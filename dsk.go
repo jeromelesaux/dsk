@@ -5,7 +5,9 @@ import (
 	"errors"
 	"fmt"
 	"github.com/jeromelesaux/m4client/cpc"
+	"gopkg.in/restruct.v1"
 	"os"
+	"io/ioutil"
 )
 
 var USER_DELETED = 0xE5
@@ -36,8 +38,8 @@ type CPCEMUSect struct {
 	N        uint8 // size
 	Un1      uint16
 	SizeByte uint16 // Taille secteur en octets
-	Data     [0x200]byte
-}
+	data     []byte `struct:sizeof=SizeByte`
+ }
 
 type CPCEMUTrack struct {
 	ID       [0x10]byte // "Track-Info\r\n"
@@ -68,8 +70,8 @@ type StDirEntry struct {
 
 type DSK struct {
 	Entry  CPCEMUEnt
-	Tracks []CPCEMUTrack
-	BitMap [256]byte
+	Tracks []CPCEMUTrack `struct: sizeof=NbTracks`
+	//BitMap [256]byte
 }
 
 func FormatDsk(nbSect, nbTrack uint8) *DSK {
@@ -102,29 +104,18 @@ func (d *DSK) FormatTrack(track, minSect, nbSect uint8) {
 	//
 	var s uint8
 	var ss uint8
-	for s = 0; s < nbSect; {
+	for s = 0; s < nbSect; s++ {
 		t.Sect[s].C = track
 		t.Sect[s].H = 0
 		t.Sect[s].R = (ss + minSect)
 		t.Sect[s].N = 2
 		t.Sect[s].SizeByte = 0x200
-		for i := 0; i < 0x200; i++ {
-			t.Sect[s].Data[i] = 0xe5
+		var i uint16
+		t.Sect[s].data = make([]byte,t.Sect[s].SizeByte)
+		for i = 0; i < t.Sect[s].SizeByte; i++ {
+			t.Sect[s].data[i] = 0xe5
 		}
 		ss++
-		s++
-		if s < nbSect {
-			t.Sect[s].C = track
-			t.Sect[s].H = 0
-			t.Sect[s].R = (ss + minSect + 4)
-			t.Sect[s].N = 2
-			t.Sect[s].SizeByte = 0x200
-			for i := 0; i < 0x200; i++ {
-				t.Sect[s].Data[i] = 0xe5
-			}
-			s++
-		}
-
 	}
 	d.Tracks[track] = t
 }
@@ -157,7 +148,10 @@ func NewDsk(filePath string) (*DSK, error) {
 		return &DSK{}, err
 	}
 	defer f.Close()
-	cpcEntry := &CPCEMUEnt{}
+	data, _ := ioutil.ReadAll(f)
+	dsk:= &DSK{}
+	restruct.Unpack(data,binary.LittleEndian,dsk)
+	/*cpcEntry := &CPCEMUEnt{}
 	if err := binary.Read(f, binary.LittleEndian, cpcEntry); err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot read CPCEmuEnt from file (%s) error :%v\n", filePath, err)
 		return &DSK{}, err
@@ -181,7 +175,7 @@ func NewDsk(filePath string) (*DSK, error) {
 	for i = 0; i < dsk.Entry.NbTracks; i++ {
 		fmt.Fprintf(os.Stdout, "Track %d %s\n", i, dsk.Tracks[i].ToString())
 	}
-	return dsk, nil*/
+	return dsk, nil
 	var i uint8
 	for i = 0; i < cpcEntry.NbTracks; i++ {
 		//	fmt.Fprintf(os.Stdout,"Loading track %d, total: %d\n", i, cpcEntry.NbTracks)
@@ -192,6 +186,8 @@ func NewDsk(filePath string) (*DSK, error) {
 		dsk.Tracks[i] = track
 		fmt.Fprintf(os.Stdout, "Track %d %s\n", i, dsk.Tracks[i].ToString())
 	}
+	*/
+
 	return dsk, nil
 }
 
