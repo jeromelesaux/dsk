@@ -20,7 +20,7 @@ func TestOpenDsk(t *testing.T) {
 	if err := dsk.CheckDsk(); err != nil {
 		t.Fatalf("error %v",err)
 	} 
-	dsk.DisplayCatalogue()
-
+	t.Logf("%s\n",dsk.GetEntryyNameInCatalogue(1))
+	t.Logf("%s\n",dsk.GetEntrySizeInCatalogue(1))
 	
 }

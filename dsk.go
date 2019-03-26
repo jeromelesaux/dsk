@@ -247,6 +247,7 @@ type DSK struct {
 	Tracks []CPCEMUTrack
 	BitMap [256]byte
 	Catalogue [64]StDirEntry
+	catalogueLoaded bool
 }
 
 func (d *DSK)CleanBitmap() {
@@ -479,13 +480,51 @@ func (d*DSK)DisplayCatalogue() {
 	d.GetCatalogue()
 	for i := 0 ; i < 64 ; i++ {
 		entry := d.Catalogue[i]
-		if entry.User != USER_DELETED {
+		if entry.User != USER_DELETED && entry.NumPage != 0 {
 			fmt.Fprintf(os.Stdout,"%s.%s : %d\n",entry.Nom,entry.Ext,entry.User )
 		}
 	}
 }
 
+func (d*DSK) GetEntryyNameInCatalogue(num int) string {
+	d.GetCatalogue()
+	var nom string 
+	for i := 0 ; i < 64 ; i++ {
+		entry := d.Catalogue[i]
+		if entry.User != USER_DELETED && entry.NumPage != 0 && i == num {
+			nom = fmt.Sprintf("%.8s.%.3s",entry.Nom,entry.Ext)
+		//	fmt.Fprintf(os.Stdout,"%s.%s : %d\n",entry.Nom,entry.Ext,entry.User )
+			return nom
+		}
+	}
+	return nom
+}
+
+func (d*DSK) GetEntrySizeInCatalogue(num int) string {
+	d.GetCatalogue()
+	for i := 0 ; i < 64 ; i++ {
+		entry := d.Catalogue[i]
+		if entry.User != USER_DELETED && entry.NumPage != 0 && i == num {
+			var p, t int
+			for {
+				if d.Catalogue[p + i].User == entry.User {
+					t += int(d.Catalogue[p +i].NbPages)
+				}
+				p++
+				if d.Catalogue[p +i].NumPage != 0 || p + i >= 64 {
+					break
+				}
+			}
+			return fmt.Sprintf("%d ko", (t + 7)>>3)
+		}
+	}
+	return ""
+}
+
 func (d *DSK)GetCatalogue() error {
+	if d.catalogueLoaded {
+		return nil
+	}
 	for i := 0 ; i < 64 ; i++ {
 		dirEntry, err := d.GetInfoDirEntry(uint8(i))
 		if err != nil {
@@ -493,6 +532,7 @@ func (d *DSK)GetCatalogue() error {
 		}
 		d.Catalogue[i] = dirEntry
 	}	
+	d.catalogueLoaded = true
 	return nil
 }
 
