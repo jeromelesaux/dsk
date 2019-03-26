@@ -40,28 +40,32 @@ type CPCEMUSect struct {
 	Data     []byte
 }
 func (c *CPCEMUSect)Write(w io.Writer) error {
-	if err := binary.Write(w, binary.LittleEndian, c.C); err != nil {
+	if err := binary.Write(w, binary.LittleEndian, &c.C); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.C error :%v\n", err)
 		return err
 	}
-	if err := binary.Write(w, binary.LittleEndian, c.H); err != nil {
+	if err := binary.Write(w, binary.LittleEndian, &c.H); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.H error :%v\n", err)
 		return err
 	}
-	if err := binary.Write(w, binary.LittleEndian, c.N); err != nil {
+	if err := binary.Write(w, binary.LittleEndian, &c.R); err != nil {
+		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.R error :%v\n", err)
+		return err
+	}
+	if err := binary.Write(w, binary.LittleEndian, &c.N); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.N error :%v\n", err)
 		return err
 	}
-	if err := binary.Write(w, binary.LittleEndian, c.Un1); err != nil {
+	if err := binary.Write(w, binary.LittleEndian, &c.Un1); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.Un1 error :%v\n", err)
 		return err
 	}
-	if err := binary.Write(w, binary.LittleEndian, c.SizeByte); err != nil {
+	if err := binary.Write(w, binary.LittleEndian, &c.SizeByte); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.SizeByte error :%v\n", err)
 		return err
 	}
-	c.Data = make([]byte, c.SizeByte)
-	if err := binary.Write(w, binary.LittleEndian, c.Data); err != nil {
+	fmt.Fprintf(os.Stderr,"Write data size :%d\n",len(c.Data))
+	if err := binary.Write(w, binary.LittleEndian, &c.Data); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.Data error :%v\n", err)
 		return err
 	}
@@ -69,28 +73,32 @@ func (c *CPCEMUSect)Write(w io.Writer) error {
 }
 
 func (c *CPCEMUSect) Read(r io.Reader) error {
-	if err := binary.Read(r, binary.LittleEndian, c.C); err != nil {
+	if err := binary.Read(r, binary.LittleEndian, &c.C); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.C error :%v\n", err)
 		return err
 	}
-	if err := binary.Read(r, binary.LittleEndian, c.H); err != nil {
+	if err := binary.Read(r, binary.LittleEndian, &c.H); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.H error :%v\n", err)
 		return err
 	}
-	if err := binary.Read(r, binary.LittleEndian, c.N); err != nil {
+	if err := binary.Read(r, binary.LittleEndian, &c.R); err != nil {
+		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.R error :%v\n", err)
+		return err
+	}
+	if err := binary.Read(r, binary.LittleEndian, &c.N); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.N error :%v\n", err)
 		return err
 	}
-	if err := binary.Read(r, binary.LittleEndian, c.Un1); err != nil {
+	if err := binary.Read(r, binary.LittleEndian, &c.Un1); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.Un1 error :%v\n", err)
 		return err
 	}
-	if err := binary.Read(r, binary.LittleEndian, c.SizeByte); err != nil {
+	if err := binary.Read(r, binary.LittleEndian, &c.SizeByte); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.SizeByte error :%v\n", err)
 		return err
 	}
 	c.Data = make([]byte, c.SizeByte)
-	if err := binary.Read(r, binary.LittleEndian, c.Data); err != nil {
+	if err := binary.Read(r, binary.LittleEndian, &c.Data); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.Data error :%v\n", err)
 		return err
 	}
@@ -110,35 +118,35 @@ type CPCEMUTrack struct {
 }
 
 func (c *CPCEMUTrack) Read(r io.Reader) error {
-	if err := binary.Read(r, binary.LittleEndian, c.ID); err != nil {
+	if err := binary.Read(r, binary.LittleEndian, &c.ID); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.ID error :%v\n", err)
 		return err
 	}
-	if err := binary.Read(r, binary.LittleEndian, c.Track); err != nil {
+	if err := binary.Read(r, binary.LittleEndian, &c.Track); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.Track error :%v\n", err)
 		return err
 	}
-	if err := binary.Read(r, binary.LittleEndian, c.Head); err != nil {
+	if err := binary.Read(r, binary.LittleEndian, &c.Head); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.Head error :%v\n", err)
 		return err
 	}
-	if err := binary.Read(r, binary.LittleEndian, c.Unused); err != nil {
+	if err := binary.Read(r, binary.LittleEndian, &c.Unused); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.Unused error :%v\n", err)
 		return err
 	}
-	if err := binary.Read(r, binary.LittleEndian, c.SectSize); err != nil {
+	if err := binary.Read(r, binary.LittleEndian, &c.SectSize); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.SectSize error :%v\n", err)
 		return err
 	}
-	if err := binary.Read(r, binary.LittleEndian, c.NbSect); err != nil {
+	if err := binary.Read(r, binary.LittleEndian, &c.NbSect); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.NbSect error :%v\n", err)
 		return err
 	}
-	if err := binary.Read(r, binary.LittleEndian, c.Gap3); err != nil {
+	if err := binary.Read(r, binary.LittleEndian, &c.Gap3); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.Gap3 error :%v\n", err)
 		return err
 	}
-	if err := binary.Read(r, binary.LittleEndian, c.OctRemp); err != nil {
+	if err := binary.Read(r, binary.LittleEndian, &c.OctRemp); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.OctRemp error :%v\n", err)
 		return err
 	}
@@ -156,46 +164,44 @@ func (c *CPCEMUTrack) Read(r io.Reader) error {
 
 
 func (c *CPCEMUTrack) Write(w io.Writer) error {
-	if err := binary.Write(w, binary.LittleEndian, c.ID); err != nil {
+	if err := binary.Write(w, binary.LittleEndian, &c.ID); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.ID error :%v\n", err)
 		return err
 	}
-	if err := binary.Write(w, binary.LittleEndian, c.Track); err != nil {
+	if err := binary.Write(w, binary.LittleEndian, &c.Track); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.Track error :%v\n", err)
 		return err
 	}
-	if err := binary.Write(w, binary.LittleEndian, c.Head); err != nil {
+	if err := binary.Write(w, binary.LittleEndian, &c.Head); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.Head error :%v\n", err)
 		return err
 	}
-	if err := binary.Write(w, binary.LittleEndian, c.Unused); err != nil {
+	if err := binary.Write(w, binary.LittleEndian, &c.Unused); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.Unused error :%v\n", err)
 		return err
 	}
-	if err := binary.Write(w, binary.LittleEndian, c.SectSize); err != nil {
+	if err := binary.Write(w, binary.LittleEndian, &c.SectSize); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.SectSize error :%v\n", err)
 		return err
 	}
-	if err := binary.Write(w, binary.LittleEndian, c.NbSect); err != nil {
+	if err := binary.Write(w, binary.LittleEndian, &c.NbSect); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.NbSect error :%v\n", err)
 		return err
 	}
-	if err := binary.Write(w, binary.LittleEndian, c.Gap3); err != nil {
+	if err := binary.Write(w, binary.LittleEndian, &c.Gap3); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.Gap3 error :%v\n", err)
 		return err
 	}
-	if err := binary.Write(w, binary.LittleEndian, c.OctRemp); err != nil {
+	if err := binary.Write(w, binary.LittleEndian, &c.OctRemp); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.OctRemp error :%v\n", err)
 		return err
 	}
 	var i uint8
 	for i = 0; i < c.NbSect; i++ {
-		sect := &CPCEMUSect{}
-		if err := sect.Write(w); err != nil {
+		if err := c.Sect[i].Write(w); err != nil {
 			fmt.Fprintf(os.Stderr, "Cannot read sector (%d) error :%v\n", i, err)
 			return err
 		}
-		c.Sect[i] = *sect
 	}
 	return nil
 }
@@ -222,7 +228,7 @@ type DSK struct {
 }
 
 func (d *DSK)Read(r io.Reader) error {
-	if err := binary.Read(r, binary.LittleEndian, d.Entry); err != nil {
+	if err := binary.Read(r, binary.LittleEndian, &d.Entry); err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot read CPCEmuEnt error :%v\n", err)
 		return  err
 	}
@@ -294,7 +300,7 @@ func (d *DSK) FormatTrack(track, minSect, nbSect uint8) {
 }
 
 func (d *DSK) Write(w io.Writer) error {
-	if err := binary.Write(w, binary.LittleEndian, d.Entry); err != nil {
+	if err := binary.Write(w, binary.LittleEndian, &d.Entry); err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot read CPCEmuEnt error :%v\n", err)
 		return  err
 	}
