@@ -30,15 +30,21 @@ func (e *CPCEMUEnt) ToString() string {
 		e.Debut, e.NbTracks, e.NbHeads, e.DataSize)
 }
 
-type CPCEMUSect struct {
+type CPCEMUSect struct { // length 8 
 	C        uint8 // track,
 	H        uint8 // head
 	R        uint8 // sect
 	N        uint8 // size
 	Un1      uint16
 	SizeByte uint16 // Taille secteur en octets
-	Data     []byte
+//	
 }
+
+func ( c *CPCEMUSect)ToString() string {
+	return fmt.Sprintf("C:%d,H:%d,R:%d,N:%d,Un1:%d:SizeByte:%d", //,DataSize:%d",
+	c.C,c.H,c.R,c.N,c.Un1,c.SizeByte ) //, len(c.Data))
+}
+
 func (c *CPCEMUSect)Write(w io.Writer) error {
 	if err := binary.Write(w, binary.LittleEndian, &c.C); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.C error :%v\n", err)
@@ -64,11 +70,11 @@ func (c *CPCEMUSect)Write(w io.Writer) error {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.SizeByte error :%v\n", err)
 		return err
 	}
-	fmt.Fprintf(os.Stderr,"Write data size :%d\n",len(c.Data))
-	if err := binary.Write(w, binary.LittleEndian, &c.Data); err != nil {
+/*	if err := binary.Write(w, binary.LittleEndian, &c.Data); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.Data error :%v\n", err)
 		return err
-	}
+	} */ 
+	fmt.Fprintf(os.Stdout,"Sector %s\n",c.ToString())
 	return nil
 }
 
@@ -97,15 +103,20 @@ func (c *CPCEMUSect) Read(r io.Reader) error {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.SizeByte error :%v\n", err)
 		return err
 	}
-	c.Data = make([]byte, c.SizeByte)
-	if err := binary.Read(r, binary.LittleEndian, &c.Data); err != nil {
+	
+/*	c.Data = make([]byte, c.SizeByte)
+	fmt.Fprintf(os.Stdout,"Sector:%s\n",c.ToString())
+	nb, err := r.Read(c.Data)
+	fmt.Fprintf(os.Stdout,"%d bytes read\n",nb)
+	if err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.Data error :%v\n", err)
 		return err
-	}
+	} */
+	fmt.Fprintf(os.Stdout,"Sector %s\n",c.ToString())
 	return nil
 }
 
-type CPCEMUTrack struct {
+type CPCEMUTrack struct { // length 18 bytes
 	ID       [0x10]byte // "Track-Info\r\n"
 	Track    uint8
 	Head     uint8
@@ -115,6 +126,7 @@ type CPCEMUTrack struct {
 	Gap3     uint8 // 0x4E
 	OctRemp  uint8 // 0xE5
 	Sect     [29]CPCEMUSect
+	Data     []byte
 }
 
 func (c *CPCEMUTrack) Read(r io.Reader) error {
@@ -150,6 +162,8 @@ func (c *CPCEMUTrack) Read(r io.Reader) error {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.OctRemp error :%v\n", err)
 		return err
 	}
+	
+	fmt.Fprintf(os.Stdout,"Track:%s\n",c.ToString())
 	var i uint8
 	for i = 0; i < c.NbSect; i++ {
 		sect := &CPCEMUSect{}
@@ -159,6 +173,15 @@ func (c *CPCEMUTrack) Read(r io.Reader) error {
 		}
 		c.Sect[i] = *sect
 	}
+	for i = c.NbSect; i< 29 ; i++ {
+		sect := &CPCEMUSect{}
+		sect.Read(r)
+	}
+	c.Data = make([]byte,0x200*uint16(c.NbSect))
+	if err := binary.Read(r, binary.LittleEndian, &c.Data); err != nil {
+		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.Data error :%v\n", err)
+		return err
+	} 
 	return nil
 }
 
@@ -196,6 +219,8 @@ func (c *CPCEMUTrack) Write(w io.Writer) error {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.OctRemp error :%v\n", err)
 		return err
 	}
+	
+	fmt.Fprintf(os.Stdout,"Track:%s\n",c.ToString())
 	var i uint8
 	for i = 0; i < c.NbSect; i++ {
 		if err := c.Sect[i].Write(w); err != nil {
@@ -203,6 +228,14 @@ func (c *CPCEMUTrack) Write(w io.Writer) error {
 			return err
 		}
 	}
+	for i = c.NbSect; i < 29 ; i++ {
+		sect := &CPCEMUSect{}
+		sect.Write(w)
+	}
+	if err := binary.Write(w, binary.LittleEndian, &c.Data); err != nil {
+		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.Data error :%v\n", err)
+		return err
+	} 
 	return nil
 }
 
@@ -265,6 +298,7 @@ func FormatDsk(nbSect, nbTrack uint8) *DSK {
 	var i uint8
 	for i = 0; i < nbTrack; i++ {
 		dsk.FormatTrack(i, 0xC1, nbSect)
+
 	}
 	return dsk
 }
@@ -289,12 +323,16 @@ func (d *DSK) FormatTrack(track, minSect, nbSect uint8) {
 		t.Sect[s].R = (ss + minSect)
 		t.Sect[s].N = 2
 		t.Sect[s].SizeByte = 0x200
-		var i uint16
+	/*	var i uint16
 		t.Sect[s].Data = make([]byte, t.Sect[s].SizeByte)
 		for i = 0; i < t.Sect[s].SizeByte; i++ {
 			t.Sect[s].Data[i] = 0xe5
-		}
+		} */
 		ss++
+	}
+	t.Data = make([]byte,0x200*uint16(nbSect))
+	for i := 0; i < len(t.Data); i++ {
+		t.Data[i] = 0xE5
 	}
 	d.Tracks[track] = t
 }
