@@ -70,11 +70,7 @@ func (c *CPCEMUSect)Write(w io.Writer) error {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.SizeByte error :%v\n", err)
 		return err
 	}
-/*	if err := binary.Write(w, binary.LittleEndian, &c.Data); err != nil {
-		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.Data error :%v\n", err)
-		return err
-	} */ 
-	fmt.Fprintf(os.Stdout,"Sector %s\n",c.ToString())
+//	fmt.Fprintf(os.Stdout,"Sector %s\n",c.ToString())
 	return nil
 }
 
@@ -103,16 +99,7 @@ func (c *CPCEMUSect) Read(r io.Reader) error {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.SizeByte error :%v\n", err)
 		return err
 	}
-	
-/*	c.Data = make([]byte, c.SizeByte)
-	fmt.Fprintf(os.Stdout,"Sector:%s\n",c.ToString())
-	nb, err := r.Read(c.Data)
-	fmt.Fprintf(os.Stdout,"%d bytes read\n",nb)
-	if err != nil {
-		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.Data error :%v\n", err)
-		return err
-	} */
-	fmt.Fprintf(os.Stdout,"Sector %s\n",c.ToString())
+//	fmt.Fprintf(os.Stdout,"Sector %s\n",c.ToString())
 	return nil
 }
 
@@ -163,7 +150,7 @@ func (c *CPCEMUTrack) Read(r io.Reader) error {
 		return err
 	}
 	
-	fmt.Fprintf(os.Stdout,"Track:%s\n",c.ToString())
+//	fmt.Fprintf(os.Stdout,"Track:%s\n",c.ToString())
 	var i uint8
 	for i = 0; i < c.NbSect; i++ {
 		sect := &CPCEMUSect{}
@@ -220,7 +207,7 @@ func (c *CPCEMUTrack) Write(w io.Writer) error {
 		return err
 	}
 	
-	fmt.Fprintf(os.Stdout,"Track:%s\n",c.ToString())
+//	fmt.Fprintf(os.Stdout,"Track:%s\n",c.ToString())
 	var i uint8
 	for i = 0; i < c.NbSect; i++ {
 		if err := c.Sect[i].Write(w); err != nil {
@@ -258,8 +245,14 @@ type DSK struct {
 	Entry  CPCEMUEnt
 	Tracks []CPCEMUTrack
 	BitMap [256]byte
+	Catalogue [64]StDirEntry
 }
 
+func (d *DSK)CleanBitmap() {
+	for i:=0; i<256 ; i++ {
+		d.BitMap[i] = 0
+	}
+}
 func (d *DSK)Read(r io.Reader) error {
 	if err := binary.Read(r, binary.LittleEndian, &d.Entry); err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot read CPCEmuEnt error :%v\n", err)
@@ -323,11 +316,6 @@ func (d *DSK) FormatTrack(track, minSect, nbSect uint8) {
 		t.Sect[s].R = (ss + minSect)
 		t.Sect[s].N = 2
 		t.Sect[s].SizeByte = 0x200
-	/*	var i uint16
-		t.Sect[s].Data = make([]byte, t.Sect[s].SizeByte)
-		for i = 0; i < t.Sect[s].SizeByte; i++ {
-			t.Sect[s].Data[i] = 0xe5
-		} */
 		ss++
 	}
 	t.Data = make([]byte,0x200*uint16(nbSect))
@@ -376,6 +364,7 @@ func NewDsk(filePath string) (*DSK, error) {
 		fmt.Fprintf(os.Stderr,"Error while reading (%s) error %v", filePath, err)
 	}	
 	f.Close()
+	
 	return dsk, nil
 }
 
@@ -484,3 +473,24 @@ func (d *DSK) RechercheDirLibre() uint8 {
 	return -1
 }
 */
+
+func (d*DSK)GetInfoDirEntry( numDir uint8 ) (StDirEntry,error) {
+	dir := StDirEntry{}
+    minSect := d.GetMinSect();
+	s := ( numDir >> 4 ) + minSect;
+	var t uint8
+	if minSect == 0x41 {
+		t = 2
+	}
+   
+    if  minSect == 1 {
+		t = 1
+	}
+	p := d.GetPosData(t,s,true)
+	buffer := d.Tracks[t].Data[((uint16(numDir) & 15) << 5) + p: ((uint16(numDir) & 15) << 5) + p + 32]
+    //memcpy( &Dir
+	//		, &ImgDsk[ ( ( NumDir & 15 ) << 5 ) + GetPosData( t, s, true ) ]
+	//		, sizeof( StDirEntry )
+	//		);
+    return dir
+}
