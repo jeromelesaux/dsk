@@ -293,7 +293,6 @@ func FormatDsk(nbSect, nbTrack uint8) *DSK {
 	var i uint8
 	for i = 0; i < nbTrack; i++ {
 		dsk.FormatTrack(i, 0xC1, nbSect)
-
 	}
 	return dsk
 }
@@ -536,6 +535,26 @@ func (d *DSK)GetCatalogue() error {
 	return nil
 }
 
+func (d *DSK)SetInfoDirEntry(numDir uint8, e StDirEntry) error {
+	minSect := d.GetMinSect();
+	var t uint8
+	if minSect == 0x41 {
+		t = 2
+	}
+   
+    if  minSect == 1 {
+		t = 1
+	}
+	var data bytes.Buffer
+
+	if err := binary.Write(&data,binary.LittleEndian,e); err != nil {
+		fmt.Fprintf(os.Stderr,"Error while writing StDirEntry structure with error :%v\n",err)
+		return err
+	}
+	copy(d.Tracks[t].Data[((uint16(numDir) & 15 ) << 5 ):((uint16(numDir) & 15 ) << 5 ) + uint16(binary.Size(data.Bytes()))],data.Bytes())
+	return nil
+}
+
 func (d*DSK)GetInfoDirEntry( numDir uint8 ) (StDirEntry,error) {
 	dir := StDirEntry{}
     minSect := d.GetMinSect();
@@ -550,8 +569,7 @@ func (d*DSK)GetInfoDirEntry( numDir uint8 ) (StDirEntry,error) {
 	data := d.Tracks[t].Data[((uint16(numDir) & 15) << 5) : ((uint16(numDir) & 15) << 5)  + 32]
 	buffer := bytes.NewReader(data[:])
 	if err := binary.Read(buffer,binary.LittleEndian,&dir); err != nil {
-		fmt.Fprintf(os.Stderr,"Error while reading StDirEntry structure with error :%v\n",err)
-		return dir, err 
+			return dir, err 
 	}
     //memcpy( &Dir
 	//		, &ImgDsk[ ( ( NumDir & 15 ) << 5 ) + GetPosData( t, s, true ) ]
