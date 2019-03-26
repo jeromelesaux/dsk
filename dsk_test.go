@@ -6,12 +6,12 @@ import (
 
 func TestOpenDsk(t *testing.T) {
 
-	/*formated := FormatDsk(9,40)
+	formated := FormatDsk(9,40)
 	if err := WriteDsk("test.dsk",formated); err != nil {
 		t.Fatalf("error :%v",err)
-	}*/
+	}
 
-	dsk, err := NewDsk("empty.dsk")
+	dsk, err := NewDsk("ironman.dsk")
 	if err != nil {
 		t.Fatalf("error %v",err)
 	}
@@ -20,4 +20,7 @@ func TestOpenDsk(t *testing.T) {
 	if err := dsk.CheckDsk(); err != nil {
 		t.Fatalf("error %v",err)
 	} 
+	dsk.DisplayCatalogue()
+
+	
 }

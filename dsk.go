@@ -10,8 +10,8 @@ import (
 	"bytes"
 )
 
-var USER_DELETED = 0xE5
-var SECTSIZE = 512
+var USER_DELETED uint8 = 0xE5
+var SECTSIZE  = 512
 var ErrorUnsupportedDskFormat = errors.New("Unsupported DSK Format.")
 var ErrorUnsupportedMultiHeadDsk = errors.New("Multi-side dsk ! Expected 1 head")
 var ErrorBadSectorNumber = errors.New("DSK has wrong sector number!")
@@ -275,7 +275,7 @@ func (d *DSK)Read(r io.Reader) error {
 			fmt.Fprintf(os.Stderr, "Error track (%d) error :%v\n", i, err)
 		} 
 		d.Tracks[i] = *track
-		fmt.Fprintf(os.Stdout, "Track %d %s\n", i, d.Tracks[i].ToString())
+		//fmt.Fprintf(os.Stdout, "Track %d %s\n", i, d.Tracks[i].ToString())
 	}
 	return nil
 }
@@ -415,9 +415,9 @@ func (d *DSK) GetMinSect() uint8 {
 	var Sect uint8 = 0xFF
 	var s uint8
 	tr := d.Tracks[0]
-	fmt.Fprintf(os.Stdout, "Track 0 nbSect :%d \n", tr.NbSect)
+	//fmt.Fprintf(os.Stdout, "Track 0 nbSect :%d \n", tr.NbSect)
 	for s = 0; s < tr.NbSect; s++ {
-		fmt.Fprintf(os.Stdout, "Sector %d, R %d\n", s, tr.Sect[s].R)
+	//	fmt.Fprintf(os.Stdout, "Sector %d, R %d\n", s, tr.Sect[s].R)
 		if Sect > tr.Sect[s].R {
 			Sect = tr.Sect[s].R
 		}
@@ -430,7 +430,7 @@ func (d *DSK) GetMinSect() uint8 {
 //
 func (d *DSK) GetPosData(track, sect uint8, SectPhysique bool) uint16 {
 	// Recherche position secteur
-	var tr CPCEMUTrack = d.Tracks[track]
+	tr := d.Tracks[track]
 	var SizeByte uint16
 	var Pos uint16
 
@@ -475,10 +475,30 @@ func (d *DSK) RechercheDirLibre() uint8 {
 }
 */
 
+func (d*DSK)DisplayCatalogue() {
+	d.GetCatalogue()
+	for i := 0 ; i < 64 ; i++ {
+		entry := d.Catalogue[i]
+		if entry.User != USER_DELETED {
+			fmt.Fprintf(os.Stdout,"%s.%s : %d\n",entry.Nom,entry.Ext,entry.User )
+		}
+	}
+}
+
+func (d *DSK)GetCatalogue() error {
+	for i := 0 ; i < 64 ; i++ {
+		dirEntry, err := d.GetInfoDirEntry(uint8(i))
+		if err != nil {
+			fmt.Fprintf(os.Stderr,"Error while reading catalogue error :%v\n",err)
+		}
+		d.Catalogue[i] = dirEntry
+	}	
+	return nil
+}
+
 func (d*DSK)GetInfoDirEntry( numDir uint8 ) (StDirEntry,error) {
 	dir := StDirEntry{}
     minSect := d.GetMinSect();
-	s := ( numDir >> 4 ) + minSect;
 	var t uint8
 	if minSect == 0x41 {
 		t = 2
@@ -487,8 +507,7 @@ func (d*DSK)GetInfoDirEntry( numDir uint8 ) (StDirEntry,error) {
     if  minSect == 1 {
 		t = 1
 	}
-	p := d.GetPosData(t,s,true)
-	data := d.Tracks[t].Data[((uint16(numDir) & 15) << 5) + p: ((uint16(numDir) & 15) << 5) + p + 32]
+	data := d.Tracks[t].Data[((uint16(numDir) & 15) << 5) : ((uint16(numDir) & 15) << 5)  + 32]
 	buffer := bytes.NewReader(data[:])
 	if err := binary.Read(buffer,binary.LittleEndian,&dir); err != nil {
 		fmt.Fprintf(os.Stderr,"Error while reading StDirEntry structure with error :%v\n",err)
