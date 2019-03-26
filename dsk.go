@@ -7,6 +7,7 @@ import (
 	"github.com/jeromelesaux/m4client/cpc"
 	"io"
 	"os"
+	"bytes"
 )
 
 var USER_DELETED = 0xE5
@@ -487,10 +488,15 @@ func (d*DSK)GetInfoDirEntry( numDir uint8 ) (StDirEntry,error) {
 		t = 1
 	}
 	p := d.GetPosData(t,s,true)
-	buffer := d.Tracks[t].Data[((uint16(numDir) & 15) << 5) + p: ((uint16(numDir) & 15) << 5) + p + 32]
+	data := d.Tracks[t].Data[((uint16(numDir) & 15) << 5) + p: ((uint16(numDir) & 15) << 5) + p + 32]
+	buffer := bytes.NewReader(data[:])
+	if err := binary.Read(buffer,binary.LittleEndian,&dir); err != nil {
+		fmt.Fprintf(os.Stderr,"Error while reading StDirEntry structure with error :%v\n",err)
+		return dir, err 
+	}
     //memcpy( &Dir
 	//		, &ImgDsk[ ( ( NumDir & 15 ) << 5 ) + GetPosData( t, s, true ) ]
 	//		, sizeof( StDirEntry )
 	//		);
-    return dir
+    return dir,nil
 }
