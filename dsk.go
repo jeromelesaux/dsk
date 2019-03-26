@@ -39,6 +39,34 @@ type CPCEMUSect struct {
 	SizeByte uint16 // Taille secteur en octets
 	Data     []byte
 }
+func (c *CPCEMUSect)Write(w io.Writer) error {
+	if err := binary.Write(w, binary.LittleEndian, c.C); err != nil {
+		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.C error :%v\n", err)
+		return err
+	}
+	if err := binary.Write(w, binary.LittleEndian, c.H); err != nil {
+		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.H error :%v\n", err)
+		return err
+	}
+	if err := binary.Write(w, binary.LittleEndian, c.N); err != nil {
+		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.N error :%v\n", err)
+		return err
+	}
+	if err := binary.Write(w, binary.LittleEndian, c.Un1); err != nil {
+		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.Un1 error :%v\n", err)
+		return err
+	}
+	if err := binary.Write(w, binary.LittleEndian, c.SizeByte); err != nil {
+		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.SizeByte error :%v\n", err)
+		return err
+	}
+	c.Data = make([]byte, c.SizeByte)
+	if err := binary.Write(w, binary.LittleEndian, c.Data); err != nil {
+		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.Data error :%v\n", err)
+		return err
+	}
+	return nil
+}
 
 func (c *CPCEMUSect) Read(r io.Reader) error {
 	if err := binary.Read(r, binary.LittleEndian, c.C); err != nil {
@@ -126,6 +154,52 @@ func (c *CPCEMUTrack) Read(r io.Reader) error {
 	return nil
 }
 
+
+func (c *CPCEMUTrack) Write(w io.Writer) error {
+	if err := binary.Write(w, binary.LittleEndian, c.ID); err != nil {
+		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.ID error :%v\n", err)
+		return err
+	}
+	if err := binary.Write(w, binary.LittleEndian, c.Track); err != nil {
+		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.Track error :%v\n", err)
+		return err
+	}
+	if err := binary.Write(w, binary.LittleEndian, c.Head); err != nil {
+		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.Head error :%v\n", err)
+		return err
+	}
+	if err := binary.Write(w, binary.LittleEndian, c.Unused); err != nil {
+		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.Unused error :%v\n", err)
+		return err
+	}
+	if err := binary.Write(w, binary.LittleEndian, c.SectSize); err != nil {
+		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.SectSize error :%v\n", err)
+		return err
+	}
+	if err := binary.Write(w, binary.LittleEndian, c.NbSect); err != nil {
+		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.NbSect error :%v\n", err)
+		return err
+	}
+	if err := binary.Write(w, binary.LittleEndian, c.Gap3); err != nil {
+		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.Gap3 error :%v\n", err)
+		return err
+	}
+	if err := binary.Write(w, binary.LittleEndian, c.OctRemp); err != nil {
+		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.OctRemp error :%v\n", err)
+		return err
+	}
+	var i uint8
+	for i = 0; i < c.NbSect; i++ {
+		sect := &CPCEMUSect{}
+		if err := sect.Write(w); err != nil {
+			fmt.Fprintf(os.Stderr, "Cannot read sector (%d) error :%v\n", i, err)
+			return err
+		}
+		c.Sect[i] = *sect
+	}
+	return nil
+}
+
 func (t *CPCEMUTrack) ToString() string {
 	return fmt.Sprintf("ID:%s, Track:%d, Head:%d, SectSize:%d, nbSect:%d,Gap3:%d",
 		t.ID, t.Track, t.Head, t.SectSize, t.NbSect, t.Gap3)
@@ -144,7 +218,33 @@ type StDirEntry struct {
 type DSK struct {
 	Entry  CPCEMUEnt
 	Tracks []CPCEMUTrack
-	//BitMap [256]byte
+	BitMap [256]byte
+}
+
+func (d *DSK)Read(r io.Reader) error {
+	if err := binary.Read(r, binary.LittleEndian, d.Entry); err != nil {
+		fmt.Fprintf(os.Stderr, "Cannot read CPCEmuEnt error :%v\n", err)
+		return  err
+	}
+	mv := make([]byte, 4)
+	extended := make([]byte, 16)
+	copy(mv, d.Entry.Debut[0:4])
+	copy(extended, d.Entry.Debut[0:16])
+	if string(mv) != "MV -" && string(extended) != "EXTENDED CPC DSK" {
+		return ErrorUnsupportedDskFormat
+	}
+	d.Tracks = make([]CPCEMUTrack,d.Entry.NbTracks)
+	var i uint8
+	for i = 0; i < d.Entry.NbTracks; i++ {
+		//	fmt.Fprintf(os.Stdout,"Loading track %d, total: %d\n", i, cpcEntry.NbTracks)
+		track := &CPCEMUTrack{}
+		if err := track.Read(r); err != nil {
+			fmt.Fprintf(os.Stderr, "Error track (%d) error :%v\n", i, err)
+		} 
+		d.Tracks[i] = *track
+		fmt.Fprintf(os.Stdout, "Track %d %s\n", i, d.Tracks[i].ToString())
+	}
+	return nil
 }
 
 func FormatDsk(nbSect, nbTrack uint8) *DSK {
@@ -193,24 +293,30 @@ func (d *DSK) FormatTrack(track, minSect, nbSect uint8) {
 	d.Tracks[track] = t
 }
 
-func (d *DSK) Write(filePath string) error {
-	fw, err := os.Create(filePath)
+func (d *DSK) Write(w io.Writer) error {
+	if err := binary.Write(w, binary.LittleEndian, d.Entry); err != nil {
+		fmt.Fprintf(os.Stderr, "Cannot read CPCEmuEnt error :%v\n", err)
+		return  err
+	}
+	var i uint8
+	for i = 0; i < d.Entry.NbTracks; i++ {
+		if err := d.Tracks[i].Write(w); err != nil {
+			fmt.Fprintf(os.Stderr, "Error track (%d) error :%v\n", i, err)
+		} 
+	}
+	return nil
+}
+
+func WriteDsk(filePath string, d *DSK) (error) {
+	f, err := os.Create(filePath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Cannot write file (%s) error %v\n", filePath, err)
+		fmt.Fprintf(os.Stderr, "Cannot open file (%s) error %v\n", filePath, err)
 		return err
 	}
-	defer fw.Close()
-	if err := binary.Write(fw, binary.LittleEndian, d.Entry); err != nil {
-		fmt.Fprintf(os.Stderr, "Cannot write CPCEntry in file (%s) error :%v \n", filePath, err)
-		return err
-	}
-	var t uint8
-	for t = 0; t < d.Entry.NbTracks; t++ {
-		if err := binary.Write(fw, binary.LittleEndian, d.Tracks[t]); err != nil {
-			fmt.Fprintf(os.Stderr, "Cannot write CPCTracks in file (%s) error :%v \n", filePath, err)
-			return err
-		}
-	}
+	if err :=d.Write(f); err != nil {
+		fmt.Fprintf(os.Stderr,"Error while reading (%s) error %v", filePath, err)
+	}	
+	f.Close()
 	return nil
 }
 
@@ -222,34 +328,9 @@ func NewDsk(filePath string) (*DSK, error) {
 	}
 	
 	dsk := &DSK{}
-
-	cpcEntry := &CPCEMUEnt{}
-	if err := binary.Read(f, binary.LittleEndian, cpcEntry); err != nil {
-		fmt.Fprintf(os.Stderr, "Cannot read CPCEmuEnt from file (%s) error :%v\n", filePath, err)
-		return dsk, err
-	}
-	mv := make([]byte, 4)
-	extended := make([]byte, 16)
-	copy(mv, cpcEntry.Debut[0:4])
-	copy(extended, cpcEntry.Debut[0:16])
-	if string(mv) != "MV -" && string(extended) != "EXTENDED CPC DSK" {
-		return dsk, ErrorUnsupportedDskFormat
-	}
-	fmt.Fprintf(os.Stdout, "Entry %s\n", cpcEntry.ToString())
-	dsk.Entry = *cpcEntry
-	dsk.Tracks = make([]CPCEMUTrack, dsk.Entry.NbTracks)
-
-	var i uint8
-	for i = 0; i < cpcEntry.NbTracks; i++ {
-		//	fmt.Fprintf(os.Stdout,"Loading track %d, total: %d\n", i, cpcEntry.NbTracks)
-		track := &CPCEMUTrack{}
-		if err := track.Read(f); err != nil {
-			fmt.Fprintf(os.Stderr, "Error in file (%s) track (%d) error :%v\n", filePath, i, err)
-		} else {
-			dsk.Tracks[i] = *track
-		}
-		fmt.Fprintf(os.Stdout, "Track %d %s\n", i, dsk.Tracks[i].ToString())
-	}
+	if err :=dsk.Read(f); err != nil {
+		fmt.Fprintf(os.Stderr,"Error while reading (%s) error %v", filePath, err)
+	}	
 	f.Close()
 	return dsk, nil
 }
