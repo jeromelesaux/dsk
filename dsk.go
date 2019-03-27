@@ -498,6 +498,35 @@ func (d *DSK) GetFile(path string, indice int) error {
 	return nil
 }
 
+func (d *DSK) WriteBloc(bloc int, bufBloc []byte) error {
+	track := (bloc << 1) / 9
+	sect := (bloc << 1) % 9
+	minSect := d.GetMinSect()
+	if minSect == 0x41 {
+		track += 2
+	} else {
+		if minSect == 0x01 {
+			track++
+		}
+	}
+	//
+	// Ajuste le nombre de pistes si d�passement capacit�
+	//
+	if track > int(d.Entry.NbTracks-1) {
+		d.FormatTrack(uint8(track), minSect, 9)
+	}
+	pos := d.GetPosData(uint8(track), uint8(sect)+minSect, true)
+	copy(d.Tracks[track].Data[pos:], bufBloc[0:SECTSIZE])
+	sect++
+	if sect > 8 {
+		track++
+		sect = 0
+	}
+	pos = d.GetPosData(uint8(track), uint8(sect)+minSect, true)
+	copy(d.Tracks[track].Data[pos:], bufBloc[SECTSIZE:])
+	return nil
+}
+
 func (d *DSK) ReadBloc(bloc int) []byte {
 	bufBloc := make([]byte, SECTSIZE*2)
 	track := (bloc << 1) / 9
