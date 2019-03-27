@@ -11,7 +11,7 @@ import (
 )
 
 var USER_DELETED uint8 = 0xE5
-var SECTSIZE = 512
+var SECTSIZE uint16 = 512
 var ErrorUnsupportedDskFormat = errors.New("Unsupported DSK Format.")
 var ErrorUnsupportedMultiHeadDsk = errors.New("Multi-side dsk ! Expected 1 head")
 var ErrorBadSectorNumber = errors.New("DSK has wrong sector number!")
@@ -433,13 +433,16 @@ func (d *DSK) GetPosData(track, sect uint8, SectPhysique bool) uint16 {
 	tr := d.Tracks[track]
 	var SizeByte uint16
 	var Pos uint16
-
-	if (tr.Sect[sect].R == sect && SectPhysique) || !SectPhysique {
-		SizeByte = tr.Sect[sect].SizeByte
+	//fmt.Fprintf(os.Stdout,"Track:%d,Secteur:%d\n",track,sect)
+	for s := 0; s < int(tr.NbSect); s++ {
+		if (tr.Sect[s].R == sect && SectPhysique) || !SectPhysique {
+			break
+		}
+		SizeByte = tr.Sect[s].SizeByte
 		if SizeByte == 0 {
 			Pos += SizeByte
 		} else {
-			Pos += (128 << tr.Sect[sect].N)
+			Pos += (128 << tr.Sect[s].N)
 		}
 	}
 	return Pos
@@ -475,7 +478,7 @@ func (d *DSK) GetFile(path string, indice int) error {
 			}
 			if nbOctets > 0 {
 				if err := binary.Write(fw, binary.LittleEndian, p); err != nil {
-					fmt.Fprint(os.Stderr, "Cannot write data into file (%s) error %v\n", path, err)
+					fmt.Fprintf(os.Stderr, "Cannot write data into file (%s) error %v\n", path, err)
 				}
 				cumul += nbOctets
 			}
@@ -507,7 +510,8 @@ func (d *DSK) ReadBloc(bloc int) []byte {
 			track++
 		}
 	}
-	copy(bufBloc, d.Tracks[track].Data[sect+int(minSect):sect+int(minSect)+SECTSIZE])
+	pos := d.GetPosData(uint8(track), uint8(sect), true)
+	copy(bufBloc, d.Tracks[track].Data[pos:pos+SECTSIZE])
 	//int Pos = GetPosData( track, sect + MinSect, true );
 	//memcpy( BufBloc, &ImgDsk[ Pos ], SECTSIZE );
 	sect++
@@ -515,7 +519,8 @@ func (d *DSK) ReadBloc(bloc int) []byte {
 		track++
 		sect = 0
 	}
-	copy(bufBloc, d.Tracks[track].Data[sect+int(minSect):sect+int(minSect)+SECTSIZE])
+	pos = d.GetPosData(uint8(track), uint8(sect), true)
+	copy(bufBloc, d.Tracks[track].Data[pos:pos+SECTSIZE])
 	//   Pos = GetPosData( track, sect + MinSect, true );
 	// memcpy( &BufBloc[ SECTSIZE ], &ImgDsk[ Pos ], SECTSIZE );
 	return bufBloc
@@ -613,6 +618,7 @@ func (d *DSK) GetCatalogue() error {
 
 func (d *DSK) SetInfoDirEntry(numDir uint8, e StDirEntry) error {
 	minSect := d.GetMinSect()
+	s := (numDir >> 4) + minSect
 	var t uint8
 	if minSect == 0x41 {
 		t = 2
@@ -627,13 +633,15 @@ func (d *DSK) SetInfoDirEntry(numDir uint8, e StDirEntry) error {
 		fmt.Fprintf(os.Stderr, "Error while writing StDirEntry structure with error :%v\n", err)
 		return err
 	}
-	copy(d.Tracks[t].Data[((uint16(numDir)&15)<<5):((uint16(numDir)&15)<<5)+uint16(binary.Size(data.Bytes()))], data.Bytes())
+	pos := d.GetPosData(t, s, true)
+	copy(d.Tracks[t].Data[((uint16(numDir)&15)<<5)+pos:((uint16(numDir)&15)<<5)+pos+uint16(binary.Size(data.Bytes()))], data.Bytes())
 	return nil
 }
 
 func (d *DSK) GetInfoDirEntry(numDir uint8) (StDirEntry, error) {
 	dir := StDirEntry{}
 	minSect := d.GetMinSect()
+	s := (numDir >> 4) + minSect
 	var t uint8
 	if minSect == 0x41 {
 		t = 2
@@ -642,7 +650,9 @@ func (d *DSK) GetInfoDirEntry(numDir uint8) (StDirEntry, error) {
 	if minSect == 1 {
 		t = 1
 	}
-	data := d.Tracks[t].Data[((uint16(numDir) & 15) << 5) : ((uint16(numDir)&15)<<5)+32]
+
+	pos := d.GetPosData(t, s, true)
+	data := d.Tracks[t].Data[((uint16(numDir)&15)<<5)+pos : ((uint16(numDir)&15)<<5)+pos+32]
 	buffer := bytes.NewReader(data[:])
 	if err := binary.Read(buffer, binary.LittleEndian, &dir); err != nil {
 		return dir, err
