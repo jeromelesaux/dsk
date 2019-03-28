@@ -443,18 +443,16 @@ func (d *DSK) GetPosData(track, sect uint8, SectPhysique bool) uint16 {
 	tr := d.Tracks[track]
 	var SizeByte uint16
 	var Pos uint16
-	var t,s uint8
+	var s uint8
 	//Pos += 256
 
 	//fmt.Fprintf(os.Stdout,"Track:%d,Secteur:%d\n",track,sect)
 
 		//Pos += 256
 		for s = 0; s < tr.NbSect; s++ {
-			if t == track {
 				if (tr.Sect[s].R == sect && SectPhysique) || ( s == sect && !SectPhysique ) {
 					break
 				}
-			}
 			SizeByte = tr.Sect[s].SizeByte
 			if SizeByte != 0 {
 				Pos += SizeByte
