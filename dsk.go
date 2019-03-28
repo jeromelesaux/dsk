@@ -555,69 +555,66 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 	if header.Checksum == header.ComputedChecksum16() {
 		isAmsdos = true
 	}
-
 	if !isAmsdos {
 		// Creer une en-tete amsdos par defaut
 		fmt.Fprintf(os.Stdout, "Create header...\n")
-		e := StAmsdos{Size: uint16(len(buff)), Size2: uint16(len(buff))}
-		copy(e.Filename[:], []byte(cFileName[0:14]))
+		header = &StAmsdos{Size: uint16(len(buff)), Size2: uint16(len(buff))}
+		copy(header.Filename[:], []byte(cFileName[0:14]))
 		if loadAdress != 0 {
-			e.Address = loadAdress
+			header.Address = loadAdress
 			typeModeImport = MODE_BINAIRE
 		}
 		if exeAdress != 0 {
-			e.Exec = exeAdress
+			header.Exec = exeAdress
 			typeModeImport = MODE_BINAIRE
 		}
 		// Il faut recalculer le checksum en comptant es adresses !
-		e.Checksum = e.ComputedChecksum16()
+		header.Checksum = header.ComputedChecksum16()
 	} else {
 		fmt.Fprintf(os.Stdout, "File has already header...\n")
-
-		//
-		// En fonction du mode d'importation...
-		//
-		switch typeModeImport {
-		case MODE_ASCII:
-			//
-			// Importation en mode ASCII
-			//
-			if isAmsdos {
-				// Supprmier en-tete si elle existe
-				copy(buff[0:], buff[binary.Size(StAmsdos{}):])
-			}
-			break
-
-		case MODE_BINAIRE:
-			//
-			// Importation en mode BINAIRE
-			//
-
-			if !isAmsdos {
-				//
-				// Indique qu'il faudra ajouter une en-tete
-				//
-				addHeader = true
-			}
-			break
-		}
-
 	}
+	//
+	// En fonction du mode d'importation...
+	//
+	switch typeModeImport {
+	case MODE_ASCII:
+		//
+		// Importation en mode ASCII
+		//
+		if isAmsdos {
+			// Supprmier en-tete si elle existe
+			copy(buff[0:], buff[binary.Size(StAmsdos{}):])
+		}
+		break
+	case MODE_BINAIRE:
+		//
+		// Importation en mode BINAIRE
+		//
 
+		if !isAmsdos {
+			//
+			// Indique qu'il faudra ajouter une en-tete
+			//
+			addHeader = true
+		}
+		break
+	}
 	//
 	// Si fichier ok pour etre import
 	//
 	if addHeader {
 		// Ajoute l'en-tete amsdos si necessaire
 
+		var rbuff bytes.Buffer
+		binary.Write(&rbuff, binary.LittleEndian, header)
+		binary.Write(&rbuff, binary.LittleEndian, buff)
+		buff = rbuff.Bytes()
 		//	memmove( &Buff[ sizeof( StAmsdos ) ], Buff, Lg );
 		//         	memcpy( Buff, e, sizeof( StAmsdos ) );
 		//       	Lg += sizeof( StAmsdos );
 	}
-
 	//if (MODE_BINAIRE) ClearAmsdos(Buff); //Remplace les octets inutilises par des 0 dans l'en-tete
-
-	return d.CopieFichier(buff, cFileName, uint16(len(buff)), 256, userNumber, isSystemFile, readOnly)
+	return d.CopyFile(buff, cFileName, uint16(len(buff)), 256, userNumber, isSystemFile, readOnly)
 
 }
 
@@ -626,7 +623,7 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 //
 // la taille est determine par le nombre de NbPages
 // regarder pourquoi different d'une autre DSK
-func (d *DSK) CopieFichier(bufFile []byte, fileName string, fileLength, maxBloc, userNumber uint16, isSystemFile, readOnly bool) error {
+func (d *DSK) CopyFile(bufFile []byte, fileName string, fileLength, maxBloc, userNumber uint16, isSystemFile, readOnly bool) error {
 	var nbPages, taillePage uint8
 	d.FillBitmap()
 	dirLoc := d.GetNomDir(fileName)
