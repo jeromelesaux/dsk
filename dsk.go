@@ -447,7 +447,7 @@ func (d *DSK) GetPosData(track, sect uint8, SectPhysique bool) uint16 {
 	//Pos += 256
 
 	//fmt.Fprintf(os.Stdout,"Track:%d,Secteur:%d\n",track,sect)
-	for t = 0; t <= track; t++ {
+
 		//Pos += 256
 		for s = 0; s < tr.NbSect; s++ {
 			if t == track {
@@ -456,14 +456,14 @@ func (d *DSK) GetPosData(track, sect uint8, SectPhysique bool) uint16 {
 				}
 			}
 			SizeByte = tr.Sect[s].SizeByte
-			if SizeByte == 0 {
+			if SizeByte != 0 {
 				Pos += SizeByte
 			} else {
 				Pos += (128 << tr.Sect[s].N)
 			}
 			//fmt.Fprintf(os.Stderr, "sizebyte:%d, t:%d,s:%d,tr.Sect[s].SizeByte:%d, tr->Sect[ s ].N:%d, Pos:%d\n", SizeByte,t,s,tr.Sect[s].SizeByte,tr.Sect[ s ].N,Pos)
 		}
-	}
+	
 	return Pos
 }
 
@@ -639,7 +639,7 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 // la taille est determine par le nombre de NbPages
 // regarder pourquoi different d'une autre DSK
 func (d *DSK) CopyFile(bufFile []byte, fileName string, fileLength, maxBloc, userNumber uint16, isSystemFile, readOnly bool) error {
-	var nbPages, taillePage uint8
+	var nbPages, taillePage int
 	d.FillBitmap()
 	dirLoc := d.GetNomDir(fileName)
 	var posFile uint16                       //Construit l'entree pour mettre dans le catalogue
@@ -655,12 +655,12 @@ func (d *DSK) CopyFile(bufFile []byte, fileName string, fileLength, maxBloc, use
 			}
 			dirLoc.NumPage = uint8(nbPages) // Numero de l'entree dans le fichier
 			nbPages++
-			taillePage = uint8((fileLength - posFile + 127) >> 7) // Taille de la page (on arrondit par le haut)
+			taillePage = ((int(fileLength) - int(posFile) + 127) >> 7) // Taille de la page (on arrondit par le haut)
 			if taillePage > 128 {                                 // Si y'a plus de 16k il faut plusieurs pages
 				taillePage = 128
 			}
 
-			dirLoc.NbPages = taillePage
+			dirLoc.NbPages = uint8(taillePage)
 			l := (dirLoc.NbPages + 7) >> 3 //Nombre de blocs=TaillePage/8 arrondi par le haut
 			for i := 0; i < 16; i++ {
 				dirLoc.Blocks[i] = 0
@@ -671,7 +671,7 @@ func (d *DSK) CopyFile(bufFile []byte, fileName string, fileLength, maxBloc, use
 				fmt.Fprintf(os.Stdout,"Bloc:%d, MaxBloc:%d\n",bloc,maxBloc)
 				if bloc != 0 {
 					dirLoc.Blocks[j] = bloc
-					d.WriteBloc(int(bloc), bufFile[posFile:])
+					d.WriteBloc(int(bloc), bufFile,posFile)
 					posFile += 1024 // Passe au bloc suivant
 
 				} else {
@@ -725,7 +725,7 @@ func (d *DSK) GetNomDir(nomFile string) StDirEntry {
 	return e
 }
 
-func (d *DSK) WriteBloc(bloc int, bufBloc []byte) error {
+func (d *DSK) WriteBloc(bloc int, bufBloc []byte, offset uint16) error {
 	track := (bloc << 1) / 9
 	sect := (bloc << 1) % 9
 	minSect := d.GetMinSect()
@@ -742,15 +742,19 @@ func (d *DSK) WriteBloc(bloc int, bufBloc []byte) error {
 	if track > int(d.Entry.NbTracks-1) {
 		d.FormatTrack(uint8(track), minSect, 9)
 	}
+	if sect > 8 {
+		track++
+		sect = 0
+	}
 	pos := d.GetPosData(uint8(track), uint8(sect)+minSect, true)
-	copy(d.Tracks[track].Data[pos:], bufBloc[0:SECTSIZE])
+	copy(d.Tracks[track].Data[pos:], bufBloc[offset:offset + SECTSIZE])
 	sect++
 	if sect > 8 {
 		track++
 		sect = 0
 	}
 	pos = d.GetPosData(uint8(track), uint8(sect)+minSect, true)
-	copy(d.Tracks[track].Data[pos:], bufBloc[SECTSIZE:])
+	copy(d.Tracks[track].Data[pos:], bufBloc[offset + SECTSIZE: offset + (SECTSIZE*2)])
 	return nil
 }
 
