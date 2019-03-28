@@ -11,6 +11,11 @@ func TestOpenDsk(t *testing.T) {
 		t.Fatalf("error :%v",err)
 	}
 
+	if err :=formated.PutFile("sonic-pa.BAS",MODE_BINAIRE,0,0,0,false,false); err != nil {
+		t.Fatalf("Error:%v",err)
+	}
+	WriteDsk("test.dsk",formated)
+
 	dsk, err := ReadDsk("ironman.dsk")
 	if err != nil {
 		t.Fatalf("error %v",err)

@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"github.com/jeromelesaux/m4client/cpc"
 	"io"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -525,20 +524,22 @@ func GetNomAmsdos(masque string) string {
 func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress, userNumber uint16, isSystemFile, readOnly bool) error {
 	buff := make([]byte, 0x20000)
 	cFileName := GetNomAmsdos(masque)
-	var header *StAmsdos
+	header :=  &StAmsdos{}
 	var addHeader bool
 	fr, err := os.Open(masque)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot read file (%s) error :%v\n", masque, err)
 		return err
 	}
-	buff, err = ioutil.ReadAll(fr)
+	fileLength,err := fr.Read(buff)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot read the content of the file (%s) with error %v\n", masque, err)
 		return err
 	}
 	rbuff := bytes.NewReader(buff)
-	binary.Read(rbuff, binary.LittleEndian, header)
+	if err := binary.Read(rbuff, binary.LittleEndian, header); err != nil {
+		fmt.Fprintf(os.Stdout,"No header found for file :%s, error :%v\n",masque,err)
+	}
 
 	if typeModeImport == MODE_ASCII {
 		for i := 0; i < 0x20000; i++ {
@@ -614,7 +615,7 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 		//       	Lg += sizeof( StAmsdos );
 	}
 	//if (MODE_BINAIRE) ClearAmsdos(Buff); //Remplace les octets inutilises par des 0 dans l'en-tete
-	return d.CopyFile(buff, cFileName, uint16(len(buff)), 256, userNumber, isSystemFile, readOnly)
+	return d.CopyFile(buff, cFileName, uint16(fileLength), 256, userNumber, isSystemFile, readOnly)
 
 }
 
