@@ -7,15 +7,26 @@ import (
 	"fmt"
 	"github.com/jeromelesaux/m4client/cpc"
 	"io"
+	"io/ioutil"
 	"os"
+	"path/filepath"
+	"strings"
 )
 
 var USER_DELETED uint8 = 0xE5
 var SECTSIZE uint16 = 512
-var ErrorUnsupportedDskFormat = errors.New("Unsupported DSK Format.")
-var ErrorUnsupportedMultiHeadDsk = errors.New("Multi-side dsk ! Expected 1 head")
-var ErrorBadSectorNumber = errors.New("DSK has wrong sector number!")
-var ErrorCatalogueExceed = errors.New("Catalogue indice exceed.")
+var (
+	ErrorUnsupportedDskFormat    = errors.New("Unsupported DSK Format.")
+	ErrorUnsupportedMultiHeadDsk = errors.New("Multi-side dsk ! Expected 1 head")
+	ErrorBadSectorNumber         = errors.New("DSK has wrong sector number!")
+	ErrorCatalogueExceed         = errors.New("Catalogue indice exceed.")
+	ErrorNoBloc                  = errors.New("Error no more block available.")
+	ErrorNoDirEntry              = errors.New("Error no more dir entry available.")
+)
+var (
+	MODE_ASCII   uint8 = 0
+	MODE_BINAIRE uint8 = 1
+)
 
 type StAmsdos = cpc.CpcHead
 
@@ -353,7 +364,7 @@ func WriteDsk(filePath string, d *DSK) error {
 	return nil
 }
 
-func NewDsk(filePath string) (*DSK, error) {
+func ReadDsk(filePath string) (*DSK, error) {
 	f, err := os.Open(filePath)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot open file (%s) error %v\n", filePath, err)
@@ -426,7 +437,7 @@ func (d *DSK) GetMinSect() uint8 {
 }
 
 //
-// Retourne la position d'un secteur dans le fichier DSK
+// Retourne la position d'un secteur dans le fichier DSK, position dans la structure Data
 //
 func (d *DSK) GetPosData(track, sect uint8, SectPhysique bool) uint16 {
 	// Recherche position secteur
@@ -498,6 +509,207 @@ func (d *DSK) GetFile(path string, indice int) error {
 	return nil
 }
 
+func GetNomAmsdos(masque string) string {
+	var filenameSize uint8
+	file := filepath.Base(masque)
+	ext := filepath.Ext(file)
+	filename := strings.TrimSuffix(file, ext)
+	if len(filename) > 8 {
+		filenameSize = 8
+	} else {
+		filenameSize = uint8(len(filename))
+	}
+	return filename[0:filenameSize] + ext
+}
+
+func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress, userNumber uint16, isSystemFile, readOnly bool) error {
+	buff := make([]byte, 0x20000)
+	cFileName := GetNomAmsdos(masque)
+	var header *StAmsdos
+	var addHeader bool
+	fr, err := os.Open(masque)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Cannot read file (%s) error :%v\n", masque, err)
+		return err
+	}
+	buff, err = ioutil.ReadAll(fr)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "Cannot read the content of the file (%s) with error %v\n", masque, err)
+		return err
+	}
+	rbuff := bytes.NewReader(buff)
+	binary.Read(rbuff, binary.LittleEndian, header)
+
+	if typeModeImport == MODE_ASCII {
+		for i := 0; i < 0x20000; i++ {
+			if buff[i] > 136 {
+				buff[i] = '?'
+			}
+		}
+	}
+
+	var isAmsdos bool
+	//
+	// Regarde si le fichier contient une en-tete ou non
+	//
+	if header.Checksum == header.ComputedChecksum16() {
+		isAmsdos = true
+	}
+
+	if !isAmsdos {
+		// Creer une en-tete amsdos par defaut
+		fmt.Fprintf(os.Stdout, "Create header...\n")
+		e := StAmsdos{Size: uint16(len(buff)), Size2: uint16(len(buff))}
+		copy(e.Filename[:], []byte(cFileName[0:14]))
+		if loadAdress != 0 {
+			e.Address = loadAdress
+			typeModeImport = MODE_BINAIRE
+		}
+		if exeAdress != 0 {
+			e.Exec = exeAdress
+			typeModeImport = MODE_BINAIRE
+		}
+		// Il faut recalculer le checksum en comptant es adresses !
+		e.Checksum = e.ComputedChecksum16()
+	} else {
+		fmt.Fprintf(os.Stdout, "File has already header...\n")
+
+		//
+		// En fonction du mode d'importation...
+		//
+		switch typeModeImport {
+		case MODE_ASCII:
+			//
+			// Importation en mode ASCII
+			//
+			if isAmsdos {
+				// Supprmier en-tete si elle existe
+				copy(buff[0:], buff[binary.Size(StAmsdos{}):])
+			}
+			break
+
+		case MODE_BINAIRE:
+			//
+			// Importation en mode BINAIRE
+			//
+
+			if !isAmsdos {
+				//
+				// Indique qu'il faudra ajouter une en-tete
+				//
+				addHeader = true
+			}
+			break
+		}
+
+	}
+
+	//
+	// Si fichier ok pour etre import
+	//
+	if addHeader {
+		// Ajoute l'en-tete amsdos si necessaire
+
+		//	memmove( &Buff[ sizeof( StAmsdos ) ], Buff, Lg );
+		//         	memcpy( Buff, e, sizeof( StAmsdos ) );
+		//       	Lg += sizeof( StAmsdos );
+	}
+
+	//if (MODE_BINAIRE) ClearAmsdos(Buff); //Remplace les octets inutilises par des 0 dans l'en-tete
+
+	return d.CopieFichier(buff, cFileName, uint16(len(buff)), 256, userNumber, isSystemFile, readOnly)
+
+}
+
+//
+// Copie un fichier sur le DSK
+//
+// la taille est determine par le nombre de NbPages
+// regarder pourquoi different d'une autre DSK
+func (d *DSK) CopieFichier(bufFile []byte, fileName string, fileLength, maxBloc, userNumber uint16, isSystemFile, readOnly bool) error {
+	var nbPages, taillePage uint8
+	d.FillBitmap()
+	dirLoc := d.GetNomDir(fileName)
+	var posFile uint16                       //Construit l'entree pour mettre dans le catalogue
+	for posFile = 0; posFile < fileLength; { //Pour chaque bloc du fichier
+		posDir, err := d.RechercheDirLibre() //Trouve une entree libre dans le CAT
+		if err == nil {
+			dirLoc.User = uint8(userNumber) //Remplit l'entree : User 0
+			if isSystemFile {
+				dirLoc.Ext[0] |= 0x80
+			}
+			if readOnly {
+				dirLoc.Ext[0] |= 0x80
+			}
+			dirLoc.NumPage = uint8(nbPages) // Numero de l'entree dans le fichier
+			nbPages++
+			taillePage = uint8((fileLength - posFile + 127) >> 7) // Taille de la page (on arrondit par le haut)
+			if taillePage > 128 {                                 // Si y'a plus de 16k il faut plusieurs pages
+				taillePage = 128
+			}
+
+			dirLoc.NbPages = taillePage
+			l := (dirLoc.NbPages + 7) >> 3 //Nombre de blocs=TaillePage/8 arrondi par le haut
+			for i := 0; i < 16; i++ {
+				dirLoc.Blocks[i] = 0
+			}
+			var j uint8
+			for j = 0; j < l; j++ { //Pour chaque bloc de la page
+				bloc := d.RechercheBlocLibre(uint8(maxBloc)) //Met le fichier sur la disquette
+				if bloc == 0 {
+					dirLoc.Blocks[j] = bloc
+					d.WriteBloc(int(bloc), bufFile[posFile:])
+					posFile += 1024 // Passe au bloc suivant
+
+				} else {
+					return ErrorNoBloc
+				}
+			}
+			d.SetInfoDirEntry(posDir, dirLoc)
+		} else {
+			return ErrorNoDirEntry
+		}
+	}
+	return nil
+}
+
+func (d *DSK) FillBitmap() int {
+	for i := 0; i < len(d.BitMap); i++ {
+		d.BitMap[i] = 0
+	}
+	d.BitMap[0] = 1
+	d.BitMap[1] = 1
+	var nbKo int
+	for i := 0; i < 64; i++ {
+		dir, _ := d.GetInfoDirEntry(uint8(i))
+		if dir.User != USER_DELETED {
+			for j := 0; j < 16; j++ {
+				b := dir.Blocks[j]
+				if b > 1 && d.BitMap[b] != 0 {
+					d.BitMap[b] = 1
+					nbKo++
+				}
+			}
+
+		}
+	}
+	return nbKo
+}
+
+func (d *DSK) GetNomDir(nomFile string) StDirEntry {
+	var nameSize uint8
+	if len(nomFile) > 8 {
+		nameSize = 7
+	} else {
+		nameSize = uint8(len(nomFile))
+	}
+	ext := nomFile[len(nomFile)-4 : len(nomFile)-1]
+	e := StDirEntry{}
+	copy(e.Ext[:], []byte(ext[0:2]))
+	copy(e.Nom[:], []byte(nomFile[0:nameSize]))
+	return e
+}
+
 func (d *DSK) WriteBloc(bloc int, bufBloc []byte) error {
 	track := (bloc << 1) / 9
 	sect := (bloc << 1) % 9
@@ -510,7 +722,7 @@ func (d *DSK) WriteBloc(bloc int, bufBloc []byte) error {
 		}
 	}
 	//
-	// Ajuste le nombre de pistes si d�passement capacit�
+	// Ajuste le nombre de pistes si depassement capacite
 	//
 	if track > int(d.Entry.NbTracks-1) {
 		d.FormatTrack(uint8(track), minSect, 9)
@@ -558,32 +770,31 @@ func (d *DSK) ReadBloc(bloc int) []byte {
 //
 // Recherche un bloc libre et le remplit
 //
-/*
-func (d *DSK) RechercheBlocLibre(MaxBloc uint8) uint8 {
+
+func (d *DSK) RechercheBlocLibre(maxBloc uint8) uint8 {
 	var i uint8
-	for i = 2; i < MaxBloc; i++ {
-		if d.Bitmap[i] == 0 {
-			d.Bitmap[i] = 1
+	for i = 2; i < maxBloc; i++ {
+		if d.BitMap[i] == 0 {
+			d.BitMap[i] = 1
 			return i
 		}
 	}
 	return 0
 }
-*/
+
 //
-// Recherche une entr�e de r�pertoire libre
+// Recherche une entree de repertoire libre
 //
-/*
-func (d *DSK) RechercheDirLibre() uint8 {
+
+func (d *DSK) RechercheDirLibre() (uint8, error) {
 	for i := 0; i < 64; i++ {
-		Dir = GetInfoDirEntry(i)
-		if Dir.User == USER_DELETED {
-			return i
+		dir, _ := d.GetInfoDirEntry(uint8(i))
+		if dir.User == USER_DELETED {
+			return uint8(i), nil
 		}
 	}
-	return -1
+	return 0, ErrorNoDirEntry
 }
-*/
 
 func (d *DSK) DisplayCatalogue() {
 	d.GetCatalogue()
@@ -691,4 +902,24 @@ func (d *DSK) GetInfoDirEntry(numDir uint8) (StDirEntry, error) {
 	//		, sizeof( StDirEntry )
 	//		);
 	return dir, nil
+}
+
+func (d *DSK) GetType(langue int, ams *StAmsdos) string {
+	if ams.Checksum == ams.ComputedChecksum16() {
+		switch ams.Type {
+		case 0:
+			return "BASIC"
+		case 1:
+			return "BASIC(P)"
+		case 2:
+			return "BINAIRE"
+		case 3:
+			return "BINAIRE(P)"
+		default:
+			return "INCONNU"
+
+		}
+	}
+	return "ASCII"
+
 }

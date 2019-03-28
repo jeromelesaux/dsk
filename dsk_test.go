@@ -11,7 +11,7 @@ func TestOpenDsk(t *testing.T) {
 		t.Fatalf("error :%v",err)
 	}
 
-	dsk, err := NewDsk("ironman.dsk")
+	dsk, err := ReadDsk("ironman.dsk")
 	if err != nil {
 		t.Fatalf("error %v",err)
 	}
