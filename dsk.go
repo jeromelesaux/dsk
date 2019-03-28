@@ -443,16 +443,25 @@ func (d *DSK) GetPosData(track, sect uint8, SectPhysique bool) uint16 {
 	tr := d.Tracks[track]
 	var SizeByte uint16
 	var Pos uint16
+	var t,s uint8
+	Pos += 256
+
 	//fmt.Fprintf(os.Stdout,"Track:%d,Secteur:%d\n",track,sect)
-	for s := 0; s < int(tr.NbSect); s++ {
-		if (tr.Sect[s].R == sect && SectPhysique) || !SectPhysique {
-			break
-		}
-		SizeByte = tr.Sect[s].SizeByte
-		if SizeByte == 0 {
-			Pos += SizeByte
-		} else {
-			Pos += (128 << tr.Sect[s].N)
+	for t = 0; t <= track; t++ {
+		Pos += 256
+		for s = 0; s < tr.NbSect; s++ {
+			if t == track {
+				if (tr.Sect[s].R == sect && SectPhysique) || ( s == sect && !SectPhysique ) {
+					break
+				}
+			}
+			SizeByte = tr.Sect[s].SizeByte
+			if SizeByte == 0 {
+				Pos += SizeByte
+			} else {
+				Pos += (128 << tr.Sect[s].N)
+			}
+			//fmt.Fprintf(os.Stderr, "sizebyte:%d, t:%d,s:%d,tr.Sect[s].SizeByte:%d, tr->Sect[ s ].N:%d, Pos:%d\n", SizeByte,t,s,tr.Sect[s].SizeByte,tr.Sect[ s ].N,Pos)
 		}
 	}
 	return Pos
@@ -509,36 +518,37 @@ func (d *DSK) GetFile(path string, indice int) error {
 }
 
 func GetNomAmsdos(masque string) string {
-	var filenameSize uint8
-	file := filepath.Base(masque)
-	ext := filepath.Ext(file)
-	filename := strings.TrimSuffix(file, ext)
-	if len(filename) > 8 {
-		filenameSize = 8
-	} else {
-		filenameSize = uint8(len(filename))
+	amsdosFile := make([]byte, 12)
+	for i := 0; i < 12; i++ {
+		amsdosFile[i] = ' '
 	}
-	return filename[0:filenameSize] + ext
+	file := strings.ToUpper(filepath.Base(masque))
+	copy(amsdosFile[0:8], file[0:8])
+	amsdosFile[8] = '.'
+	ext := strings.ToUpper(filepath.Ext(file))
+	copy(amsdosFile[9:12], ext[1:4])
+	return string(amsdosFile)
 }
 
 func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress, userNumber uint16, isSystemFile, readOnly bool) error {
 	buff := make([]byte, 0x20000)
 	cFileName := GetNomAmsdos(masque)
-	header :=  &StAmsdos{}
+	header := &StAmsdos{}
 	var addHeader bool
+	d.GetCatalogue()
 	fr, err := os.Open(masque)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot read file (%s) error :%v\n", masque, err)
 		return err
 	}
-	fileLength,err := fr.Read(buff)
+	fileLength, err := fr.Read(buff)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot read the content of the file (%s) with error %v\n", masque, err)
 		return err
 	}
 	rbuff := bytes.NewReader(buff)
 	if err := binary.Read(rbuff, binary.LittleEndian, header); err != nil {
-		fmt.Fprintf(os.Stdout,"No header found for file :%s, error :%v\n",masque,err)
+		fmt.Fprintf(os.Stdout, "No header found for file :%s, error :%v\n", masque, err)
 	}
 
 	if typeModeImport == MODE_ASCII {
@@ -653,8 +663,9 @@ func (d *DSK) CopyFile(bufFile []byte, fileName string, fileLength, maxBloc, use
 			}
 			var j uint8
 			for j = 0; j < l; j++ { //Pour chaque bloc de la page
-				bloc := d.RechercheBlocLibre(uint8(maxBloc)) //Met le fichier sur la disquette
-				if bloc == 0 {
+				bloc := d.RechercheBlocLibre(int(maxBloc)) //Met le fichier sur la disquette
+				fmt.Fprintf(os.Stdout,"Bloc:%d, MaxBloc:%d\n",bloc,maxBloc)
+				if bloc != 0 {
 					dirLoc.Blocks[j] = bloc
 					d.WriteBloc(int(bloc), bufFile[posFile:])
 					posFile += 1024 // Passe au bloc suivant
@@ -663,6 +674,7 @@ func (d *DSK) CopyFile(bufFile []byte, fileName string, fileLength, maxBloc, use
 					return ErrorNoBloc
 				}
 			}
+			fmt.Fprintf(os.Stdout, "posDir:%d dirloc:%v\n", posDir, dirLoc)
 			d.SetInfoDirEntry(posDir, dirLoc)
 		} else {
 			return ErrorNoDirEntry
@@ -683,7 +695,7 @@ func (d *DSK) FillBitmap() int {
 		if dir.User != USER_DELETED {
 			for j := 0; j < 16; j++ {
 				b := dir.Blocks[j]
-				if b > 1 && d.BitMap[b] != 0 {
+				if b > 1 && d.BitMap[b] != 1 {
 					d.BitMap[b] = 1
 					nbKo++
 				}
@@ -695,16 +707,17 @@ func (d *DSK) FillBitmap() int {
 }
 
 func (d *DSK) GetNomDir(nomFile string) StDirEntry {
-	var nameSize uint8
-	if len(nomFile) > 8 {
-		nameSize = 7
-	} else {
-		nameSize = uint8(len(nomFile))
-	}
-	ext := nomFile[len(nomFile)-4 : len(nomFile)-1]
+
 	e := StDirEntry{}
-	copy(e.Ext[:], []byte(ext[0:2]))
-	copy(e.Nom[:], []byte(nomFile[0:nameSize]))
+	for i := 0; i < 8; i++ {
+		e.Nom[i] = ' '
+	}
+
+	for i := 0; i < 3; i++ {
+		e.Ext[i] = ' '
+	}
+	copy(e.Ext[:], []byte(nomFile[9:12]))
+	copy(e.Nom[:], []byte(nomFile[0:8]))
 	return e
 }
 
@@ -769,12 +782,13 @@ func (d *DSK) ReadBloc(bloc int) []byte {
 // Recherche un bloc libre et le remplit
 //
 
-func (d *DSK) RechercheBlocLibre(maxBloc uint8) uint8 {
-	var i uint8
-	for i = 2; i < maxBloc; i++ {
+func (d *DSK) RechercheBlocLibre(maxBloc int) uint8 {
+
+	for i := 2; i < maxBloc; i++ {
+		fmt.Fprintf(os.Stdout,"Bitmap[%d]:%d\n",i,d.BitMap[i])
 		if d.BitMap[i] == 0 {
 			d.BitMap[i] = 1
-			return i
+			return uint8(i)
 		}
 	}
 	return 0
@@ -867,12 +881,17 @@ func (d *DSK) SetInfoDirEntry(numDir uint8, e StDirEntry) error {
 	}
 	var data bytes.Buffer
 
-	if err := binary.Write(&data, binary.LittleEndian, e); err != nil {
+	if err := binary.Write(&data, binary.LittleEndian, &e); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while writing StDirEntry structure with error :%v\n", err)
 		return err
 	}
-	pos := d.GetPosData(t, s, true)
-	copy(d.Tracks[t].Data[((uint16(numDir)&15)<<5)+pos:((uint16(numDir)&15)<<5)+pos+uint16(binary.Size(data.Bytes()))], data.Bytes())
+	entry := data.Bytes()
+	for i := 0; i < 16; i++ {
+		pos := d.GetPosData(t, s, true)
+		fmt.Fprintf(os.Stdout, "t:%d,s:%d,pos:%d\n", t, s, pos)
+		fmt.Fprintf(os.Stdout,"offset:%d\n",((uint16(numDir)&15)<<5) + d.GetPosData(t, s, true))
+		copy(d.Tracks[t].Data[((uint16(numDir)&15)<<5)+pos:((uint16(numDir)&15)<<5)+pos+uint16(binary.Size(entry))], entry[:])
+	}
 	return nil
 }
 
