@@ -522,10 +522,14 @@ func GetNomAmsdos(masque string) string {
 	for i := 0; i < 12; i++ {
 		amsdosFile[i] = ' '
 	}
-	file := strings.ToUpper(filepath.Base(masque))
-	copy(amsdosFile[0:8], file[0:8])
+	file := strings.ToUpper(strings.TrimSuffix(filepath.Base(masque), filepath.Ext(filepath.Base(masque))))
+	filenameSize := len(file)
+	if filenameSize > 8 {
+		filenameSize = 8
+	}
+	copy(amsdosFile[0:filenameSize], file[0:filenameSize])
 	amsdosFile[8] = '.'
-	ext := strings.ToUpper(filepath.Ext(file))
+	ext := strings.ToUpper(filepath.Ext(masque))
 	copy(amsdosFile[9:12], ext[1:4])
 	return string(amsdosFile)
 }
