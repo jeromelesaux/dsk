@@ -295,7 +295,7 @@ func FormatDsk(nbSect, nbTrack uint8) *DSK {
 	dsk := &DSK{}
 	entry := CPCEMUEnt{}
 	copy(entry.Debut[:], "MV - CPCEMU Disk-File\r\nDisk-Info\r\n")
-	entry.DataSize = uint16(0x21c * int(nbSect))
+	entry.DataSize = 0x100 + (SECTSIZE * 9)
 	entry.NbTracks = nbTrack
 	entry.NbHeads = 1
 	dsk.Entry = entry
@@ -321,13 +321,22 @@ func (d *DSK) FormatTrack(track, minSect, nbSect uint8) {
 	//
 	var s uint8
 	var ss uint8
-	for s = 0; s < nbSect; s++ {
+	for s = 0; s < nbSect; {
 		t.Sect[s].C = track
 		t.Sect[s].H = 0
 		t.Sect[s].R = (ss + minSect)
 		t.Sect[s].N = 2
 		t.Sect[s].SizeByte = 0x200
 		ss++
+		s++ 
+		if s < nbSect {
+			t.Sect[s].C = track
+			t.Sect[s].H = 0
+			t.Sect[s].R = (ss + minSect + 4)
+			t.Sect[s].N = 2
+			t.Sect[s].SizeByte = 0x200	
+			s++
+		}
 	}
 	t.Data = make([]byte, 0x200*uint16(nbSect))
 	for i := 0; i < len(t.Data); i++ {
