@@ -675,7 +675,7 @@ func (d *DSK) CopyFile(bufFile []byte, fileName string, fileLength, maxBloc, use
 			var j uint8
 			for j = 0; j < l; j++ { //Pour chaque bloc de la page
 				bloc := d.RechercheBlocLibre(int(maxBloc)) //Met le fichier sur la disquette
-				fmt.Fprintf(os.Stdout,"Bloc:%d, MaxBloc:%d\n",bloc,maxBloc)
+			//	fmt.Fprintf(os.Stdout,"Bloc:%d, MaxBloc:%d\n",bloc,maxBloc)
 				if bloc != 0 {
 					dirLoc.Blocks[j] = bloc
 					d.WriteBloc(int(bloc), bufFile,posFile)
@@ -685,7 +685,7 @@ func (d *DSK) CopyFile(bufFile []byte, fileName string, fileLength, maxBloc, use
 					return ErrorNoBloc
 				}
 			}
-			fmt.Fprintf(os.Stdout, "posDir:%d dirloc:%v\n", posDir, dirLoc)
+			//fmt.Fprintf(os.Stdout, "posDir:%d dirloc:%v\n", posDir, dirLoc)
 			d.SetInfoDirEntry(posDir, dirLoc)
 		} else {
 			return ErrorNoDirEntry
@@ -800,7 +800,6 @@ func (d *DSK) ReadBloc(bloc int) []byte {
 func (d *DSK) RechercheBlocLibre(maxBloc int) uint8 {
 
 	for i := 2; i < maxBloc; i++ {
-		fmt.Fprintf(os.Stdout,"Bitmap[%d]:%d\n",i,d.BitMap[i])
 		if d.BitMap[i] == 0 {
 			d.BitMap[i] = 1
 			return uint8(i)
@@ -903,8 +902,8 @@ func (d *DSK) SetInfoDirEntry(numDir uint8, e StDirEntry) error {
 	entry := data.Bytes()
 	for i := 0; i < 16; i++ {
 		pos := d.GetPosData(t, s, true)
-		fmt.Fprintf(os.Stdout, "t:%d,s:%d,pos:%d\n", t, s, pos)
-		fmt.Fprintf(os.Stdout,"offset:%d\n",((uint16(numDir)&15)<<5) + d.GetPosData(t, s, true))
+	//	fmt.Fprintf(os.Stdout, "t:%d,s:%d,pos:%d\n", t, s, pos)
+	//	fmt.Fprintf(os.Stdout,"offset:%d\n",((uint16(numDir)&15)<<5) + d.GetPosData(t, s, true))
 		copy(d.Tracks[t].Data[((uint16(numDir)&15)<<5)+pos:((uint16(numDir)&15)<<5)+pos+uint16(binary.Size(entry))], entry[:])
 	}
 	return nil
