@@ -21,6 +21,7 @@ var (
 	ErrorCatalogueExceed         = errors.New("Catalogue indice exceed.")
 	ErrorNoBloc                  = errors.New("Error no more block available.")
 	ErrorNoDirEntry              = errors.New("Error no more dir entry available.")
+	ErrorFileSizeExceed          = errors.New("Filesize exceed.")
 )
 var (
 	MODE_ASCII   uint8 = 0
@@ -579,7 +580,7 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 	}
 	if !isAmsdos {
 		// Creer une en-tete amsdos par defaut
-		fmt.Fprintf(os.Stdout, "Create header...\n")
+		fmt.Fprintf(os.Stdout, "Create header... (%s)\n",masque)
 		header = &StAmsdos{Size: uint16(len(buff)), Size2: uint16(len(buff))}
 		copy(header.Filename[:], []byte(cFileName[0:14]))
 		if loadAdress != 0 {
@@ -593,7 +594,7 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 		// Il faut recalculer le checksum en comptant es adresses !
 		header.Checksum = header.ComputedChecksum16()
 	} else {
-		fmt.Fprintf(os.Stdout, "File has already header...\n")
+		fmt.Fprintf(os.Stdout, "File has already header...(%s)\n",masque)
 	}
 	//
 	// En fonction du mode d'importation...
@@ -605,6 +606,7 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 		//
 		if isAmsdos {
 			// Supprmier en-tete si elle existe
+			fmt.Fprintf(os.Stdout,"Removing header...(%s)\n",masque)
 			copy(buff[0:], buff[binary.Size(StAmsdos{}):])
 		}
 		break
@@ -634,6 +636,9 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 		//	memmove( &Buff[ sizeof( StAmsdos ) ], Buff, Lg );
 		//         	memcpy( Buff, e, sizeof( StAmsdos ) );
 		//       	Lg += sizeof( StAmsdos );
+	}
+	if fileLength > 65536 {
+		return ErrorFileSizeExceed
 	}
 	//if (MODE_BINAIRE) ClearAmsdos(Buff); //Remplace les octets inutilises par des 0 dans l'en-tete
 	return d.CopyFile(buff, cFileName, uint16(fileLength), 256, userNumber, isSystemFile, readOnly)
