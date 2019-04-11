@@ -329,13 +329,13 @@ func (d *DSK) FormatTrack(track, minSect, nbSect uint8) {
 		t.Sect[s].N = 2
 		t.Sect[s].SizeByte = 0x200
 		ss++
-		s++ 
+		s++
 		if s < nbSect {
 			t.Sect[s].C = track
 			t.Sect[s].H = 0
 			t.Sect[s].R = (ss + minSect + 4)
 			t.Sect[s].N = 2
-			t.Sect[s].SizeByte = 0x200	
+			t.Sect[s].SizeByte = 0x200
 			s++
 		}
 	}
@@ -343,7 +343,12 @@ func (d *DSK) FormatTrack(track, minSect, nbSect uint8) {
 	for i := 0; i < len(t.Data); i++ {
 		t.Data[i] = 0xE5
 	}
-	d.Tracks[track] = t
+	if len(d.Tracks) < int(track+1) {
+		d.Tracks = append(d.Tracks, t)
+		d.Entry.NbTracks++
+	} else {
+		d.Tracks[track] = t
+	}
 }
 
 func (d *DSK) Write(w io.Writer) error {
@@ -458,20 +463,20 @@ func (d *DSK) GetPosData(track, sect uint8, SectPhysique bool) uint16 {
 
 	//fmt.Fprintf(os.Stdout,"Track:%d,Secteur:%d\n",track,sect)
 
-		//Pos += 256
-		for s = 0; s < tr.NbSect; s++ {
-				if (tr.Sect[s].R == sect && SectPhysique) || ( s == sect && !SectPhysique ) {
-					break
-				}
-			SizeByte = tr.Sect[s].SizeByte
-			if SizeByte != 0 {
-				Pos += SizeByte
-			} else {
-				Pos += (128 << tr.Sect[s].N)
-			}
-			//fmt.Fprintf(os.Stderr, "sizebyte:%d, t:%d,s:%d,tr.Sect[s].SizeByte:%d, tr->Sect[ s ].N:%d, Pos:%d\n", SizeByte,t,s,tr.Sect[s].SizeByte,tr.Sect[ s ].N,Pos)
+	//Pos += 256
+	for s = 0; s < tr.NbSect; s++ {
+		if (tr.Sect[s].R == sect && SectPhysique) || (s == sect && !SectPhysique) {
+			break
 		}
-	
+		SizeByte = tr.Sect[s].SizeByte
+		if SizeByte != 0 {
+			Pos += SizeByte
+		} else {
+			Pos += (128 << tr.Sect[s].N)
+		}
+		//fmt.Fprintf(os.Stderr, "sizebyte:%d, t:%d,s:%d,tr.Sect[s].SizeByte:%d, tr->Sect[ s ].N:%d, Pos:%d\n", SizeByte,t,s,tr.Sect[s].SizeByte,tr.Sect[ s ].N,Pos)
+	}
+
 	return Pos
 }
 
@@ -580,7 +585,7 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 	}
 	if !isAmsdos {
 		// Creer une en-tete amsdos par defaut
-		fmt.Fprintf(os.Stdout, "Create header... (%s)\n",masque)
+		fmt.Fprintf(os.Stdout, "Create header... (%s)\n", masque)
 		header = &StAmsdos{Size: uint16(len(buff)), Size2: uint16(len(buff))}
 		copy(header.Filename[:], []byte(cFileName[0:14]))
 		if loadAdress != 0 {
@@ -594,7 +599,7 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 		// Il faut recalculer le checksum en comptant es adresses !
 		header.Checksum = header.ComputedChecksum16()
 	} else {
-		fmt.Fprintf(os.Stdout, "File has already header...(%s)\n",masque)
+		fmt.Fprintf(os.Stdout, "File has already header...(%s)\n", masque)
 	}
 	//
 	// En fonction du mode d'importation...
@@ -606,7 +611,7 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 		//
 		if isAmsdos {
 			// Supprmier en-tete si elle existe
-			fmt.Fprintf(os.Stdout,"Removing header...(%s)\n",masque)
+			fmt.Fprintf(os.Stdout, "Removing header...(%s)\n", masque)
 			copy(buff[0:], buff[binary.Size(StAmsdos{}):])
 		}
 		break
@@ -668,7 +673,7 @@ func (d *DSK) CopyFile(bufFile []byte, fileName string, fileLength, maxBloc, use
 			dirLoc.NumPage = uint8(nbPages) // Numero de l'entree dans le fichier
 			nbPages++
 			taillePage = ((int(fileLength) - int(posFile) + 127) >> 7) // Taille de la page (on arrondit par le haut)
-			if taillePage > 128 {                                 // Si y'a plus de 16k il faut plusieurs pages
+			if taillePage > 128 {                                      // Si y'a plus de 16k il faut plusieurs pages
 				taillePage = 128
 			}
 
@@ -680,10 +685,10 @@ func (d *DSK) CopyFile(bufFile []byte, fileName string, fileLength, maxBloc, use
 			var j uint8
 			for j = 0; j < l; j++ { //Pour chaque bloc de la page
 				bloc := d.RechercheBlocLibre(int(maxBloc)) //Met le fichier sur la disquette
-			//	fmt.Fprintf(os.Stdout,"Bloc:%d, MaxBloc:%d\n",bloc,maxBloc)
+				//	fmt.Fprintf(os.Stdout,"Bloc:%d, MaxBloc:%d\n",bloc,maxBloc)
 				if bloc != 0 {
 					dirLoc.Blocks[j] = bloc
-					d.WriteBloc(int(bloc), bufFile,posFile)
+					d.WriteBloc(int(bloc), bufFile, posFile)
 					posFile += 1024 // Passe au bloc suivant
 
 				} else {
@@ -759,14 +764,17 @@ func (d *DSK) WriteBloc(bloc int, bufBloc []byte, offset uint16) error {
 		sect = 0
 	}
 	pos := d.GetPosData(uint8(track), uint8(sect)+minSect, true)
-	copy(d.Tracks[track].Data[pos:], bufBloc[offset:offset + SECTSIZE])
+	copy(d.Tracks[track].Data[pos:], bufBloc[offset:offset+SECTSIZE])
 	sect++
 	if sect > 8 {
 		track++
 		sect = 0
 	}
+	if track > int(d.Entry.NbTracks-1) {
+		d.FormatTrack(uint8(track), minSect, 9)
+	}
 	pos = d.GetPosData(uint8(track), uint8(sect)+minSect, true)
-	copy(d.Tracks[track].Data[pos:], bufBloc[offset + SECTSIZE: offset + (SECTSIZE*2)])
+	copy(d.Tracks[track].Data[pos:], bufBloc[offset+SECTSIZE:offset+(SECTSIZE*2)])
 	return nil
 }
 
@@ -907,8 +915,8 @@ func (d *DSK) SetInfoDirEntry(numDir uint8, e StDirEntry) error {
 	entry := data.Bytes()
 	for i := 0; i < 16; i++ {
 		pos := d.GetPosData(t, s, true)
-	//	fmt.Fprintf(os.Stdout, "t:%d,s:%d,pos:%d\n", t, s, pos)
-	//	fmt.Fprintf(os.Stdout,"offset:%d\n",((uint16(numDir)&15)<<5) + d.GetPosData(t, s, true))
+		//	fmt.Fprintf(os.Stdout, "t:%d,s:%d,pos:%d\n", t, s, pos)
+		//	fmt.Fprintf(os.Stdout,"offset:%d\n",((uint16(numDir)&15)<<5) + d.GetPosData(t, s, true))
 		copy(d.Tracks[t].Data[((uint16(numDir)&15)<<5)+pos:((uint16(numDir)&15)<<5)+pos+uint16(binary.Size(entry))], entry[:])
 	}
 	return nil
