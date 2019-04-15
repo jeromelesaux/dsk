@@ -107,7 +107,7 @@ func main() {
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 			}
-			fmt.Println(dsk.DisplayHex(content))
+			fmt.Println(dsk.DisplayHex(content,16))
 		}
 	}
 	os.Exit(0)

@@ -1,6 +1,7 @@
 package dsk
 
 import (
+	"fmt"
 	"strings"
 )
 
@@ -30,8 +31,28 @@ func GetNomDir(s string) StDirEntry {
 	return entry
 }
 
-func DisplayHex(b []byte) string {
+func DisplayHex(b []byte, width int) string {
 	var out string
+	var ascii string
+	var hexa string
+	var offset int
+	for i := 0; i < len(b); i += width {
+		for j := 0; j < width; j++ {
+			if j < len(b) {
+				if b[j+i] > 32 && b[j+i] < 125 {
+					ascii += fmt.Sprintf("%c", b[j+i])
+				} else {
+					ascii += "."
+				}
 
+				hexa += fmt.Sprintf("%.2X ", b[j+i])
+			}
+		}
+		out += fmt.Sprintf("#%.4X ", offset) + hexa + " | " + ascii + " |\n"
+		ascii = ""
+		hexa = ""
+		offset += width
+
+	}
 	return out
 }
