@@ -15,6 +15,7 @@ var (
 	dskPath = flag.String("dsk", "", "Dsk path to handle.")
 	file    = flag.String("file", "", "File in th dsk")
 	hexa    = flag.Bool("hex", false, "List the file in hexadecimal")
+	get = flag.Bool("get",false,"Get the file in the dsk.")
 )
 
 func main() {
@@ -108,6 +109,33 @@ func main() {
 				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 			}
 			fmt.Println(dsk.DisplayHex(content, 16))
+		}
+	}
+	if *get {
+		if *file == "" {
+			fmt.Fprintf(os.Stderr, "File option is empty, set it.")
+			os.Exit(-1)
+		}
+		amsdosFile := dsk.GetNomDir(*file)
+		indice := dskFile.FileExists(amsdosFile)
+		if indice == dsk.NOT_FOUND {
+			fmt.Fprintf(os.Stderr, "File %s does not exist\n", *file)
+		} else {
+			content, err := dskFile.GetFileIn(*file, indice)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
+			}
+			af,err := os.Create(*file)
+			if err != nil {
+				fmt.Fprintf(os.Stderr,"Error while creating file (%s) error %v\n",*file,err)
+				os.Exit(-1)
+			}
+			defer af.Close()
+			_,err = af.Write(content)
+			if err != nil {
+				fmt.Fprintf(os.Stderr,"Error while copying content in file (%s) error %v\n",*file,err)
+				os.Exit(-1)
+			}
 		}
 	}
 	os.Exit(0)
