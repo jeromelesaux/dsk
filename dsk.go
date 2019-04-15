@@ -792,7 +792,7 @@ func (d *DSK) ReadBloc(bloc int) []byte {
 		}
 	}
 	pos := d.GetPosData(uint8(track), uint8(sect)+minSect, true)
-	copy(bufBloc, d.Tracks[track].Data[pos:pos+SECTSIZE])
+	copy(bufBloc[0:], d.Tracks[track].Data[pos:pos+SECTSIZE])
 	//int Pos = GetPosData( track, sect + MinSect, true );
 	//memcpy( BufBloc, &ImgDsk[ Pos ], SECTSIZE );
 	sect++
@@ -801,7 +801,7 @@ func (d *DSK) ReadBloc(bloc int) []byte {
 		sect = 0
 	}
 	pos = d.GetPosData(uint8(track), uint8(sect)+minSect, true)
-	copy(bufBloc, d.Tracks[track].Data[pos:pos+SECTSIZE])
+	copy(bufBloc[SECTSIZE:], d.Tracks[track].Data[pos:pos+SECTSIZE])
 	//   Pos = GetPosData( track, sect + MinSect, true );
 	// memcpy( &BufBloc[ SECTSIZE ], &ImgDsk[ Pos ], SECTSIZE );
 	return bufBloc
@@ -994,18 +994,19 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 	i := indice
 	lMax := 0x1000000
 	b := make([]byte, 0)
-	tabDir := make([]StDirEntry, 64)
+/*	tabDir := make([]StDirEntry, 64)
 	for j := 0; j < 64; j++ {
 		tabDir[j], _ = d.GetInfoDirEntry(uint8(j))
-	}
-	entryIndice := tabDir[i]
+	}*/
+	d.GetCatalogue()
+	entryIndice := d.Catalogue[i]
 	var cumul int
 	for {
-		l := (tabDir[i].NbPages + 7) >> 3
+		l := (d.Catalogue[i].NbPages + 7) >> 3
 		var j uint8
 		for j = 0; j < l; j++ {
 			tailleBloc := 1024
-			bloc := d.ReadBloc(int(tabDir[i].Blocks[j]))
+			bloc := d.ReadBloc(int(d.Catalogue[i].Blocks[j]))
 			var nbOctets int
 			if lMax > tailleBloc {
 				nbOctets = tailleBloc
@@ -1019,10 +1020,10 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 			lMax -= 1024
 		}
 		i++
-		if i > 64 {
+		if i >= 64 {
 			return b, errors.New("Cannot get the file, Exceed catalogue indice")
 		}
-		if entryIndice.Nom != tabDir[i].Nom && entryIndice.Ext != tabDir[i].Ext {
+		if entryIndice.Nom != d.Catalogue[i].Nom && entryIndice.Ext != d.Catalogue[i].Ext {
 			break
 		}
 	}
