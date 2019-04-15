@@ -13,6 +13,8 @@ var (
 	sector  = flag.Int("sector", 9, "Sector number (format)")
 	format  = flag.Bool("format", false, "Format the followed dsk.")
 	dskPath = flag.String("dsk", "", "Dsk path to handle.")
+	file    = flag.String("file", "", "File in th dsk")
+	hexa    = flag.Bool("hex", false, "List the file in hexadecimal")
 )
 
 func main() {
@@ -91,5 +93,22 @@ func main() {
 		}
 	}
 
+	if *hexa {
+		if *file == "" {
+			fmt.Fprintf(os.Stderr, "File option is empty, set it.")
+			os.Exit(-1)
+		}
+		amsdosFile := dsk.GetNomDir(*file)
+		indice := dskFile.FileExists(amsdosFile)
+		if indice == -1 {
+			fmt.Fprintf(os.Stderr, "File %s does not exist\n", *file)
+		} else {
+			content, err := dskFile.GetFileIn(*file, indice)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
+			}
+			fmt.Println(dsk.DisplayHex(content))
+		}
+	}
 	os.Exit(0)
 }

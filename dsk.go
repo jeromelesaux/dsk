@@ -790,7 +790,7 @@ func (d *DSK) ReadBloc(bloc int) []byte {
 			track++
 		}
 	}
-	pos := d.GetPosData(uint8(track), uint8(sect), true)
+	pos := d.GetPosData(uint8(track), uint8(sect)+minSect, true)
 	copy(bufBloc, d.Tracks[track].Data[pos:pos+SECTSIZE])
 	//int Pos = GetPosData( track, sect + MinSect, true );
 	//memcpy( BufBloc, &ImgDsk[ Pos ], SECTSIZE );
@@ -799,7 +799,7 @@ func (d *DSK) ReadBloc(bloc int) []byte {
 		track++
 		sect = 0
 	}
-	pos = d.GetPosData(uint8(track), uint8(sect), true)
+	pos = d.GetPosData(uint8(track), uint8(sect)+minSect, true)
 	copy(bufBloc, d.Tracks[track].Data[pos:pos+SECTSIZE])
 	//   Pos = GetPosData( track, sect + MinSect, true );
 	// memcpy( &BufBloc[ SECTSIZE ], &ImgDsk[ Pos ], SECTSIZE );
@@ -966,4 +966,64 @@ func (d *DSK) GetType(langue int, ams *StAmsdos) string {
 	}
 	return "ASCII"
 
+}
+
+func (d *DSK) FileExists(entry StDirEntry) int {
+	for i := 0; i < 64; i++ {
+		dir, err := d.GetInfoDirEntry(uint8(i))
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error while getting info dir entry (%d) error :%v\n", i, err)
+		} else {
+			for q := 0; q < 8; q++ {
+				dir.Nom[q] &= 127
+			}
+			for q := 0; q < 3; q++ {
+				dir.Ext[q] &= 127
+			}
+			if dir.User != USER_DELETED && dir.Nom == entry.Nom && dir.Ext == entry.Ext {
+				return i
+			}
+		}
+
+	}
+	return -1
+}
+
+func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
+	i := indice
+	lMax := 0x1000000
+	b := make([]byte, 0)
+	tabDir := make([]StDirEntry, 64)
+	for j := 0; j < 64; j++ {
+		tabDir[j], _ = d.GetInfoDirEntry(uint8(j))
+	}
+	entryIndice := tabDir[i]
+	var cumul int
+	for {
+		l := (tabDir[i].NbPages + 7) >> 3
+		var j uint8
+		for j = 0; j < l; j++ {
+			tailleBloc := 1024
+			bloc := d.ReadBloc(int(tabDir[i].Blocks[j]))
+			var nbOctets int
+			if lMax > tailleBloc {
+				nbOctets = tailleBloc
+			} else {
+				nbOctets = lMax
+			}
+			if nbOctets > 0 {
+				b = append(b, bloc...)
+				cumul += nbOctets
+			}
+			lMax -= 1024
+		}
+		i++
+		if i > 64 {
+			return b, errors.New("Cannot get the file, Exceed catalogue indice")
+		}
+		if entryIndice.Nom != tabDir[i].Nom && entryIndice.Ext != tabDir[i].Ext {
+			break
+		}
+	}
+	return b, nil
 }
