@@ -100,14 +100,14 @@ func main() {
 		}
 		amsdosFile := dsk.GetNomDir(*file)
 		indice := dskFile.FileExists(amsdosFile)
-		if indice == -1 {
+		if indice == dsk.NOT_FOUND {
 			fmt.Fprintf(os.Stderr, "File %s does not exist\n", *file)
 		} else {
 			content, err := dskFile.GetFileIn(*file, indice)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 			}
-			fmt.Println(dsk.DisplayHex(content,16))
+			fmt.Println(dsk.DisplayHex(content, 16))
 		}
 	}
 	os.Exit(0)

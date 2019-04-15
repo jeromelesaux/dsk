@@ -14,6 +14,7 @@ import (
 
 var USER_DELETED uint8 = 0xE5
 var SECTSIZE uint16 = 512
+var NOT_FOUND int = -1
 var (
 	ErrorUnsupportedDskFormat    = errors.New("Unsupported DSK Format.")
 	ErrorUnsupportedMultiHeadDsk = errors.New("Multi-side dsk ! Expected 1 head")
@@ -986,7 +987,7 @@ func (d *DSK) FileExists(entry StDirEntry) int {
 		}
 
 	}
-	return -1
+	return NOT_FOUND
 }
 
 func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
