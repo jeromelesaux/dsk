@@ -881,6 +881,35 @@ func (d *DSK) GetEntrySizeInCatalogue(num int) string {
 	return ""
 }
 
+func (d *DSK) GetFilesize(s StDirEntry) int {
+	t := 0
+	for i := 0; i < 64; i++ {
+		if d.Catalogue[i].User != USER_DELETED {
+			if d.Catalogue[i].Nom == s.Nom &&
+				d.Catalogue[i].Ext == s.Ext {
+				t += int(d.Catalogue[i].NbPages)
+			}
+		}
+	}
+	return (t + 7) >> 3
+}
+
+func (d *DSK) GetFilesIndices() []int {
+	indices := make([]int, 0)
+	cache := make(map[string]bool)
+	for i := 0; i < 64; i++ {
+		if d.Catalogue[i].User != USER_DELETED {
+			filename := fmt.Sprintf("%s.%s", d.Catalogue[i].Nom, d.Catalogue[i].Ext)
+			if !cache[filename] {
+				cache[filename] = true
+				indices = append(indices, i)
+			}
+		}
+	}
+
+	return indices
+}
+
 func (d *DSK) GetCatalogue() error {
 	if d.catalogueLoaded {
 		return nil
@@ -994,10 +1023,10 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 	i := indice
 	lMax := 0x1000000
 	b := make([]byte, 0)
-/*	tabDir := make([]StDirEntry, 64)
-	for j := 0; j < 64; j++ {
-		tabDir[j], _ = d.GetInfoDirEntry(uint8(j))
-	}*/
+	/*	tabDir := make([]StDirEntry, 64)
+		for j := 0; j < 64; j++ {
+			tabDir[j], _ = d.GetInfoDirEntry(uint8(j))
+		}*/
 	d.GetCatalogue()
 	entryIndice := d.Catalogue[i]
 	var cumul int

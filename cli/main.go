@@ -15,7 +15,7 @@ var (
 	dskPath = flag.String("dsk", "", "Dsk path to handle.")
 	file    = flag.String("file", "", "File in th dsk")
 	hexa    = flag.Bool("hex", false, "List the file in hexadecimal")
-	get = flag.Bool("get",false,"Get the file in the dsk.")
+	get     = flag.Bool("get", false, "Get the file in the dsk.")
 )
 
 func main() {
@@ -67,30 +67,11 @@ func main() {
 			fmt.Fprintf(os.Stderr, "Error while getting catalogue in dsk file (%s) error %v\n", *dskPath, err)
 			os.Exit(-1)
 		}
-		var index int
-		var lenght uint8
-		for index < 64 {
-			entry := dskFile.Catalogue[index]
-			lenght += entry.NbPages
 
-			if entry.User != dsk.USER_DELETED && entry.NumPage != 0 {
-				for {
-					index++
-					if dskFile.Catalogue[index].NbPages == 0 || index >= 64 {
-						break
-					}
-					next := dskFile.Catalogue[index]
-					if next.User == entry.User {
-						lenght += next.NbPages
-					} else {
-						break
-					}
-				}
-				size := fmt.Sprintf("%d ko", (int(lenght)+7)>>3)
-				filename := fmt.Sprintf("%s.%s", entry.Nom, entry.Ext)
-				fmt.Fprintf(os.Stdout, "[%.2d] : %s : %s\n", index, filename, size)
-			}
-			index++
+		for _, i := range dskFile.GetFilesIndices() {
+			size := fmt.Sprintf("%.3d ko", dskFile.GetFilesize(dskFile.Catalogue[i]))
+			filename := fmt.Sprintf("%s.%s", dskFile.Catalogue[i].Nom, dskFile.Catalogue[i].Ext)
+			fmt.Fprintf(os.Stdout, "[%.2d] : %s : %d %s\n", i, filename, int(dskFile.Catalogue[i].User), size)
 		}
 	}
 
@@ -125,15 +106,15 @@ func main() {
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 			}
-			af,err := os.Create(*file)
+			af, err := os.Create(*file)
 			if err != nil {
-				fmt.Fprintf(os.Stderr,"Error while creating file (%s) error %v\n",*file,err)
+				fmt.Fprintf(os.Stderr, "Error while creating file (%s) error %v\n", *file, err)
 				os.Exit(-1)
 			}
 			defer af.Close()
-			_,err = af.Write(content)
+			_, err = af.Write(content)
 			if err != nil {
-				fmt.Fprintf(os.Stderr,"Error while copying content in file (%s) error %v\n",*file,err)
+				fmt.Fprintf(os.Stderr, "Error while copying content in file (%s) error %v\n", *file, err)
 				os.Exit(-1)
 			}
 		}
