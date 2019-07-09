@@ -8,14 +8,24 @@ import (
 )
 
 var (
-	list    = flag.Bool("list", false, "List content of dsk.")
-	track   = flag.Int("track", 39, "Track number (format).")
-	sector  = flag.Int("sector", 9, "Sector number (format)")
-	format  = flag.Bool("format", false, "Format the followed dsk.")
-	dskPath = flag.String("dsk", "", "Dsk path to handle.")
-	file    = flag.String("file", "", "File in th dsk")
-	hexa    = flag.Bool("hex", false, "List the file in hexadecimal")
-	get     = flag.Bool("get", false, "Get the file in the dsk.")
+	list           = flag.Bool("list", false, "List content of dsk.")
+	track          = flag.Int("track", 39, "Track number (format).")
+	sector         = flag.Int("sector", 9, "Sector number (format).")
+	format         = flag.Bool("format", false, "Format the followed dsk.")
+	dskPath        = flag.String("dsk", "", "Dsk path to handle.")
+	fileInDsk      = flag.String("amsdosfile", "", "File to handle in (or to insert in) the dsk.")
+	hexa           = flag.Bool("hex", false, "List the amsdosfile in hexadecimal.")
+	ascii          = flag.Bool("ascii", false, "list the amsdosfile in ascii mode.")
+	desassemble    = flag.Bool("desassemble", false, "list the amsdosfile desassembled.")
+	get            = flag.Bool("get", false, "Get the file in the dsk.")
+	remove         = flag.Bool("remove", false, "Remove the amsdosfile from the current dsk.")
+	basic          = flag.Bool("basic", false, "List a basic amsdosfile.")
+	put            = flag.Bool("put", false, "Put the amsdosfile in the current dsk.")
+	executeAddress = flag.Int("exec", -1, "Execute address of the inserted file.")
+	loadingAddress = flag.Int("load", -1, "Loading address of the inserted file.")
+	user           = flag.Int("user", 0, "User number of the inserted file.")
+	force          = flag.Bool("force", false, "Force overwriting of the inserted file.")
+	fileType       = flag.String("type", "", "Type of the inserted file \n\tascii : type ascii\n\tbinary : type binary\n")
 )
 
 func main() {
@@ -76,16 +86,16 @@ func main() {
 	}
 
 	if *hexa {
-		if *file == "" {
-			fmt.Fprintf(os.Stderr, "File option is empty, set it.")
+		if *fileInDsk == "" {
+			fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
 			os.Exit(-1)
 		}
-		amsdosFile := dsk.GetNomDir(*file)
+		amsdosFile := dsk.GetNomDir(*fileInDsk)
 		indice := dskFile.FileExists(amsdosFile)
 		if indice == dsk.NOT_FOUND {
-			fmt.Fprintf(os.Stderr, "File %s does not exist\n", *file)
+			fmt.Fprintf(os.Stderr, "File %s does not exist\n", *fileInDsk)
 		} else {
-			content, err := dskFile.GetFileIn(*file, indice)
+			content, err := dskFile.GetFileIn(*fileInDsk, indice)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 			}
@@ -93,31 +103,50 @@ func main() {
 		}
 	}
 	if *get {
-		if *file == "" {
-			fmt.Fprintf(os.Stderr, "File option is empty, set it.")
+		if *fileInDsk == "" {
+			fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
 			os.Exit(-1)
 		}
-		amsdosFile := dsk.GetNomDir(*file)
+		amsdosFile := dsk.GetNomDir(*fileInDsk)
 		indice := dskFile.FileExists(amsdosFile)
 		if indice == dsk.NOT_FOUND {
-			fmt.Fprintf(os.Stderr, "File %s does not exist\n", *file)
+			fmt.Fprintf(os.Stderr, "File %s does not exist\n", *fileInDsk)
 		} else {
-			content, err := dskFile.GetFileIn(*file, indice)
+			content, err := dskFile.GetFileIn(*fileInDsk, indice)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 			}
-			af, err := os.Create(*file)
+			af, err := os.Create(*fileInDsk)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error while creating file (%s) error %v\n", *file, err)
+				fmt.Fprintf(os.Stderr, "Error while creating file (%s) error %v\n", *fileInDsk, err)
 				os.Exit(-1)
 			}
 			defer af.Close()
 			_, err = af.Write(content)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error while copying content in file (%s) error %v\n", *file, err)
+				fmt.Fprintf(os.Stderr, "Error while copying content in file (%s) error %v\n", *fileInDsk, err)
 				os.Exit(-1)
 			}
 		}
 	}
+	if *put {
+		if *fileInDsk == "" {
+			fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
+			os.Exit(-1)
+		}
+		switch *fileType {
+		case "ascii":
+			resumeAction(*dskPath, "put ascii", *fileInDsk, "")
+		case "binary":
+			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", *executeAddress, *loadingAddress)
+			resumeAction(*dskPath, "put binary", *fileInDsk, informations)
+		}
+	}
 	os.Exit(0)
+}
+
+func resumeAction(dskFilepath, action, amsdosfile, informations string) {
+	fmt.Fprintf(os.Stderr, "DSK path [%s]\n", dskFilepath)
+	fmt.Fprintf(os.Stderr, "Action on DSK [%s] on amsdos file [%s]\n", action, amsdosfile)
+	fmt.Fprintf(os.Stderr, "%s\n", informations)
 }
