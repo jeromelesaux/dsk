@@ -15,6 +15,7 @@ var (
 	dskPath        = flag.String("dsk", "", "Dsk path to handle.")
 	fileInDsk      = flag.String("amsdosfile", "", "File to handle in (or to insert in) the dsk.")
 	hexa           = flag.Bool("hex", false, "List the amsdosfile in hexadecimal.")
+	info           = flag.Bool("info", false, "Get informations of the amsdosfile (size, execute and loading address).")
 	ascii          = flag.Bool("ascii", false, "list the amsdosfile in ascii mode.")
 	desassemble    = flag.Bool("desassemble", false, "list the amsdosfile desassembled.")
 	get            = flag.Bool("get", false, "Get the file in the dsk.")
