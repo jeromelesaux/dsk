@@ -146,7 +146,7 @@ func main() {
 			resumeAction(*dskPath, "put ascii", *fileInDsk, informations)
 		case "binary":
 			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", *executeAddress, *loadingAddress)
-			if err := dskFile.PutFile(*fileInDsk,dsk.MODE_BINAIRE,uint16(*loadingAddress),uint16(*executeAddress),uint16(*user),,false,false); err != nil {
+			if err := dskFile.PutFile(*fileInDsk,dsk.MODE_BINAIRE,uint16(*loadingAddress),uint16(*executeAddress),uint16(*user),false,false); err != nil {
 				fmt.Fprintf(os.Stderr,"Error while inserted file (%s) in dsk (%s) error :%v\n",*fileInDsk,*dskPath,err)
 				os.Exit(-1)
 			}
