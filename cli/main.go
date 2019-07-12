@@ -103,6 +103,7 @@ func main() {
 			fmt.Println(dsk.DisplayHex(content, 16))
 		}
 	}
+
 	if *get {
 		if *fileInDsk == "" {
 			fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
@@ -137,10 +138,21 @@ func main() {
 		}
 		switch *fileType {
 		case "ascii":
-			resumeAction(*dskPath, "put ascii", *fileInDsk, "")
+			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", *executeAddress, *loadingAddress)
+			if err := dskFile.PutFile(*fileInDsk,dsk.MODE_ASCII,0,0,uint16(*user),false,false); err != nil {
+				fmt.Fprintf(os.Stderr,"Error while inserted file (%s) in dsk (%s) error :%v\n",*fileInDsk,*dskPath,err)
+				os.Exit(-1)
+			}
+			resumeAction(*dskPath, "put ascii", *fileInDsk, informations)
 		case "binary":
 			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", *executeAddress, *loadingAddress)
+			if err := dskFile.PutFile(*fileInDsk,dsk.MODE_BINAIRE,uint16(*loadingAddress),uint16(*executeAddress),uint16(*user),,false,false); err != nil {
+				fmt.Fprintf(os.Stderr,"Error while inserted file (%s) in dsk (%s) error :%v\n",*fileInDsk,*dskPath,err)
+				os.Exit(-1)
+			}
 			resumeAction(*dskPath, "put binary", *fileInDsk, informations)
+		default: 
+			fmt.Fprintf(os.Stderr,"File type option unknown please choose between ascii or binary.")
 		}
 	}
 	os.Exit(0)
