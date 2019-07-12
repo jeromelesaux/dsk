@@ -393,13 +393,14 @@ func Hex(input string, inputVal string, valeur, digit int) string {
 //
 // Convertir le buffer en listing desassemble
 //
-func Desass(Prg, Listing string, Longueur uint16) string {
+func Desass(Prg []byte, Longueur uint16) string {
 	var Instr, Inst2, Inst3, Inst4 uint8
 	var Chaine, Inst string
 	var Adr, OldAdr, PosD, Ad16 uint16
 	var Ad8 uint8
 	var p int
-
+	Listing := ""
+	
 	for Adr < Longueur {
 		OldAdr = Adr
 		Adr++
