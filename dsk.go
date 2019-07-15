@@ -1058,3 +1058,63 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 	}
 	return b, nil
 }
+
+
+
+func (d *DSK) ViewFile(indice int) ([]byte,error) {
+	i := indice
+	lMax := 0x1000000
+	b := make([]byte, 0)
+	firstBlock := true 
+	d.GetCatalogue()
+	entryIndice := d.Catalogue[i]
+	var cumul int
+	for {
+		l := (d.Catalogue[i].NbPages + 7) >> 3
+		var j uint8
+		for j = 0; j < l; j++ {
+			tailleBloc := 1024
+			bloc := d.ReadBloc(int(d.Catalogue[i].Blocks[j]))
+			if firstBlock {
+				if d.CheckAmsdos(bloc) {
+					t := make([]byte,len(bloc))
+					copy(t,bloc[0x80:])
+					bloc = t
+					tailleBloc -= 0x80
+				}
+			}
+			var nbOctets int
+			if lMax > tailleBloc {
+				nbOctets = tailleBloc
+			} else {
+				nbOctets = lMax
+			}
+			if nbOctets > 0 {
+				b = append(b, bloc...)
+				cumul += nbOctets
+			}
+			lMax -= 1024
+		}
+		i++
+		if i >= 64 {
+			return b, errors.New("Cannot get the file, Exceed catalogue indice")
+		}
+		if entryIndice.Nom != d.Catalogue[i].Nom && entryIndice.Ext != d.Catalogue[i].Ext {
+			break
+		}
+	}
+	return b,nil
+}
+
+
+func (d *DSK)CheckAmsdos(buf []byte) bool {
+	header := &StAmsdos{}
+	rbuff := bytes.NewReader(buf)
+	if err := binary.Read(rbuff, binary.LittleEndian, header); err != nil {
+		return false
+	}
+	if header.Checksum == header.ComputedChecksum16() {
+		return true
+	}
+	return false
+}

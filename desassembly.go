@@ -378,15 +378,15 @@ var TabInstr [256]string = [256]string{
 	"CALL M,nnnn", "", "CP nn", "RST 38",
 }
 
-func Hex(input string, inputVal string, valeur, digit int) string {
-	//	TabDigit := "0123456789ABCDEF"
-	if digit > 2 {
-		hexVal := fmt.Sprintf("%4X", valeur)
-		input = strings.Replace(input, inputVal, hexVal, digit)
-	} else {
-		hexVal := fmt.Sprintf("%2X", valeur)
-		input = strings.Replace(input, inputVal, hexVal, digit)
+func Hex(input string, position int, valeur, digit int) string {
+	TabDigit := "0123456789ABCDEF"
+	t := []byte(input)
+	for digit > 0 {
+		digit--
+		t[position] = (TabDigit[(valeur>>uint(4*(digit)))&0x0F])
+		position++
 	}
+	input = string(t)
 	return input
 }
 
@@ -395,89 +395,101 @@ func Hex(input string, inputVal string, valeur, digit int) string {
 //
 func Desass(Prg []byte, Longueur uint16) string {
 	var Instr, Inst2, Inst3, Inst4 uint8
-	var Chaine, Inst string
-	var Adr, OldAdr, Ad16 uint16
-	var Ad8 uint8
-	var p int
+	var Inst string
+	var Adr, OldAdr uint16
+	//var Ad8 uint8
+	//var p int
 	Listing := ""
-
-	for Adr+1 < Longueur {
+	Adr = 0
+	for Adr < Longueur {
 		OldAdr = Adr
+		Instr = Prg[Adr]
 		Adr++
-		Instr = byte(Prg[Adr])
-		Chaine = TabInstr[Instr]
-		switch Instr {
-		case 0xCB:
-			Adr++
+		Chaine := TabInstr[Instr]
+		if Instr == 0xCB {
 			Inst2 = Prg[Adr]
+			Adr++
 			Chaine = TabInstrCB[Inst2]
-		case 0xDD:
-			Adr++
-			Inst2 = byte(Prg[Adr])
-			if Inst2 == 0xCB {
+		} else {
+			if Instr == 0xDD {
+				Inst2 = Prg[Adr]
 				Adr++
-				Inst3 = Prg[Adr]
-				Adr++
-				Inst4 = Prg[Adr]
-				Chaine = TabInstrDDCB[Inst4]
-				Inst = Chaine
-				p = strings.Index(Inst, "nn")
-				if p >= 0 {
-					if Inst3 < 0x80 {
-						Inst = Hex(Inst, "nn", int(Inst3), 2)
-					} else {
-						Inst = Hex(Inst, "nn", int(-Inst3), 2)
-					}
-				}
-				Chaine = TabInstrDD[Inst2]
-			}
-		case 0xED:
-			Adr++
-			Inst2 = Prg[Adr]
-			Chaine = TabInstrED[Inst2]
-		case 0xFD:
-			Adr++
-			Inst2 = Prg[Adr]
-			if Inst2 == 0xCB {
-				Adr++
-				Ad8 = Prg[Adr]
-				Chaine = TabInstrFDCB[Inst3]
-				if Chaine != "" {
+				if Inst2 == 0xCB {
+					Inst3 = Prg[Adr]
+					Adr++
+					Inst4 = Prg[Adr]
+					Adr++
+					Chaine = TabInstrDDCB[Inst4]
 					Inst = Chaine
-					p = strings.Index(Inst, "nn")
-					if p >= 0 {
-						Inst = Hex(Inst, "nn", int(Ad8), 2)
+					p := strings.Index(Inst, "nn")
+					if p != -1 {
+						if Inst3 < 0x80 {
+							Inst = Hex(Inst, p, int(Inst3), 2)
+						} else {
+							Inst = Hex(Inst, p, int(-Inst3), 2)
+						}
 					}
+					Chaine = TabInstrDD[Inst2]
 				}
 			} else {
-				Chaine = TabInstrFD[Inst2]
+				if Instr == 0xED {
+					Inst2 = Prg[Adr]
+					Adr++
+					Chaine = TabInstrED[Inst2]
+				} else {
+					if Instr == 0xFD {
+						Inst2 = Prg[Adr]
+						Adr++
+						if Inst2 == 0xCB {
+							Ad8 := Prg[Adr]
+							Adr++
+							Inst3 = Prg[Adr]
+							Adr++
+							Chaine = TabInstrFDCB[Inst3]
+							if Chaine != "" {
+								Inst = Chaine
+								p := strings.Index(Inst, "nn")
+								if p != -1 {
+									Inst = Hex(Inst, p, int(Ad8), 2)
+								}
+							}
+						} else {
+							Chaine = TabInstrFD[Inst2]
+						}
+					}
+				}
 			}
 		}
 
 		if Chaine != "" {
 			Inst = Chaine
-			p = strings.Index(Inst, "nnnn")
-			Adr++
-			Ad16 = uint16(Prg[Adr])
-			Ad16 += uint16(Prg[Adr]) << 8
-			Ad8 = uint8(Ad16)
-			if p >= 0 {
-				Inst = Hex(Inst, "nnnn", int(Ad16), 4)
+			p := strings.Index(Inst, "nnnn")
+
+			if Adr+1 < Longueur {
+				Ad16 := uint16(Prg[Adr])
 				Adr++
-			} else {
-				p = strings.Index(Inst, "nn")
-				if p >= 0 {
-					Inst = Hex(Inst, "nn", int(Ad16), 2)
-					p = strings.Index(Inst, "nn")
-					if p >= 0 {
-						Inst = Hex(Inst, "nn", int(Ad16>>8), 2)
+				Ad16 += uint16(Prg[Adr]) << 8
+				Ad8 := uint8(Ad16)
+
+				if p != -1 {
+					Inst = Hex(Inst, p, int(Ad16), 4)
+					Adr++
+				} else {
+					p := strings.Index(Inst, "nn")
+					if p != -1 {
+						Inst = Hex(Inst, p, int(Ad16), 2)
+						p = strings.Index(Inst, "nn")
+						if p != -1 {
+							Inst = Hex(Inst, p, int(Ad16>>8), 2)
+						}
 					} else {
-						p = strings.Index(Inst, "eeee")
-						if p >= 0 {
-							Inst = Hex(Inst, "eeee", int(Adr+uint16(Ad8)), 4)
+						p := strings.Index(Inst, "eeee")
+						if p != -1 {
+							Inst = Hex(Inst, p, int(Adr+uint16(Ad8)), 4)
 						} else {
 							Adr--
 						}
+
 					}
 				}
 			}
