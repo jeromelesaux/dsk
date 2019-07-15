@@ -494,15 +494,15 @@ func Desass(Prg []byte, Longueur uint16) string {
 				}
 			}
 		} else {
-			fmt.Sprintf(Inst, "%2X %2X %2X ????", Instr, Inst2, Inst3)
+			fmt.Sprintf(Inst, "%.2X %.2X %2.X ????", Instr, Inst2, Inst3)
 		}
-		OldAdrHex := fmt.Sprintf("%4X", OldAdr)
+		OldAdrHex := fmt.Sprintf("%.4X", OldAdr)
 		Listing += OldAdrHex
 		//copy([]byte(Listing[PosD:4]), []byte(OldAdrHex))
 		Listing += " "
 
 		for i := OldAdr; i < Adr; i++ {
-			prgHex := fmt.Sprintf("%2X", Prg[i])
+			prgHex := fmt.Sprintf("%.2X", Prg[i])
 			Listing += prgHex
 			//copy([]byte(Listing[PosD:2]), []byte(prgHex))
 			//Listing[PosD] = Hex(&Listing[PosD], Prg[i], 2)
