@@ -1059,13 +1059,11 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 	return b, nil
 }
 
-
-
-func (d *DSK) ViewFile(indice int) ([]byte,error) {
+func (d *DSK) ViewFile(indice int) ([]byte, error) {
 	i := indice
 	lMax := 0x1000000
 	b := make([]byte, 0)
-	firstBlock := true 
+	firstBlock := true
 	d.GetCatalogue()
 	entryIndice := d.Catalogue[i]
 	var cumul int
@@ -1077,8 +1075,8 @@ func (d *DSK) ViewFile(indice int) ([]byte,error) {
 			bloc := d.ReadBloc(int(d.Catalogue[i].Blocks[j]))
 			if firstBlock {
 				if d.CheckAmsdos(bloc) {
-					t := make([]byte,len(bloc))
-					copy(t,bloc[0x80:])
+					t := make([]byte, len(bloc))
+					copy(t, bloc[0x80:])
 					bloc = t
 					tailleBloc -= 0x80
 				}
@@ -1103,11 +1101,10 @@ func (d *DSK) ViewFile(indice int) ([]byte,error) {
 			break
 		}
 	}
-	return b,nil
+	return b, nil
 }
 
-
-func (d *DSK)CheckAmsdos(buf []byte) bool {
+func (d *DSK) CheckAmsdos(buf []byte) bool {
 	header := &StAmsdos{}
 	rbuff := bytes.NewReader(buf)
 	if err := binary.Read(rbuff, binary.LittleEndian, header); err != nil {
@@ -1117,4 +1114,25 @@ func (d *DSK)CheckAmsdos(buf []byte) bool {
 		return true
 	}
 	return false
+}
+
+func (d *DSK) RemoveFile(indice uint8) error {
+	d.GetCatalogue()
+	entryIndice := d.Catalogue[indice]
+
+	for {
+		d.Catalogue[indice].User = USER_DELETED
+		entry,err := d.GetInfoDirEntry(indice)
+		if err != nil {
+			return ErrorNoDirEntry
+		}
+		if err := d.SetInfoDirEntry(indice,entry); err != nil {
+			return ErrorNoDirEntry
+		}
+		indice++
+		if entryIndice.Nom != d.Catalogue[indice].Nom && entryIndice.Ext != d.Catalogue[indice].Ext {
+			break
+		}
+	}
+	return nil
 }

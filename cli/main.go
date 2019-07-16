@@ -177,8 +177,49 @@ func main() {
 			default: 
 				fmt.Fprintf(os.Stderr,"File type option unknown please choose between ascii or binary.")
 			}
+			f, err := os.Create(*dskPath)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error while write file (%s) error %v\n", *dskPath, err)
+				os.Exit(-1)
+			}
+			defer f.Close()
+			
+			if err := dskFile.Write(f); err != nil {
+				fmt.Fprintf(os.Stderr, "Error while write file (%s) error %v\n", *dskPath, err)
+				os.Exit(-1)
+			}
 		}
 	}
+
+	if *remove {
+		if *fileInDsk == "" {
+			fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
+			os.Exit(-1)
+		}
+		amsdosFile := dsk.GetNomDir(*fileInDsk)
+		indice := dskFile.FileExists(amsdosFile)
+		if indice != dsk.NOT_FOUND && ! *force{
+			fmt.Fprintf(os.Stderr, "File %s already exists\n", *fileInDsk)
+		} else {
+			if err := dskFile.RemoveFile(uint8(indice)); err != nil {
+				fmt.Fprintf(os.Stderr,"Error while removing file %s (indice:%d) error :%v\n",*fileInDsk,indice,err)
+			} else {
+				f, err := os.Create(*dskPath)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error while write file (%s) error %v\n", *dskPath, err)
+					os.Exit(-1)
+				}
+				defer f.Close()
+				if err := dskFile.Write(f); err != nil {
+					fmt.Fprintf(os.Stderr, "Error while write file (%s) error %v\n", *dskPath, err)
+					os.Exit(-1)
+				}
+			}
+		}
+	
+	}
+
+
 	os.Exit(0)
 }
 
