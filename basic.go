@@ -3,6 +3,7 @@ package dsk
 import (
 	"fmt"
 	"unicode"
+	"math"
 )
 
 var Nbre [11]string = [11]string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"}
@@ -84,8 +85,7 @@ func addWord(buf []byte, pos uint8, listing []byte, deprotect uint8) ([]byte, ui
 }
 
 func Basic(buf []byte, listing []byte, isBasic, crLf bool) []byte {
-	var pos, token, startLigne, endLine, exp, deprotect uint8
-	var f float32
+	var pos, token, deprotect uint8
 	token = getByte(buf, 0, deprotect)
 	for {
 		if isBasic {
@@ -158,45 +158,45 @@ func Basic(buf []byte, listing []byte, isBasic, crLf bool) []byte {
 								listing, pos = addWord(buf, 2+pos, listing, deprotect)
 							case 0x19: // Constante entière 8 bits
 								val := fmt.Sprintf("%d", getByte(buf, pos, deprotect))
-								listing = append(listing, val)
+								listing = append(listing, val...)
 								pos++
 							case 0x1A:
 							case 0x1E: // Constante entière 16 bits
 								val := fmt.Sprintf("%d", getWord(buf, pos, deprotect))
-								listing = append(listing, val)
+								listing = append(listing, val...)
 								pos += 2
 							case 0x1B:
-								tmp = fmt.Sprintf("&X%X", getWord(buf, pos, deprotect))
-								listing = append(listing, tmp...)
+								val := fmt.Sprintf("&X%X", getWord(buf, pos, deprotect))
+								listing = append(listing, val...)
 								pos += 2
 							case 0x1C:
-								tmp = fmt.Sprintf("&%X", getWord(buf, pos, deprotect))
-								listing = append(listing, tmp...)
+								val := fmt.Sprintf("&%X", getWord(buf, pos, deprotect))
+								listing = append(listing, val...)
 								pos += 2
 
 							case 0x1F: // Constante flottante
-								f = (getByte(buf, pos+2, deprotect) << 16) +
+								f := float64((getByte(buf, pos+2, deprotect) << 16) +
 									(getByte(buf, pos+1, deprotect) << 8) +
 									getByte(buf, pos, deprotect) +
-									((getByte(buf, pos+3, deprotect) & 0x7F) << 24)
+									((getByte(buf, pos+3, deprotect) & 0x7F) << 24))
 								f = 1 + (f / 0x80000000)
 
 								if getByte(buf, pos+3, deprotect)&0x80 == 0 {
 									f = -f
 								}
 
-								exp = getByte(buf, pos+4, deprotect) - 129
+								exp := getByte(buf, pos+4, deprotect) - 129
 								pos += 5
-								tmp = fmt.Sprintf("%f", f*math.Pow(float64(2), exp))
+								val := fmt.Sprintf("%f", f*math.Pow(float64(2), float64(exp)))
 								// Suppression des '0' inutiles
-								listing = append(listing, tmp...)
+								listing = append(listing, val...)
 
 							case 0x7C:
 								listing = append(listing, '|')
 								listing, pos = addWord(buf, 1+pos, listing, deprotect)
 							case 0xFF:
-								if getByte(buf, pos, deprotect) < 0x80 == 0 {
-									listing = append(listing, Fcts[getByte(buf, pos, deprotect)])
+								if getByte(buf, pos, deprotect) < 0x80  {
+									listing = append(listing, Fcts[getByte(buf, pos, deprotect)]...)
 									pos++
 								} else {
 									tmp[1] = 0
@@ -205,7 +205,7 @@ func Basic(buf []byte, listing []byte, isBasic, crLf bool) []byte {
 									listing = append(listing, tmp...)
 								}
 							default:
-								Token = Token
+								token = token
 							}
 						}
 					}
@@ -238,7 +238,7 @@ func Basic(buf []byte, listing []byte, isBasic, crLf bool) []byte {
 		for i := len(listing); i >= 0; i-- {
 			//cout << i << " ";
 
-			if !unicode.IsPrint(listing[i]) && listing[i] != '\n' && listing[i] != '\r' {
+			if !unicode.IsPrint(rune(listing[i])) && listing[i] != '\n' && listing[i] != '\r' {
 				listing[i] = '?'
 			}
 		}
