@@ -96,7 +96,7 @@ func main() {
 		if indice == dsk.NOT_FOUND {
 			fmt.Fprintf(os.Stderr, "File %s does not exist\n", *fileInDsk)
 		} else {
-			content, err := dskFile.ViewFile(indice)
+			content,_, err := dskFile.ViewFile(indice)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 			}
@@ -114,11 +114,29 @@ func main() {
 		if indice == dsk.NOT_FOUND {
 			fmt.Fprintf(os.Stderr, "File %s does not exist\n", *fileInDsk)
 		} else {
-			content, err := dskFile.ViewFile(indice)
+			content, _, err := dskFile.ViewFile(indice)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 			}
 			fmt.Println(dsk.Desass(content, uint16(len(content))))
+		}
+	}
+
+	if *ascii {
+		if *fileInDsk == "" {
+			fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
+			os.Exit(-1)
+		}
+		amsdosFile := dsk.GetNomDir(*fileInDsk)
+		indice := dskFile.FileExists(amsdosFile)
+		if indice == dsk.NOT_FOUND {
+			fmt.Fprintf(os.Stderr, "File %s does not exist\n", *fileInDsk)
+		} else {
+			content, _,err := dskFile.ViewFile(indice)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
+			}
+			fmt.Println(string(content))
 		}
 	}
 
@@ -132,11 +150,12 @@ func main() {
 		if indice == dsk.NOT_FOUND {
 			fmt.Fprintf(os.Stderr, "File %s does not exist\n", *fileInDsk)
 		} else {
-			content, err := dskFile.ViewFile(indice)
+			content,filesize, err := dskFile.ViewFile(indice)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 			}
-			fmt.Println(dsk.Basic(content,true))
+			fmt.Fprintf(os.Stdout,"File %s filesize :%d octets\n",*fileInDsk,filesize)
+			fmt.Fprintf(os.Stdout,"%s",dsk.Basic(content,uint16(filesize),true))
 		}
 	}
 
@@ -236,23 +255,7 @@ func main() {
 		}
 	}
 
-	if *ascii {
-		if *fileInDsk == "" {
-			fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
-			os.Exit(-1)
-		}
-		amsdosFile := dsk.GetNomDir(*fileInDsk)
-		indice := dskFile.FileExists(amsdosFile)
-		if indice == dsk.NOT_FOUND {
-			fmt.Fprintf(os.Stderr, "File %s does not exist\n", *fileInDsk)
-		} else {
-			content, err := dskFile.ViewFile(indice)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
-			}
-			fmt.Println(string(content))
-		}
-	}
+
 
 	os.Exit(0)
 }

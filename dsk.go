@@ -1059,14 +1059,14 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 	return b, nil
 }
 
-func (d *DSK) ViewFile(indice int) ([]byte, error) {
+func (d *DSK) ViewFile(indice int) ([]byte,int, error) {
 	i := indice
 	lMax := 0x1000000
 	b := make([]byte, 0)
 	firstBlock := true
 	d.GetCatalogue()
 	entryIndice := d.Catalogue[i]
-	var cumul int
+	var tailleFichier,cumul int
 	for {
 		l := (d.Catalogue[i].NbPages + 7) >> 3
 		var j uint8
@@ -1074,12 +1074,15 @@ func (d *DSK) ViewFile(indice int) ([]byte, error) {
 			tailleBloc := 1024
 			bloc := d.ReadBloc(int(d.Catalogue[i].Blocks[j]))
 			if firstBlock {
-				if d.CheckAmsdos(bloc) {
+				isAmsdos, header :=  d.CheckAmsdos(bloc) 
+				if isAmsdos {
 					t := make([]byte, len(bloc))
 					copy(t, bloc[0x80:])
 					bloc = t
 					tailleBloc -= 0x80
+					tailleFichier = int(header.LogicalSize)
 				}
+				firstBlock = false
 			}
 			var nbOctets int
 			if lMax > tailleBloc {
@@ -1095,25 +1098,25 @@ func (d *DSK) ViewFile(indice int) ([]byte, error) {
 		}
 		i++
 		if i >= 64 {
-			return b, errors.New("Cannot get the file, Exceed catalogue indice")
+			return b,cumul, errors.New("Cannot get the file, Exceed catalogue indice")
 		}
 		if entryIndice.Nom != d.Catalogue[i].Nom && entryIndice.Ext != d.Catalogue[i].Ext {
 			break
 		}
 	}
-	return b, nil
+	return b,tailleFichier, nil
 }
 
-func (d *DSK) CheckAmsdos(buf []byte) bool {
+func (d *DSK) CheckAmsdos(buf []byte) (bool, *StAmsdos) {
 	header := &StAmsdos{}
 	rbuff := bytes.NewReader(buf)
 	if err := binary.Read(rbuff, binary.LittleEndian, header); err != nil {
-		return false
+		return false,&StAmsdos{}
 	}
 	if header.Checksum == header.ComputedChecksum16() {
-		return true
+		return true,header
 	}
-	return false
+	return false,&StAmsdos{}
 }
 
 func (d *DSK) RemoveFile(indice uint8) error {

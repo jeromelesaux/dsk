@@ -2,8 +2,8 @@ package dsk
 
 import (
 	"fmt"
-	"unicode"
 	"math"
+	"unicode"
 )
 
 var Nbre [11]string = [11]string{"0", "1", "2", "3", "4", "5", "6", "7", "8", "9", "10"}
@@ -58,25 +58,24 @@ var DproBasic [128]byte = [128]byte{
 	0xF0, 0x0B, 0x98, 0x0F, 0x36, 0x9D, 0xD8, 0x96,
 }
 
-func getByte(buf []byte, pos, deprotect uint8) byte {
+func getByte(buf []byte, pos uint16, deprotect uint8) byte {
 	return buf[pos] ^ (DproBasic[pos&0x7F] * deprotect)
 }
 
-func getWord(buf []byte, pos, deprotect uint8) uint16 {
-	var ret uint16
-	ret = uint16(buf[pos] ^ (DproBasic[pos&0x7F] * deprotect))
+func getWord(buf []byte, pos uint16, deprotect uint8) int {
+	ret := int(buf[pos] ^ (DproBasic[pos&0x7F] * deprotect))
 	pos++
-	ret += uint16((buf[pos] ^ (DproBasic[pos&0x7F] * deprotect)) << 8)
+	ret += int(int(buf[pos])^int((DproBasic[pos&0x7F]*deprotect))) << 8
 	return ret
 }
 
-func addWord(buf []byte, pos uint8, listing []byte, deprotect uint8) ([]byte, uint8) {
+func addWord(buf []byte, pos uint16, listing []byte, deprotect uint8) ([]byte, uint16) {
 	var lenVar int
 	for {
 		b := getByte(buf, pos, deprotect)
 		pos++
 		listing = append(listing, (b & 0x7f))
-		if b&0x80 == 0 || lenVar >= 0xff {
+		if b&0x80 != 0 || lenVar >= 0xff {
 			break
 		}
 		lenVar++
@@ -84,9 +83,10 @@ func addWord(buf []byte, pos uint8, listing []byte, deprotect uint8) ([]byte, ui
 	return listing, pos
 }
 
-func Basic(buf []byte, isBasic bool) []byte {
-	var pos, token, deprotect uint8
-	listing := make([]byte,0)
+func Basic(buf []byte, fileSize uint16, isBasic bool) []byte {
+	var  token, deprotect uint8
+	var pos uint16
+	listing := make([]byte, 0)
 	token = getByte(buf, 0, deprotect)
 	for {
 		if isBasic {
@@ -112,10 +112,7 @@ func Basic(buf []byte, isBasic bool) []byte {
 				break
 			}
 			if dansChaine == 1 || !isBasic {
-				tmp := make([]byte, 2)
-				tmp[0] = token
-				tmp[1] = 0
-				listing = append(listing, tmp...)
+				listing = append(listing, token)
 				if token == '"' {
 					dansChaine ^= 1
 				}
@@ -123,17 +120,16 @@ func Basic(buf []byte, isBasic bool) []byte {
 				if token > 0x7F && token < 0xFF {
 					if listing[len(listing)-1] == ':' && token == 0x97 {
 						listing[len(listing)-1] = 0
-						listing = append(listing, MotsClefs[token&0x7f]...)
 					}
+					listing = append(listing, MotsClefs[token&0x7f]...)
+
 				} else {
 					if token >= 0x0E && token <= 0x18 {
 						listing = append(listing, Nbre[token-0x0e]...)
 					} else {
 						if token >= 0x20 && token < 0x7C {
-							tmp := make([]byte, 2)
-							tmp[0] = token
-							tmp[1] = 0
-							listing = append(listing, tmp...)
+
+							listing = append(listing, token)
 							if token == '"' {
 								dansChaine ^= 1
 							}
@@ -141,9 +137,7 @@ func Basic(buf []byte, isBasic bool) []byte {
 							tmp := make([]byte, 2)
 							switch token {
 							case 0x01:
-								tmp[0] = ':'
-								tmp[1] = 0
-								listing = append(listing, tmp...)
+								listing = append(listing, ':')
 							case 0x02: // Variable entière (type %)
 								listing, pos = addWord(buf, 2+pos, listing, deprotect)
 								listing = append(listing, '%')
@@ -163,15 +157,18 @@ func Basic(buf []byte, isBasic bool) []byte {
 								pos++
 							case 0x1A:
 							case 0x1E: // Constante entière 16 bits
-								val := fmt.Sprintf("%d", getWord(buf, pos, deprotect))
+								w := getWord(buf, pos, deprotect)
+								val := fmt.Sprintf("%d", w)
 								listing = append(listing, val...)
 								pos += 2
 							case 0x1B:
-								val := fmt.Sprintf("&X%X", getWord(buf, pos, deprotect))
+								w := getWord(buf, pos, deprotect)
+								val := fmt.Sprintf("&X%X", w)
 								listing = append(listing, val...)
 								pos += 2
 							case 0x1C:
-								val := fmt.Sprintf("&%X", getWord(buf, pos, deprotect))
+								w := getWord(buf, pos, deprotect)
+								val := fmt.Sprintf("&%X", w)
 								listing = append(listing, val...)
 								pos += 2
 
@@ -196,7 +193,7 @@ func Basic(buf []byte, isBasic bool) []byte {
 								listing = append(listing, '|')
 								listing, pos = addWord(buf, 1+pos, listing, deprotect)
 							case 0xFF:
-								if getByte(buf, pos, deprotect) < 0x80  {
+								if getByte(buf, pos, deprotect) < 0x80 {
 									listing = append(listing, Fcts[getByte(buf, pos, deprotect)]...)
 									pos++
 								} else {
@@ -216,33 +213,17 @@ func Basic(buf []byte, isBasic bool) []byte {
 				break
 			}
 		}
-		/*	if crLf  {
-				//
-				// Retour à la ligne si > 80 caractères
-				//
-				endLigne = listing strlen( &Listing[ StartLigne ] );
-				while( EndLigne > 80 )
-					{
-					memmove( &Listing[ StartLigne + 82 ]
-						   , &Listing[ StartLigne + 80 ]
-						   , EndLigne
-						   );
-					memcpy( &Listing[ StartLigne + 80 ], "\r\n", 2 );
-					StartLigne += 82;
-					EndLigne -= 80;
-					}
-				}
-			strcat( Listing, "\r\n" );
-			StartLigne = strlen( Listing );
-			}*/
-		// Conversion des caractères accentués si nécessaire
-		for i := len(listing); i >= 0; i-- {
-			//cout << i << " ";
-
-			if !unicode.IsPrint(rune(listing[i])) && listing[i] != '\n' && listing[i] != '\r' {
-				listing[i] = '?'
-			}
+		listing = append(listing, "\n"...)
+		if pos >= fileSize {
+			break
 		}
 	}
+	// Conversion des caractères accentués si nécessaire
+	for i := len(listing) - 1; i >= 0; i-- {
+		if !unicode.IsPrint(rune(listing[i])) && listing[i] != '\n' && listing[i] != '\r' {
+			listing[i] = '?'
+		}
+	}
+
 	return listing
 }
