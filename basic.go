@@ -84,8 +84,9 @@ func addWord(buf []byte, pos uint8, listing []byte, deprotect uint8) ([]byte, ui
 	return listing, pos
 }
 
-func Basic(buf []byte, listing []byte, isBasic, crLf bool) []byte {
+func Basic(buf []byte, isBasic bool) []byte {
 	var pos, token, deprotect uint8
+	listing := make([]byte,0)
 	token = getByte(buf, 0, deprotect)
 	for {
 		if isBasic {
@@ -243,6 +244,5 @@ func Basic(buf []byte, listing []byte, isBasic, crLf bool) []byte {
 			}
 		}
 	}
-
 	return listing
 }

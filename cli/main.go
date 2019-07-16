@@ -122,6 +122,24 @@ func main() {
 		}
 	}
 
+	if *basic {
+		if *fileInDsk == "" {
+			fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
+			os.Exit(-1)
+		}
+		amsdosFile := dsk.GetNomDir(*fileInDsk)
+		indice := dskFile.FileExists(amsdosFile)
+		if indice == dsk.NOT_FOUND {
+			fmt.Fprintf(os.Stderr, "File %s does not exist\n", *fileInDsk)
+		} else {
+			content, err := dskFile.ViewFile(indice)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
+			}
+			fmt.Println(dsk.Basic(content,true))
+		}
+	}
+
 	if *get {
 		if *fileInDsk == "" {
 			fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
