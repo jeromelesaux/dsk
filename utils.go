@@ -24,7 +24,13 @@ func GetNomDir(s string) StDirEntry {
 	}
 
 	index = 0
-	for i := len(inputFile) - 3; i < len(inputFile) && index < 3; i++ {
+	start := strings.Index(inputFile, ".")
+	if start == -1 {
+		start = len(inputFile) - 3
+	} else {
+		start++
+	}
+	for i := start; i < len(inputFile) && index < 3; i++ {
 		entry.Ext[index] = inputFile[i]
 		index++
 	}
