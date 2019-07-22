@@ -1104,6 +1104,9 @@ func (d *DSK) ViewFile(indice int) ([]byte,int, error) {
 			break
 		}
 	}
+	if tailleFichier == 0 {
+		tailleFichier = cumul
+	}
 	return b,tailleFichier, nil
 }
 
