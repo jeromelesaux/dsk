@@ -1074,7 +1074,7 @@ func (d *DSK) ViewFile(indice int) ([]byte,int, error) {
 			tailleBloc := 1024
 			bloc := d.ReadBloc(int(d.Catalogue[i].Blocks[j]))
 			if firstBlock {
-				isAmsdos, header :=  d.CheckAmsdos(bloc) 
+				isAmsdos, header :=  CheckAmsdos(bloc) 
 				if isAmsdos {
 					t := make([]byte, len(bloc))
 					copy(t, bloc[0x80:])
@@ -1110,7 +1110,7 @@ func (d *DSK) ViewFile(indice int) ([]byte,int, error) {
 	return b,tailleFichier, nil
 }
 
-func (d *DSK) CheckAmsdos(buf []byte) (bool, *StAmsdos) {
+func CheckAmsdos(buf []byte) (bool, *StAmsdos) {
 	header := &StAmsdos{}
 	rbuff := bytes.NewReader(buf)
 	if err := binary.Read(rbuff, binary.LittleEndian, header); err != nil {
