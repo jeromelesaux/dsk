@@ -8,7 +8,7 @@ import (
 )
 
 type SNA struct {
-	Header *SNAHeader
+	Header SNAHeader
 	Data   []byte
 }
 
@@ -30,6 +30,8 @@ type SNAHeader struct {
 	InterruptIFF1              uint8
 	RegisterIXLow              uint8
 	RegisterIXHigh             uint8
+	RegisterIYLow              uint8
+	RegisterIYHigh             uint8
 	RegisterSPLow              uint8
 	RegisterSPHigh             uint8
 	RegisterPCLow              uint8
@@ -157,7 +159,7 @@ func (s *SNA) Read(r io.Reader) error {
 		fmt.Fprintf(os.Stderr, "Cannot read SNA header error :%v\n", err)
 		return err
 	}
-
+	
 	s.Data = make([]byte, int(s.Header.MemoryDumpSize)*1000)
 	if err := binary.Read(r, binary.LittleEndian, &s.Data); err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot read SNA data error :%v\n", err)
