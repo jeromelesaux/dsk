@@ -119,7 +119,7 @@ func main() {
 			}
 			isAmsdos, header := dsk.CheckAmsdos(content)
 			if !isAmsdos {
-				fmt.Fprintf(os.Stderr, "File (%s) does not content amsdos header.", *fileInDsk)
+				fmt.Fprintf(os.Stderr, "File (%s) does not contain amsdos header.\n", *fileInDsk)
 				os.Exit(-1)
 			}
 			fmt.Fprintf(os.Stdout, "Amsdos informations :\n\tFilename:%s\n\tSize:#%X (%.2f Ko)\n\tExecute Address:#%X\n\tLoading Address:#%X\n\tChecksum:#%X\n\tType:%d\n\tUser:%d\n",
