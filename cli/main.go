@@ -27,7 +27,7 @@ var (
 	user           = flag.Int("user", 0, "User number of the inserted file.")
 	force          = flag.Bool("force", false, "Force overwriting of the inserted file.")
 	fileType       = flag.String("type", "", "Type of the inserted file \n\tascii : type ascii\n\tbinary : type binary\n")
-	snaPath = flag.String("sna", "", "SNA file to handle")
+	snaPath        = flag.String("sna", "", "SNA file to handle")
 )
 
 func main() {
@@ -37,16 +37,16 @@ func main() {
 		f, err := os.Open(*snaPath)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error while read sna file (%s) error %v\n", *snaPath, err)
-			os.Exit(-1)	
+			os.Exit(-1)
 		}
 		defer f.Close()
 		sna := &dsk.SNA{}
 		if err := sna.Read(f); err != nil {
-			fmt.Fprintf(os.Stderr,"Error while reading sna file (%s) error %v\n",*snaPath,err)
+			fmt.Fprintf(os.Stderr, "Error while reading sna file (%s) error %v\n", *snaPath, err)
 			os.Exit(-1)
 		}
-		fmt.Fprintf(os.Stdout,"Sna (%s) description :\n\tCPC type:%s\n\tCRTC type:%s\n",*snaPath,sna.CPCType(),sna.CRTCType())
-		fmt.Fprintf(os.Stdout,"\tSna version:%d\n\tMemory size:%dKo\n",sna.Header.Version,sna.Header.MemoryDumpSize)
+		fmt.Fprintf(os.Stdout, "Sna (%s) description :\n\tCPC type:%s\n\tCRTC type:%s\n", *snaPath, sna.CPCType(), sna.CRTCType())
+		fmt.Fprintf(os.Stdout, "\tSna version:%d\n\tMemory size:%dKo\n", sna.Header.Version, sna.Header.MemoryDumpSize)
 		os.Exit(0)
 	}
 	if *dskPath == "" {
@@ -103,6 +103,37 @@ func main() {
 		}
 	}
 
+	if *info {
+		if *fileInDsk == "" {
+			fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
+			os.Exit(-1)
+		}
+		amsdosFile := dsk.GetNomDir(*fileInDsk)
+		indice := dskFile.FileExists(amsdosFile)
+		if indice == dsk.NOT_FOUND {
+			fmt.Fprintf(os.Stderr, "File %s does not exist\n", *fileInDsk)
+		} else {
+			content, err := dskFile.GetFileIn(*fileInDsk, indice)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
+			}
+			isAmsdos, header := dsk.CheckAmsdos(content)
+			if !isAmsdos {
+				fmt.Fprintf(os.Stderr, "File (%s) does not content amsdos header.", *fileInDsk)
+				os.Exit(-1)
+			}
+			fmt.Fprintf(os.Stdout, "Amsdos informations :\n\tFilename:%s\n\tSize:#%X (%.2f Ko)\n\tExecute Address:#%X\n\tLoading Address:#%X\n\tChecksum:#%X\n\tType:%d\n\tUser:%d\n",
+				header.Filename,
+				header.Size,
+				float64(header.Size)/1024.,
+				header.Exec,
+				header.Address,
+				header.Checksum,
+				header.Type,
+				header.User)
+		}
+	}
+
 	if *hexa {
 		if *fileInDsk == "" {
 			fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
@@ -113,7 +144,7 @@ func main() {
 		if indice == dsk.NOT_FOUND {
 			fmt.Fprintf(os.Stderr, "File %s does not exist\n", *fileInDsk)
 		} else {
-			content,_, err := dskFile.ViewFile(indice)
+			content, _, err := dskFile.ViewFile(indice)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 			}
@@ -149,7 +180,7 @@ func main() {
 		if indice == dsk.NOT_FOUND {
 			fmt.Fprintf(os.Stderr, "File %s does not exist\n", *fileInDsk)
 		} else {
-			content, _ ,err := dskFile.ViewFile(indice)
+			content, _, err := dskFile.ViewFile(indice)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 			}
@@ -167,12 +198,12 @@ func main() {
 		if indice == dsk.NOT_FOUND {
 			fmt.Fprintf(os.Stderr, "File %s does not exist\n", *fileInDsk)
 		} else {
-			content,filesize, err := dskFile.ViewFile(indice)
+			content, filesize, err := dskFile.ViewFile(indice)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 			}
-			fmt.Fprintf(os.Stdout,"File %s filesize :%d octets\n",*fileInDsk,filesize)
-			fmt.Fprintf(os.Stdout,"%s",dsk.Basic(content,uint16(filesize),true))
+			fmt.Fprintf(os.Stdout, "File %s filesize :%d octets\n", *fileInDsk, filesize)
+			fmt.Fprintf(os.Stdout, "%s", dsk.Basic(content, uint16(filesize), true))
 		}
 	}
 
@@ -210,26 +241,26 @@ func main() {
 		}
 		amsdosFile := dsk.GetNomDir(*fileInDsk)
 		indice := dskFile.FileExists(amsdosFile)
-		if indice != dsk.NOT_FOUND && ! *force{
+		if indice != dsk.NOT_FOUND && !*force {
 			fmt.Fprintf(os.Stderr, "File %s already exists\n", *fileInDsk)
 		} else {
 			switch *fileType {
 			case "ascii":
 				informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", *executeAddress, *loadingAddress)
-				if err := dskFile.PutFile(*fileInDsk,dsk.MODE_ASCII,0,0,uint16(*user),false,false); err != nil {
-					fmt.Fprintf(os.Stderr,"Error while inserted file (%s) in dsk (%s) error :%v\n",*fileInDsk,*dskPath,err)
+				if err := dskFile.PutFile(*fileInDsk, dsk.MODE_ASCII, 0, 0, uint16(*user), false, false); err != nil {
+					fmt.Fprintf(os.Stderr, "Error while inserted file (%s) in dsk (%s) error :%v\n", *fileInDsk, *dskPath, err)
 					os.Exit(-1)
 				}
 				resumeAction(*dskPath, "put ascii", *fileInDsk, informations)
 			case "binary":
 				informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", *executeAddress, *loadingAddress)
-				if err := dskFile.PutFile(*fileInDsk,dsk.MODE_BINAIRE,uint16(*loadingAddress),uint16(*executeAddress),uint16(*user),false,false); err != nil {
-					fmt.Fprintf(os.Stderr,"Error while inserted file (%s) in dsk (%s) error :%v\n",*fileInDsk,*dskPath,err)
+				if err := dskFile.PutFile(*fileInDsk, dsk.MODE_BINAIRE, uint16(*loadingAddress), uint16(*executeAddress), uint16(*user), false, false); err != nil {
+					fmt.Fprintf(os.Stderr, "Error while inserted file (%s) in dsk (%s) error :%v\n", *fileInDsk, *dskPath, err)
 					os.Exit(-1)
 				}
 				resumeAction(*dskPath, "put binary", *fileInDsk, informations)
-			default: 
-				fmt.Fprintf(os.Stderr,"File type option unknown please choose between ascii or binary.")
+			default:
+				fmt.Fprintf(os.Stderr, "File type option unknown please choose between ascii or binary.")
 			}
 			f, err := os.Create(*dskPath)
 			if err != nil {
@@ -237,7 +268,7 @@ func main() {
 				os.Exit(-1)
 			}
 			defer f.Close()
-			
+
 			if err := dskFile.Write(f); err != nil {
 				fmt.Fprintf(os.Stderr, "Error while write file (%s) error %v\n", *dskPath, err)
 				os.Exit(-1)
@@ -252,11 +283,11 @@ func main() {
 		}
 		amsdosFile := dsk.GetNomDir(*fileInDsk)
 		indice := dskFile.FileExists(amsdosFile)
-		if indice != dsk.NOT_FOUND && ! *force{
+		if indice != dsk.NOT_FOUND && !*force {
 			fmt.Fprintf(os.Stderr, "File %s already exists\n", *fileInDsk)
 		} else {
 			if err := dskFile.RemoveFile(uint8(indice)); err != nil {
-				fmt.Fprintf(os.Stderr,"Error while removing file %s (indice:%d) error :%v\n",*fileInDsk,indice,err)
+				fmt.Fprintf(os.Stderr, "Error while removing file %s (indice:%d) error :%v\n", *fileInDsk, indice, err)
 			} else {
 				f, err := os.Create(*dskPath)
 				if err != nil {
@@ -271,8 +302,6 @@ func main() {
 			}
 		}
 	}
-
-
 
 	os.Exit(0)
 }

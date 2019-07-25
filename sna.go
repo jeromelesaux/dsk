@@ -213,11 +213,11 @@ func (s *SNA) Put(content []byte, startAddress uint16) error {
 	return nil
 }
 
-func (s *SNA)Get(startAddress, lenght uint16) ([]byte,error) {
+func (s *SNA) Get(startAddress, lenght uint16) ([]byte, error) {
 	content := make([]byte, lenght)
 	if int(startAddress)+int(lenght) > len(s.Data) {
-		return content,ErrorFileSizeExceed 
+		return content, ErrorFileSizeExceed
 	}
-	copy(content[:],s.Data[startAddress:])
+	copy(content[:], s.Data[startAddress:])
 	return content, nil
 }

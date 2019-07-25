@@ -84,7 +84,7 @@ func addWord(buf []byte, pos uint16, listing []byte, deprotect uint8) ([]byte, u
 }
 
 func Basic(buf []byte, fileSize uint16, isBasic bool) []byte {
-	var  token, deprotect uint8
+	var token, deprotect uint8
 	var pos uint16
 	listing := make([]byte, 0)
 	token = getByte(buf, 0, deprotect)

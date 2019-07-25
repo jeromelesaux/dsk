@@ -1059,14 +1059,14 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 	return b, nil
 }
 
-func (d *DSK) ViewFile(indice int) ([]byte,int, error) {
+func (d *DSK) ViewFile(indice int) ([]byte, int, error) {
 	i := indice
 	lMax := 0x1000000
 	b := make([]byte, 0)
 	firstBlock := true
 	d.GetCatalogue()
 	entryIndice := d.Catalogue[i]
-	var tailleFichier,cumul int
+	var tailleFichier, cumul int
 	for {
 		l := (d.Catalogue[i].NbPages + 7) >> 3
 		var j uint8
@@ -1074,7 +1074,7 @@ func (d *DSK) ViewFile(indice int) ([]byte,int, error) {
 			tailleBloc := 1024
 			bloc := d.ReadBloc(int(d.Catalogue[i].Blocks[j]))
 			if firstBlock {
-				isAmsdos, header :=  CheckAmsdos(bloc) 
+				isAmsdos, header := CheckAmsdos(bloc)
 				if isAmsdos {
 					t := make([]byte, len(bloc))
 					copy(t, bloc[0x80:])
@@ -1098,7 +1098,7 @@ func (d *DSK) ViewFile(indice int) ([]byte,int, error) {
 		}
 		i++
 		if i >= 64 {
-			return b,cumul, errors.New("Cannot get the file, Exceed catalogue indice")
+			return b, cumul, errors.New("Cannot get the file, Exceed catalogue indice")
 		}
 		if entryIndice.Nom != d.Catalogue[i].Nom && entryIndice.Ext != d.Catalogue[i].Ext {
 			break
@@ -1107,19 +1107,19 @@ func (d *DSK) ViewFile(indice int) ([]byte,int, error) {
 	if tailleFichier == 0 {
 		tailleFichier = cumul
 	}
-	return b,tailleFichier, nil
+	return b, tailleFichier, nil
 }
 
 func CheckAmsdos(buf []byte) (bool, *StAmsdos) {
 	header := &StAmsdos{}
 	rbuff := bytes.NewReader(buf)
 	if err := binary.Read(rbuff, binary.LittleEndian, header); err != nil {
-		return false,&StAmsdos{}
+		return false, &StAmsdos{}
 	}
 	if header.Checksum == header.ComputedChecksum16() {
-		return true,header
+		return true, header
 	}
-	return false,&StAmsdos{}
+	return false, &StAmsdos{}
 }
 
 func (d *DSK) RemoveFile(indice uint8) error {
@@ -1128,11 +1128,11 @@ func (d *DSK) RemoveFile(indice uint8) error {
 
 	for {
 		d.Catalogue[indice].User = USER_DELETED
-		entry,err := d.GetInfoDirEntry(indice)
+		entry, err := d.GetInfoDirEntry(indice)
 		if err != nil {
 			return ErrorNoDirEntry
 		}
-		if err := d.SetInfoDirEntry(indice,entry); err != nil {
+		if err := d.SetInfoDirEntry(indice, entry); err != nil {
 			return ErrorNoDirEntry
 		}
 		indice++
