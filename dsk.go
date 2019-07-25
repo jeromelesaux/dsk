@@ -588,7 +588,7 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 		// Creer une en-tete amsdos par defaut
 		fmt.Fprintf(os.Stdout, "Create header... (%s)\n", masque)
 		header = &StAmsdos{Size: uint16(len(buff)), Size2: uint16(len(buff))}
-		copy(header.Filename[:], []byte(cFileName[0:14]))
+		copy(header.Filename[:], []byte(cFileName[0:12]))
 		if loadAdress != 0 {
 			header.Address = loadAdress
 			typeModeImport = MODE_BINAIRE

@@ -184,11 +184,11 @@ func main() {
 		if indice == dsk.NOT_FOUND {
 			fmt.Fprintf(os.Stderr, "File %s does not exist\n", *fileInDsk)
 		} else {
-			content, _, err := dskFile.ViewFile(indice)
+			content, filesize, err := dskFile.ViewFile(indice)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 			}
-			fmt.Println(string(content))
+			fmt.Println(string(content[0:filesize]))
 		}
 	}
 
