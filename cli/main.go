@@ -28,6 +28,7 @@ var (
 	force          = flag.Bool("force", false, "Force overwriting of the inserted file.")
 	fileType       = flag.String("type", "", "Type of the inserted file \n\tascii : type ascii\n\tbinary : type binary\n")
 	snaPath        = flag.String("sna", "", "SNA file to handle")
+	analyse = flag.Bool("analyze",false,"Returns the DSK header")
 )
 
 func main() {
@@ -101,6 +102,11 @@ func main() {
 			filename := fmt.Sprintf("%s.%s", dskFile.Catalogue[i].Nom, dskFile.Catalogue[i].Ext)
 			fmt.Fprintf(os.Stdout, "[%.2d] : %s : %d %s\n", i, filename, int(dskFile.Catalogue[i].User), size)
 		}
+	}
+
+	if *analyse {
+		entry := dskFile.Entry
+		fmt.Fprintf(os.Stdout,"Dsk entry %s\n",entry.ToString())
 	}
 
 	if *info {

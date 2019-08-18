@@ -297,7 +297,7 @@ func FormatDsk(nbSect, nbTrack uint8) *DSK {
 	dsk := &DSK{}
 	entry := CPCEMUEnt{}
 	copy(entry.Debut[:], "MV - CPCEMU Disk-File\r\nDisk-Info\r\n")
-	entry.DataSize = 0x100 + (SECTSIZE * 9)
+	entry.DataSize = 0x100 + (SECTSIZE * uint16(nbSect))
 	entry.NbTracks = nbTrack
 	entry.NbHeads = 1
 	dsk.Entry = entry
@@ -402,8 +402,8 @@ func (d *DSK) CheckDsk() error {
 			fmt.Fprintf(os.Stderr, "Bad sector %.2x\n", minSectFirst)
 			return ErrorBadSectorNumber
 		}
-		if d.Entry.NbTracks > 42 {
-			d.Entry.NbTracks = 42
+		if d.Entry.NbTracks > 80 {
+			d.Entry.NbTracks = 80
 		}
 		var track uint8
 		for track = 0; track < d.Entry.NbTracks; track++ {

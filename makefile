@@ -5,7 +5,7 @@ MV=mv
 
 SOURCEDIR=./cli/
 SOURCES := $(shell find . -name '*.go')
-GOOS=linux
+#GOOS=linux
 GOARCH=amd64
 
 #VERSION:=$(shell grep -m1 "dskVersion string" *.go | sed 's/[", ]//g' | cut -d= -f2)
