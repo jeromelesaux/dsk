@@ -40,7 +40,6 @@ type CPCEMUEnt struct {
 	NbTracks uint8
 	NbHeads  uint8
 	DataSize uint16 // 0x1300 = 256 + ( 512 * nbsecteurs )
-	Extended bool
 }
 
 func (e *CPCEMUEnt) ToString() string {
@@ -265,6 +264,7 @@ type DSK struct {
 	BitMap          [256]byte
 	Catalogue       [64]StDirEntry
 	catalogueLoaded bool
+	Extended bool
 }
 
 func (d *DSK) CleanBitmap() {
@@ -285,7 +285,7 @@ func (d *DSK) Read(r io.Reader) error {
 		return ErrorUnsupportedDskFormat
 	}
 	if string(extended) == "EXTENDED CPC DSK" {
-		d.Entry.Extended = true
+		d.Extended = true
 		d.TrackSizeTable = make([]byte, d.Entry.NbHeads*(d.Entry.NbTracks-1))
 	} else {
 		d.TrackSizeTable = make([]byte, 0xCC)
@@ -295,7 +295,7 @@ func (d *DSK) Read(r io.Reader) error {
 		return err
 	}
 
-	if d.Entry.Extended {
+	if d.Extended {
 		t := r.(*os.File)
 		t.Seek(0x100, os.SEEK_SET)
 	}
@@ -317,12 +317,12 @@ func FormatDsk(nbSect, nbTrack, nbHead uint8, dskType int) *DSK {
 	dsk := &DSK{}
 	entry := CPCEMUEnt{}
 	if dskType == EXTENDED_DSK_TYPE {
-		entry.Extended = true
+		dsk.Extended = true
 		copy(entry.Debut[:], "EXTENDED CPC DSK File\r\nDisk-Info\r\n")
 	} else {
 		copy(entry.Debut[:], "MV - CPCEMU Disk-File\r\nDisk-Info\r\n")
 	}
-	copy(entry.Creator[:], "DSK"[:])
+	//copy(entry.Creator[:], "DSK"[:])
 	entry.DataSize = 0x100 + (SECTSIZE * uint16(nbSect))
 	entry.NbTracks = nbTrack
 	entry.NbHeads = nbHead
@@ -408,7 +408,7 @@ func (d *DSK) Write(w io.Writer) error {
 		fmt.Fprintf(os.Stderr, "Cannot read CPCEmuEnt error :%v\n", err)
 		return err
 	}
-	if d.Entry.Extended {
+	if d.Extended {
 		wf := w.(*os.File)
 		wf.Seek(0x100, os.SEEK_SET)
 	}
