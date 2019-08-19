@@ -64,27 +64,27 @@ func (c *CPCEMUSect) ToString() string {
 
 func (c *CPCEMUSect) Write(w io.Writer) error {
 	if err := binary.Write(w, binary.LittleEndian, &c.C); err != nil {
-		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.C error :%v\n", err)
+		fmt.Fprintf(os.Stderr, "Error while writing CPCEmuSect.C error :%v\n", err)
 		return err
 	}
 	if err := binary.Write(w, binary.LittleEndian, &c.H); err != nil {
-		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.H error :%v\n", err)
+		fmt.Fprintf(os.Stderr, "Error while writing CPCEmuSect.H error :%v\n", err)
 		return err
 	}
 	if err := binary.Write(w, binary.LittleEndian, &c.R); err != nil {
-		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.R error :%v\n", err)
+		fmt.Fprintf(os.Stderr, "Error while writing CPCEmuSect.R error :%v\n", err)
 		return err
 	}
 	if err := binary.Write(w, binary.LittleEndian, &c.N); err != nil {
-		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.N error :%v\n", err)
+		fmt.Fprintf(os.Stderr, "Error while writing CPCEmuSect.N error :%v\n", err)
 		return err
 	}
 	if err := binary.Write(w, binary.LittleEndian, &c.Un1); err != nil {
-		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.Un1 error :%v\n", err)
+		fmt.Fprintf(os.Stderr, "Error while writing CPCEmuSect.Un1 error :%v\n", err)
 		return err
 	}
 	if err := binary.Write(w, binary.LittleEndian, &c.SizeByte); err != nil {
-		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.SizeByte error :%v\n", err)
+		fmt.Fprintf(os.Stderr, "Error while writing CPCEmuSect.SizeByte error :%v\n", err)
 		return err
 	}
 	//	fmt.Fprintf(os.Stdout,"Sector %s\n",c.ToString())
@@ -191,35 +191,35 @@ func (c *CPCEMUTrack) Read(r io.Reader) error {
 
 func (c *CPCEMUTrack) Write(w io.Writer) error {
 	if err := binary.Write(w, binary.LittleEndian, &c.ID); err != nil {
-		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.ID error :%v\n", err)
+		fmt.Fprintf(os.Stderr, "Error while writing CPCEMUTrack.ID error :%v\n", err)
 		return err
 	}
 	if err := binary.Write(w, binary.LittleEndian, &c.Track); err != nil {
-		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.Track error :%v\n", err)
+		fmt.Fprintf(os.Stderr, "Error while writing CPCEMUTrack.Track error :%v\n", err)
 		return err
 	}
 	if err := binary.Write(w, binary.LittleEndian, &c.Head); err != nil {
-		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.Head error :%v\n", err)
+		fmt.Fprintf(os.Stderr, "Error while writing CPCEMUTrack.Head error :%v\n", err)
 		return err
 	}
 	if err := binary.Write(w, binary.LittleEndian, &c.Unused); err != nil {
-		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.Unused error :%v\n", err)
+		fmt.Fprintf(os.Stderr, "Error while writing CPCEMUTrack.Unused error :%v\n", err)
 		return err
 	}
 	if err := binary.Write(w, binary.LittleEndian, &c.SectSize); err != nil {
-		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.SectSize error :%v\n", err)
+		fmt.Fprintf(os.Stderr, "Error while writing CPCEMUTrack.SectSize error :%v\n", err)
 		return err
 	}
 	if err := binary.Write(w, binary.LittleEndian, &c.NbSect); err != nil {
-		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.NbSect error :%v\n", err)
+		fmt.Fprintf(os.Stderr, "Error while writing CPCEMUTrack.NbSect error :%v\n", err)
 		return err
 	}
 	if err := binary.Write(w, binary.LittleEndian, &c.Gap3); err != nil {
-		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.Gap3 error :%v\n", err)
+		fmt.Fprintf(os.Stderr, "Error while writing CPCEMUTrack.Gap3 error :%v\n", err)
 		return err
 	}
 	if err := binary.Write(w, binary.LittleEndian, &c.OctRemp); err != nil {
-		fmt.Fprintf(os.Stderr, "Error while reading CPCEMUTrack.OctRemp error :%v\n", err)
+		fmt.Fprintf(os.Stderr, "Error while writing CPCEMUTrack.OctRemp error :%v\n", err)
 		return err
 	}
 
@@ -322,14 +322,14 @@ func FormatDsk(nbSect, nbTrack, nbHead uint8, dskType int) *DSK {
 	} else {
 		copy(entry.Debut[:], "MV - CPCEMU Disk-File\r\nDisk-Info\r\n")
 	}
-	//copy(entry.Creator[:], "DSK"[:])
+	copy(entry.Creator[:], "Sid DSK"[:])
 	entry.DataSize = 0x100 + (SECTSIZE * uint16(nbSect))
 	entry.NbTracks = nbTrack
 	entry.NbHeads = nbHead
 	if dskType == EXTENDED_DSK_TYPE {
 		dsk.TrackSizeTable = make([]byte, entry.NbHeads*(entry.NbTracks))
 		for i := 0; i < len(dsk.TrackSizeTable); i++ {
-			dsk.TrackSizeTable[i] = 19
+			dsk.TrackSizeTable[i] = byte(0x100 + (SECTSIZE * uint16(nbSect)) /256 +1)
 		}
 	} else {
 		dsk.TrackSizeTable = make([]byte, 0xCC)
@@ -363,7 +363,11 @@ func (d *DSK) FormatTrack(indexTrack, track, head, minSect, nbSect uint8) {
 	t.Head = head
 	t.SectSize = 2
 	t.NbSect = nbSect
-	t.Gap3 = 0x4E
+	if d.Extended {
+		t.Gap3 = 0x2a
+	} else {
+		t.Gap3 = 0x4E
+	}
 	t.OctRemp = 0xE5
 	//
 	// Gestion "entrelacement" des secteurs
@@ -400,17 +404,21 @@ func (d *DSK) FormatTrack(indexTrack, track, head, minSect, nbSect uint8) {
 }
 
 func (d *DSK) Write(w io.Writer) error {
+
 	if err := binary.Write(w, binary.LittleEndian, &d.Entry); err != nil {
-		fmt.Fprintf(os.Stderr, "Cannot read CPCEmuEnt error :%v\n", err)
+		fmt.Fprintf(os.Stderr, "Cannot write CPCEmuEnt error :%v\n", err)
 		return err
 	}
 	if err := binary.Write(w, binary.LittleEndian, &d.TrackSizeTable); err != nil {
-		fmt.Fprintf(os.Stderr, "Cannot read CPCEmuEnt error :%v\n", err)
+		fmt.Fprintf(os.Stderr, "Cannot write CPCEmuEnt error :%v\n", err)
 		return err
 	}
 	if d.Extended {
-		wf := w.(*os.File)
-		wf.Seek(0x100, os.SEEK_SET)
+		offset := make([]byte,(0x100 - (52 + uint(d.Entry.NbHeads*d.Entry.NbTracks) )))
+		if err := binary.Write(w, binary.LittleEndian, &offset); err != nil {
+			fmt.Fprintf(os.Stderr, "Cannot write CPCEmuEnt padding 0x100 error :%v\n", err)
+			return err
+		}
 	}
 	var i uint8
 	for i = 0; i < d.Entry.NbTracks; i++ {
@@ -478,7 +486,7 @@ func (d *DSK) CheckDsk() error {
 			}
 		}
 		if maxSect-minSect != 8 {
-			fmt.Fprintf(os.Stdout, "Warning : strange sector numbering in track %d!\n", track)
+			fmt.Fprintf(os.Stdout, "Warning : strange sector numbering in track %d! (maxSect:%d,minSect:%d)\n", track,maxSect,minSect)
 		}
 		if minSect != minSectFirst {
 			fmt.Fprintf(os.Stdout, "Warning : track %d start at sector %d while track 0 starts at %d\n", track, minSect, minSectFirst)
