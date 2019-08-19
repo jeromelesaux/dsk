@@ -10,8 +10,10 @@ import (
 var (
 	list           = flag.Bool("list", false, "List content of dsk.")
 	track          = flag.Int("track", 39, "Track number (format).")
+	heads          = flag.Int("head", 1, "Number of heads in the DSK (format)")
 	sector         = flag.Int("sector", 9, "Sector number (format).")
 	format         = flag.Bool("format", false, "Format the followed dsk.")
+	dskType        = flag.Int("dsktype", 0, "DSK Type :\n\t0 : DSK\n\t1 : EDSK\n")
 	dskPath        = flag.String("dsk", "", "Dsk path to handle.")
 	fileInDsk      = flag.String("amsdosfile", "", "File to handle in (or to insert in) the dsk.")
 	hexa           = flag.Bool("hex", false, "List the amsdosfile in hexadecimal.")
@@ -28,7 +30,7 @@ var (
 	force          = flag.Bool("force", false, "Force overwriting of the inserted file.")
 	fileType       = flag.String("type", "", "Type of the inserted file \n\tascii : type ascii\n\tbinary : type binary\n")
 	snaPath        = flag.String("sna", "", "SNA file to handle")
-	analyse = flag.Bool("analyze",false,"Returns the DSK header")
+	analyse        = flag.Bool("analyze", false, "Returns the DSK header")
 )
 
 func main() {
@@ -69,7 +71,7 @@ func main() {
 		}
 		defer f.Close()
 		fmt.Fprintf(os.Stdout, "Formating number of sectors (%d), tracks (%d)\n", *sector, *track)
-		dskFile := dsk.FormatDsk(uint8(*sector), uint8(*track))
+		dskFile := dsk.FormatDsk(uint8(*sector), uint8(*track), uint8(*heads), (*dskType))
 		if err := dskFile.Write(f); err != nil {
 			fmt.Fprintf(os.Stderr, "Error while write file (%s) error %v\n", *dskPath, err)
 			os.Exit(-1)
@@ -106,7 +108,7 @@ func main() {
 
 	if *analyse {
 		entry := dskFile.Entry
-		fmt.Fprintf(os.Stdout,"Dsk entry %s\n",entry.ToString())
+		fmt.Fprintf(os.Stdout, "Dsk entry %s\n", entry.ToString())
 	}
 
 	if *info {
