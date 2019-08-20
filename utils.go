@@ -2,10 +2,12 @@ package dsk
 
 import (
 	"fmt"
+	"path"
 	"strings"
 )
 
 func GetNomDir(s string) StDirEntry {
+
 	entry := StDirEntry{}
 	for i := 0; i < 8; i++ {
 		entry.Nom[i] = 32
@@ -13,7 +15,7 @@ func GetNomDir(s string) StDirEntry {
 	for i := 0; i < 3; i++ {
 		entry.Ext[i] = 32
 	}
-	inputFile := strings.ToUpper(s)
+	inputFile := strings.ToUpper(path.Base(s))
 	var index int
 	for i := 0; i < len(inputFile) && index < 8; i++ {
 		if inputFile[i] == '.' {
