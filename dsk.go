@@ -264,7 +264,7 @@ type DSK struct {
 	BitMap          [256]byte
 	Catalogue       [64]StDirEntry
 	catalogueLoaded bool
-	Extended bool
+	Extended        bool
 }
 
 func (d *DSK) CleanBitmap() {
@@ -286,7 +286,7 @@ func (d *DSK) Read(r io.Reader) error {
 	}
 	if string(extended) == "EXTENDED CPC DSK" {
 		d.Extended = true
-		d.TrackSizeTable = make([]byte, d.Entry.NbHeads*(d.Entry.NbTracks-1))
+		d.TrackSizeTable = make([]byte, d.Entry.NbHeads*(d.Entry.NbTracks))
 	} else {
 		d.TrackSizeTable = make([]byte, 0xCC)
 	}
@@ -296,8 +296,11 @@ func (d *DSK) Read(r io.Reader) error {
 	}
 
 	if d.Extended {
-		t := r.(*os.File)
-		t.Seek(0x100, os.SEEK_SET)
+		offset := make([]byte, (0x100 - (52 + uint(d.Entry.NbHeads*d.Entry.NbTracks))))
+		if err := binary.Read(r, binary.LittleEndian, &offset); err != nil {
+			fmt.Fprintf(os.Stderr, "Cannot read CPCEmuEnt padding 0x100 error :%v\n", err)
+			return err
+		}
 	}
 	d.Tracks = make([]CPCEMUTrack, d.Entry.NbTracks)
 	var i uint8
@@ -329,7 +332,7 @@ func FormatDsk(nbSect, nbTrack, nbHead uint8, dskType int) *DSK {
 	if dskType == EXTENDED_DSK_TYPE {
 		dsk.TrackSizeTable = make([]byte, entry.NbHeads*(entry.NbTracks))
 		for i := 0; i < len(dsk.TrackSizeTable); i++ {
-			dsk.TrackSizeTable[i] = byte(0x100 + (SECTSIZE * uint16(nbSect)) /256 +1)
+			dsk.TrackSizeTable[i] = byte(0x100 + (SECTSIZE*uint16(nbSect))/256 + 1)
 		}
 	} else {
 		dsk.TrackSizeTable = make([]byte, 0xCC)
@@ -363,11 +366,7 @@ func (d *DSK) FormatTrack(indexTrack, track, head, minSect, nbSect uint8) {
 	t.Head = head
 	t.SectSize = 2
 	t.NbSect = nbSect
-	if d.Extended {
-		t.Gap3 = 0x2a
-	} else {
-		t.Gap3 = 0x4E
-	}
+	t.Gap3 = 0x4E
 	t.OctRemp = 0xE5
 	//
 	// Gestion "entrelacement" des secteurs
@@ -414,7 +413,7 @@ func (d *DSK) Write(w io.Writer) error {
 		return err
 	}
 	if d.Extended {
-		offset := make([]byte,(0x100 - (52 + uint(d.Entry.NbHeads*d.Entry.NbTracks) )))
+		offset := make([]byte, (0x100 - (52 + uint(d.Entry.NbHeads*d.Entry.NbTracks))))
 		if err := binary.Write(w, binary.LittleEndian, &offset); err != nil {
 			fmt.Fprintf(os.Stderr, "Cannot write CPCEmuEnt padding 0x100 error :%v\n", err)
 			return err
@@ -486,7 +485,7 @@ func (d *DSK) CheckDsk() error {
 			}
 		}
 		if maxSect-minSect != 8 {
-			fmt.Fprintf(os.Stdout, "Warning : strange sector numbering in track %d! (maxSect:%d,minSect:%d)\n", track,maxSect,minSect)
+			fmt.Fprintf(os.Stdout, "Warning : strange sector numbering in track %d! (maxSect:%d,minSect:%d)\n", track, maxSect, minSect)
 		}
 		if minSect != minSectFirst {
 			fmt.Fprintf(os.Stdout, "Warning : track %d start at sector %d while track 0 starts at %d\n", track, minSect, minSectFirst)
