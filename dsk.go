@@ -43,8 +43,8 @@ type CPCEMUEnt struct {
 }
 
 func (e *CPCEMUEnt) ToString() string {
-	return fmt.Sprintf("Debut:%s, nbTracks:%d, nbHeads:%d, DataSize:%d",
-		e.Debut, e.NbTracks, e.NbHeads, e.DataSize)
+	return fmt.Sprintf("Debut:%s\nCreator:%s\nnbTracks:%d, nbHeads:%d, DataSize:%d",
+		e.Debut, e.Creator, e.NbTracks, e.NbHeads, e.DataSize)
 }
 
 type CPCEMUSect struct { // length 8
@@ -470,8 +470,10 @@ func (d *DSK) CheckDsk() error {
 	var track uint8
 	for track = 0; track < d.Entry.NbTracks; track++ {
 		tr := d.Tracks[track]
-		if tr.NbSect != 9 {
-			fmt.Fprintf(os.Stdout, "Warning : track :%d has %d sectors ! wanted 9\n", track, tr.NbSect)
+		if !d.Extended {
+			if tr.NbSect != 9 {
+				fmt.Fprintf(os.Stdout, "Warning : track :%d has %d sectors ! wanted 9\n", track, tr.NbSect)
+			}
 		}
 		var minSect, maxSect, s uint8
 		minSect = 0xFF
@@ -484,8 +486,10 @@ func (d *DSK) CheckDsk() error {
 				maxSect = tr.Sect[s].R
 			}
 		}
-		if maxSect-minSect != 8 {
-			fmt.Fprintf(os.Stdout, "Warning : strange sector numbering in track %d! (maxSect:%d,minSect:%d)\n", track, maxSect, minSect)
+		if !d.Extended {
+			if maxSect-minSect != 8 {
+				fmt.Fprintf(os.Stdout, "Warning : strange sector numbering in track %d! (maxSect:%X,minSect:%X)\n", track, maxSect, minSect)
+			}
 		}
 		if minSect != minSectFirst {
 			fmt.Fprintf(os.Stdout, "Warning : track %d start at sector %d while track 0 starts at %d\n", track, minSect, minSectFirst)
