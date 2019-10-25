@@ -1140,7 +1140,15 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 			break
 		}
 	}
-	return b, nil
+	tailleFichier := len(b)
+	for i := len(b) - 1; i >= 0; i-- {
+		if b[i] == 0xE5 {
+			tailleFichier--
+		} else {
+			break
+		}
+	}
+	return b[0:tailleFichier], nil
 }
 
 func (d *DSK) ViewFile(indice int) ([]byte, int, error) {
@@ -1190,6 +1198,13 @@ func (d *DSK) ViewFile(indice int) ([]byte, int, error) {
 	}
 	if tailleFichier == 0 {
 		tailleFichier = cumul
+	}
+	for i := len(b) - 1; i >= 0; i-- {
+		if b[i] == 0xE5 {
+			tailleFichier--
+		} else {
+			break
+		}
 	}
 	return b, tailleFichier, nil
 }

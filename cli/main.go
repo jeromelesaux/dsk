@@ -156,11 +156,11 @@ func main() {
 		if indice == dsk.NOT_FOUND {
 			fmt.Fprintf(os.Stderr, "File %s does not exist\n", *fileInDsk)
 		} else {
-			content, _, err := dskFile.ViewFile(indice)
+			content, fileSize, err := dskFile.ViewFile(indice)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 			}
-			fmt.Println(dsk.DisplayHex(content, 16))
+			fmt.Println(dsk.DisplayHex(content[0:fileSize], 16))
 		}
 	}
 
@@ -174,11 +174,11 @@ func main() {
 		if indice == dsk.NOT_FOUND {
 			fmt.Fprintf(os.Stderr, "File %s does not exist\n", *fileInDsk)
 		} else {
-			content, _, err := dskFile.ViewFile(indice)
+			content, filesize, err := dskFile.ViewFile(indice)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 			}
-			fmt.Println(dsk.Desass(content, uint16(len(content))))
+			fmt.Println(dsk.Desass(content[0:filesize], uint16(len(content))))
 		}
 	}
 
