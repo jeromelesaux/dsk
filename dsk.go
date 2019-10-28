@@ -1191,7 +1191,7 @@ func (d *DSK) ViewFile(indice int) ([]byte, int, error) {
 		if i >= 64 {
 			return b, cumul, errors.New("Cannot get the file, Exceed catalogue indice")
 		}
-		if entryIndice.Nom != d.Catalogue[i].Nom && entryIndice.Ext != d.Catalogue[i].Ext {
+		if entryIndice.Nom != d.Catalogue[i].Nom || entryIndice.Ext != d.Catalogue[i].Ext {
 			break
 		}
 	}
