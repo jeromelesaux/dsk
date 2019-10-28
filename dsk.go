@@ -1116,8 +1116,7 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 	var cumul int
 	for {
 		l := (d.Catalogue[i].NbPages + 7) >> 3
-		var j uint8
-		for j = 0; j < l; j++ {
+		for j := 0; uint8(j) < l; j++ {
 			tailleBloc := 1024
 			bloc := d.ReadBloc(int(d.Catalogue[i].Blocks[j]))
 			var nbOctets int
@@ -1136,11 +1135,11 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 		if i >= 64 {
 			return b, errors.New("Cannot get the file, Exceed catalogue indice")
 		}
-		if entryIndice.Nom != d.Catalogue[i].Nom && entryIndice.Ext != d.Catalogue[i].Ext {
+		if entryIndice.Nom != d.Catalogue[i].Nom || entryIndice.Ext != d.Catalogue[i].Ext {
 			break
 		}
 	}
-	tailleFichier := len(b)
+	tailleFichier := len(b) -1
 	for i := len(b) - 1; i >= 0; i-- {
 		if b[i] == 0xE5 {
 			tailleFichier--

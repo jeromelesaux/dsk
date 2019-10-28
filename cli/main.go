@@ -31,11 +31,13 @@ var (
 	fileType       = flag.String("type", "", "Type of the inserted file \n\tascii : type ascii\n\tbinary : type binary\n")
 	snaPath        = flag.String("sna", "", "SNA file to handle")
 	analyse        = flag.Bool("analyze", false, "Returns the DSK header")
+	version        = "0.1"
 )
 
 func main() {
 	var dskFile dsk.DSK
 	flag.Parse()
+	fmt.Fprintf(os.Stdout, "DSK cli version [%s]\nMade by Sid (ImpAct)\n", version)
 	if *snaPath != "" {
 		f, err := os.Open(*snaPath)
 		if err != nil {
@@ -244,6 +246,8 @@ func main() {
 				fmt.Fprintf(os.Stderr, "Error while copying content in file (%s) error %v\n", *fileInDsk, err)
 				os.Exit(-1)
 			}
+			informations := fmt.Sprintf("Extract file [%s]\nIndice in DSK [%d]\n", *fileInDsk, indice)
+			resumeAction(*dskPath, "get amsdosfile", *fileInDsk, informations)
 		}
 	}
 	if *put {
