@@ -85,6 +85,47 @@ type SNAHeader struct {
 	Unused4                         [75]uint8 // version 3
 }
 
+func NewSnaHeader() SNAHeader {
+	h := SNAHeader{
+		Version:              1,
+		MemoryDumpSize:       64,
+		GAMultiConfiguration: 0x8D,
+		CPCType:              2,
+		InterruptMode:        1,
+		CRTCConfiguration:    [18]uint8{0x3f, 40, 46, 0x8e, 38, 0, 25, 30, 0, 7, 0, 0, 0x30},
+		PSGRegisters:         [16]uint8{0, 0, 0, 0, 0, 0, 0x3f, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		PPIControlPort:       0x82,
+		RegisterSPHigh:       0xC0,
+		RegisterPCLow:        0xec,
+		RegisterPCHigh:       0xbf,
+		GAPalette:            [17]uint8{0x04, 0x0A, 0x15, 0x1C, 0x18, 0x1D, 0x0C, 0x05, 0x0D, 0x16, 0x06, 0x17, 0x1E, 0x00, 0x1F, 0x0E, 0x04},
+	}
+	copy(h.Identifier[:], "MV - SNA")
+	return h
+}
+
+func (s *SNAHeader) String() string {
+	out := fmt.Sprintf("\tIdentifier:%s\n\tVersion:%d\n", s.Identifier, s.Version)
+	out += fmt.Sprintf("\tRegisterA:#%x\n\tRegisterA2:#%x\n", s.RegisterA, s.RegisterA2)
+	out += fmt.Sprintf("\tRegisterB:#%x\n\tRegisterB2:#%x\n", s.RegisterB, s.RegisterB2)
+	out += fmt.Sprintf("\tRegisterC:#%x\n\tRegisterC2:#%x\n", s.RegisterC, s.RegisterC2)
+	out += fmt.Sprintf("\tRegisterD:#%x\n\tRegisterD2:#%x\n", s.RegisterD, s.RegisterD2)
+	out += fmt.Sprintf("\tRegisterE:#%x\n\tRegisterE2:#%x\n", s.RegisterE, s.RegisterE2)
+	out += fmt.Sprintf("\tRegisterH:#%x\n\tRegisterH2:#%x\n", s.RegisterH, s.RegisterH2)
+	out += fmt.Sprintf("\tRegisterL:#%x\n\tRegisterL2:#%x\n", s.RegisterL, s.RegisterL2)
+	out += fmt.Sprintf("\tRegisterR:#%x\n\tRegisterI:#%x\n", s.RegisterR, s.RegisterI)
+	out += fmt.Sprintf("\tInterruptIFF0:#%x\n\tInterruptIFF1:#%x\n", s.InterruptIFF0, s.InterruptIFF1)
+	out += fmt.Sprintf("\tRegisterIXLow:#%x\n\tRegisterIXHigh:#%x\n", s.RegisterIXLow, s.RegisterIXHigh)
+	out += fmt.Sprintf("\tRegisterIYLow:#%x\n\tRegisterIYHigh:#%x\n", s.RegisterIYLow, s.RegisterIYHigh)
+	out += fmt.Sprintf("\tRegisterSPLow:#%x\n\tRegisterSPHigh:#%x\n", s.RegisterSPLow, s.RegisterSPHigh)
+	out += fmt.Sprintf("\tRegisterPCLow:#%x\n\tRegisterPCHigh:#%x\n", s.RegisterPCLow, s.RegisterPCHigh)
+	out += fmt.Sprintf("\tInterruptionMode:#%x\n", s.InterruptMode)
+	out += fmt.Sprintf("\tGAIndex:#%x\n\tGADelayCounter:#%x\n", s.GAIndex, s.GADelayCounter)
+	out += fmt.Sprintf("\tGAInterruptScanlineCounter:#%x\n\tGAMultiConfiguration:#%x\n", s.GAInterruptScanlineCounter, s.GAMultiConfiguration)
+	out += fmt.Sprintf("\tGAPalette:#%x\n", s.GAPalette)
+	return out
+}
+
 var (
 	ErrorNoHeaderOrStartAddress = errors.New("No Amsdos header found and no startAddress. Quit.")
 )
@@ -193,17 +234,18 @@ func (s *SNA) Write(w io.Writer) error {
 	return nil
 }
 
-func (s *SNA) Put(content []byte, startAddress uint16) error {
+func (s *SNA) Put(content []byte, startAddress, length uint16) error {
 	isAmsdos, header := CheckAmsdos(content)
 	if isAmsdos && startAddress == 0 {
 		copy(s.Data[header.Exec:], content[128:])
 		return nil
 	}
+	fmt.Fprintf(os.Stdout, "Copying into SNA start address #%4x is amsdos %v\n", startAddress, isAmsdos)
 	if startAddress != 0 {
 		if isAmsdos {
-			copy(s.Data[startAddress:], content[128:])
+			copy(s.Data[startAddress:(len(content)-128)], content[128:])
 		} else {
-			copy(s.Data[startAddress:], content[:])
+			copy(s.Data[startAddress:len(content)], content[:])
 		}
 		return nil
 	}
