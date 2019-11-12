@@ -401,7 +401,7 @@ func Desass(Prg []byte, Longueur uint16) string {
 	//var p int
 	Listing := ""
 	Adr = 0
-	for Adr < Longueur {
+	for (Adr + 1) < Longueur {
 		OldAdr = Adr
 		Instr = Prg[Adr]
 		Adr++

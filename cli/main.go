@@ -181,7 +181,7 @@ func main() {
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 			}
-			fmt.Println(dsk.Desass(content[0:filesize], uint16(len(content))))
+			fmt.Println(dsk.Desass(content[0:filesize], uint16(filesize)))
 		}
 	}
 
