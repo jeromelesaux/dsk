@@ -1107,18 +1107,26 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 	i := indice
 	lMax := 0x1000000
 	b := make([]byte, 0)
+	firstBlock := true
 	/*	tabDir := make([]StDirEntry, 64)
 		for j := 0; j < 64; j++ {
 			tabDir[j], _ = d.GetInfoDirEntry(uint8(j))
 		}*/
 	d.GetCatalogue()
 	entryIndice := d.Catalogue[i]
-	var cumul int
+	var cumul, tailleFichier int
 	for {
 		l := (d.Catalogue[i].NbPages + 7) >> 3
 		for j := 0; uint8(j) < l; j++ {
 			tailleBloc := 1024
 			bloc := d.ReadBloc(int(d.Catalogue[i].Blocks[j]))
+			if firstBlock {
+				isAmsdos, header := CheckAmsdos(bloc)
+				if isAmsdos {
+					tailleFichier = int(header.LogicalSize) + 0x80
+				}
+				firstBlock = false
+			}
 			var nbOctets int
 			if lMax > tailleBloc {
 				nbOctets = tailleBloc
@@ -1139,7 +1147,9 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 			break
 		}
 	}
-	tailleFichier := len(b) -1
+	if tailleFichier == 0 {
+		tailleFichier = cumul
+	}
 	for i := len(b) - 1; i >= 0; i-- {
 		if b[i] == 0xE5 {
 			tailleFichier--
