@@ -3,8 +3,9 @@ package main
 import (
 	"flag"
 	"fmt"
-	"github.com/jeromelesaux/dsk"
 	"os"
+
+	"github.com/jeromelesaux/dsk"
 )
 
 var (
@@ -13,7 +14,7 @@ var (
 	heads          = flag.Int("head", 1, "Number of heads in the DSK (format)")
 	sector         = flag.Int("sector", 9, "Sector number (format).")
 	format         = flag.Bool("format", false, "Format the followed dsk.")
-	dskType        = flag.Int("dsktype", 0, "DSK Type :\n\t0 : DSK\n\t1 : EDSK\n\t3: SNA\n")
+	dskType        = flag.Int("dsktype", 0, "DSK Type :\n\t0 : DSK\n\t1 : EDSK\n\t3 : SNA\n")
 	dskPath        = flag.String("dsk", "", "Dsk path to handle.")
 	fileInDsk      = flag.String("amsdosfile", "", "File to handle in (or to insert in) the dsk.")
 	hexa           = flag.Bool("hex", false, "List the amsdosfile in hexadecimal.")
