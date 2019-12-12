@@ -132,6 +132,18 @@ func (c *Cpr) Copy(b []byte, banknumber int) error {
 	if len(b) > 0x4000 {
 		return ErrorBankdataExceed
 	}
-	copy(c.DataZone.BankZone[banknumber].BankData[:], b)
+
+	var start = 0
+	amsdos, _ := CheckAmsdos(b)
+	if amsdos {
+		start = 128
+	}
+	copy(c.DataZone.BankZone[banknumber].BankData[:], b[start:])
+	// pad page
+	pad := []byte{0, 0xff}
+	for i := len(b) - start; i < int(c.DataZone.BankZone[banknumber].BankSize); i += 2 {
+		copy(c.DataZone.BankZone[banknumber].BankData[i:], pad)
+	}
+
 	return nil
 }
