@@ -2,8 +2,14 @@ package dsk
 
 import (
 	"encoding/binary"
+	"errors"
 	"fmt"
 	"os"
+)
+
+var (
+	ErrorBanknumber     = errors.New("Bad banknumber, overflow.")
+	ErrorBankdataExceed = errors.New("Size exceed bank size #4000")
 )
 
 type Cpr struct {
@@ -37,7 +43,6 @@ func NewCpr(filePath string) *Cpr {
 	cb := [2]byte{'c', 'b'}
 	for i := 0; i < 32; i++ {
 		copy(cpr.DataZone.BankZone[i].Cb[:], cb[:])
-
 		//second := i % 10
 		//first := (i - second) / 10
 		banknumber := fmt.Sprintf("%.2d", i)
@@ -91,31 +96,42 @@ func (c *Cpr) Open() error {
 	}
 	defer f.Close()
 
-	if err := binary.Read(f, binary.LittleEndian, c.Riff); err != nil {
+	if err := binary.Read(f, binary.LittleEndian, &c.Riff); err != nil {
 		return err
 	}
 	if err := binary.Read(f, binary.LittleEndian, c.TotalSize); err != nil {
 		return err
 	}
 
-	if err := binary.Read(f, binary.LittleEndian, c.DataZone.Ams); err != nil {
+	if err := binary.Read(f, binary.LittleEndian, &c.DataZone.Ams); err != nil {
 		return err
 	}
 
 	for i := 0; i < 32; i++ {
-		if err := binary.Read(f, binary.LittleEndian, c.DataZone.BankZone[i].Cb); err != nil {
+		if err := binary.Read(f, binary.LittleEndian, &c.DataZone.BankZone[i].Cb); err != nil {
 			return err
 		}
-		if err := binary.Read(f, binary.LittleEndian, c.DataZone.BankZone[i].BankNumber); err != nil {
+		if err := binary.Read(f, binary.LittleEndian, &c.DataZone.BankZone[i].BankNumber); err != nil {
 			return err
 		}
 		if err := binary.Read(f, binary.LittleEndian, c.DataZone.BankZone[i].BankSize); err != nil {
 			return err
 		}
-		if err := binary.Read(f, binary.LittleEndian, c.DataZone.BankZone[i].BankData); err != nil {
+		if err := binary.Read(f, binary.LittleEndian, &c.DataZone.BankZone[i].BankData); err != nil {
 			return err
 		}
 	}
 
+	return nil
+}
+
+func (c *Cpr) Copy(b []byte, banknumber int) error {
+	if banknumber >= 32 {
+		return ErrorBanknumber
+	}
+	if len(b) > 0x4000 {
+		return ErrorBankdataExceed
+	}
+	copy(c.DataZone.BankZone[banknumber].BankData[:], b)
 	return nil
 }
