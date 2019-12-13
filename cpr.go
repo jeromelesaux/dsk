@@ -4,12 +4,15 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 )
 
 var (
-	ErrorBanknumber     = errors.New("Bad banknumber, overflow.")
-	ErrorBankdataExceed = errors.New("Size exceed bank size #4000")
+	ErrorBanknumber         = errors.New("Bad banknumber, overflow.")
+	ErrorBankdataExceed     = errors.New("Size exceed bank size #4000")
+	CartChunckLength        = 0x4000
+	CartAmsdosPatchFilename = 0x1c04
 )
 
 type Cpr struct {
@@ -48,7 +51,7 @@ func NewCpr(filePath string) *Cpr {
 		banknumber := fmt.Sprintf("%.2d", i)
 		cpr.DataZone.BankZone[i].BankNumber[0] = banknumber[0]
 		cpr.DataZone.BankZone[i].BankNumber[1] = banknumber[1]
-		cpr.DataZone.BankZone[i].BankSize = 0x4000
+		cpr.DataZone.BankZone[i].BankSize = uint32(CartChunckLength)
 	}
 	return cpr
 }
@@ -129,21 +132,88 @@ func (c *Cpr) Copy(b []byte, banknumber int) error {
 	if banknumber >= 32 {
 		return ErrorBanknumber
 	}
-	if len(b) > 0x4000 {
+	if len(b) > CartChunckLength {
 		return ErrorBankdataExceed
 	}
 
-	var start = 0
+	/*var start = 0
 	amsdos, _ := CheckAmsdos(b)
 	if amsdos {
 		start = 128
-	}
-	copy(c.DataZone.BankZone[banknumber].BankData[:], b[start:])
+	}*/
+	copy(c.DataZone.BankZone[banknumber].BankData[:], b[:])
 	// pad page
-	pad := []byte{0, 0xff}
-	for i := len(b) - start; i < int(c.DataZone.BankZone[banknumber].BankSize); i += 2 {
+	/*pad := []byte{0, 0xff}
+	for i := len(b); i < int(c.DataZone.BankZone[banknumber].BankSize); i += 2 {
 		copy(c.DataZone.BankZone[banknumber].BankData[i:], pad)
+	}*/
+
+	return nil
+}
+
+func (c *Cpr) Add(b []byte, banknumber int) (int, error) {
+	if banknumber > 31 {
+		return -1, ErrorBanknumber
+	}
+	for i := 0; i < CartChunckLength || i < len(b); {
+		size := CartChunckLength
+		if len(b) < CartChunckLength {
+			size = len(b)
+		}
+		if err := c.Copy(b[i:size], banknumber); err != nil {
+			banknumber++
+			return banknumber, err
+		}
+		i += size
+		banknumber++
+	}
+	if banknumber > 31 {
+		return banknumber, ErrorBanknumber
 	}
 
+	return banknumber, nil
+}
+
+func (c *Cpr) Patch(banknumber int, offset uint16, value byte) error {
+	if banknumber > 31 {
+		return ErrorBanknumber
+	}
+	if offset > uint16(CartChunckLength) {
+		return ErrorBankdataExceed
+	}
+	c.DataZone.BankZone[banknumber].BankData[offset] = value
+	return nil
+}
+
+func (c *Cpr) CopyOffset(banknumber int, offset uint16, b []byte) error {
+	if banknumber > 31 {
+		return ErrorBanknumber
+	}
+	if offset > uint16(CartChunckLength) {
+		return ErrorBankdataExceed
+	}
+	copy(c.DataZone.BankZone[banknumber].BankData[offset:], b[:])
+	return nil
+}
+
+func (c *Cpr) AddFile(filePath string, startBanknumber int) error {
+	f, err := os.Open(filePath)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "cannot open file %s error: %v\n", filePath, err)
+		return err
+	}
+	defer f.Close()
+	b, err := ioutil.ReadAll(f)
+	if err != nil {
+		return err
+	}
+	startOffset := 0
+	isAmsdos, _ := CheckAmsdos(b)
+	if isAmsdos {
+		startOffset = 128
+	}
+	if _, err := c.Add(b[startOffset:], startBanknumber); err != nil {
+		return err
+	}
 	return nil
 }
