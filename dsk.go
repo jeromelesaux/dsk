@@ -5,11 +5,12 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	"github.com/jeromelesaux/m4client/cpc"
 	"io"
 	"os"
 	"path/filepath"
 	"strings"
+
+	"github.com/jeromelesaux/m4client/cpc"
 )
 
 var USER_DELETED uint8 = 0xE5
@@ -1147,12 +1148,12 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 			break
 		}
 	}
-	if tailleFichier == 0 {
+	if tailleFichier <= 0 {
 		tailleFichier = cumul
 	}
 	for i := len(b) - 1; i >= 0; i-- {
 		if b[i] == 0xE5 {
-			tailleFichier--
+			tailleFichier = i
 		} else {
 			break
 		}
@@ -1210,7 +1211,7 @@ func (d *DSK) ViewFile(indice int) ([]byte, int, error) {
 	}
 	for i := len(b) - 1; i >= 0; i-- {
 		if b[i] == 0xE5 {
-			tailleFichier--
+			tailleFichier = i
 		} else {
 			break
 		}
