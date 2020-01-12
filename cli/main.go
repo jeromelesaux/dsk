@@ -58,7 +58,7 @@ func main() {
 			os.Exit(0)
 		}
 		if *fileInDsk != "" {
-			if err := dsk.ImportInSna(*fileInDsk, *snaPath, 0); err != nil {
+			if err := dsk.ImportInSna(*fileInDsk, *snaPath, 0x1AD, dsk.CPCPlus6128, dsk.ASIC_6845); err != nil {
 				fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
 					*fileInDsk,
 					*snaPath,
