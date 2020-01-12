@@ -32,7 +32,7 @@ var (
 	fileType       = flag.String("type", "", "Type of the inserted file \n\tascii : type ascii\n\tbinary : type binary\n")
 	snaPath        = flag.String("sna", "", "SNA file to handle")
 	analyse        = flag.Bool("analyze", false, "Returns the DSK header")
-	version        = "0.1"
+	version        = "0.2"
 )
 
 func main() {
