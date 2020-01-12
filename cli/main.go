@@ -18,7 +18,7 @@ var (
 	dskPath        = flag.String("dsk", "", "Dsk path to handle.")
 	fileInDsk      = flag.String("amsdosfile", "", "File to handle in (or to insert in) the dsk.")
 	hexa           = flag.Bool("hex", false, "List the amsdosfile in hexadecimal.")
-	info           = flag.Bool("info", false, "Get informations of the amsdosfile (size, execute and loading address).")
+	info           = flag.Bool("info", false, "Get informations of the amsdosfile (size, execute and loading address). Or get sna informations.")
 	ascii          = flag.Bool("ascii", false, "list the amsdosfile in ascii mode.")
 	desassemble    = flag.Bool("desassemble", false, "list the amsdosfile desassembled.")
 	get            = flag.Bool("get", false, "Get the file in the dsk.")
@@ -40,21 +40,31 @@ func main() {
 	flag.Parse()
 	fmt.Fprintf(os.Stdout, "DSK cli version [%s]\nMade by Sid (ImpAct)\n", version)
 	if *snaPath != "" {
-		f, err := os.Open(*snaPath)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error while read sna file (%s) error %v\n", *snaPath, err)
-			os.Exit(-1)
+		if *info {
+			f, err := os.Open(*snaPath)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error while read sna file (%s) error %v\n", *snaPath, err)
+				os.Exit(-1)
+			}
+			defer f.Close()
+			sna := &dsk.SNA{}
+			if err := sna.Read(f); err != nil {
+				fmt.Fprintf(os.Stderr, "Error while reading sna file (%s) error %v\n", *snaPath, err)
+				os.Exit(-1)
+			}
+			fmt.Fprintf(os.Stdout, "Sna (%s) description :\n\tCPC type:%s\n\tCRTC type:%s\n", *snaPath, sna.CPCType(), sna.CRTCType())
+			fmt.Fprintf(os.Stdout, "\tSna version:%d\n\tMemory size:%dKo\n", sna.Header.Version, sna.Header.MemoryDumpSize)
+			fmt.Fprintf(os.Stdout, "%s\n", sna.Header.String())
+			os.Exit(0)
 		}
-		defer f.Close()
-		sna := &dsk.SNA{}
-		if err := sna.Read(f); err != nil {
-			fmt.Fprintf(os.Stderr, "Error while reading sna file (%s) error %v\n", *snaPath, err)
-			os.Exit(-1)
+		if *fileInDsk != "" {
+			if err := dsk.ImportInSna(*fileInDsk, *snaPath, 0); err != nil {
+				fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
+					*fileInDsk,
+					*snaPath,
+					err)
+			}
 		}
-		fmt.Fprintf(os.Stdout, "Sna (%s) description :\n\tCPC type:%s\n\tCRTC type:%s\n", *snaPath, sna.CPCType(), sna.CRTCType())
-		fmt.Fprintf(os.Stdout, "\tSna version:%d\n\tMemory size:%dKo\n", sna.Header.Version, sna.Header.MemoryDumpSize)
-		fmt.Fprintf(os.Stdout, "%s\n", sna.Header.String())
-		os.Exit(0)
 	}
 	if *dskPath == "" {
 		fmt.Fprintf(os.Stdout, "No dsk set.\n")
