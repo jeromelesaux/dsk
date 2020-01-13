@@ -4,11 +4,14 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"strconv"
+	"strings"
 
 	"github.com/jeromelesaux/dsk"
 )
 
 var (
+	help           = flag.Bool("help", false, "display extended help.")
 	list           = flag.Bool("list", false, "List content of dsk.")
 	track          = flag.Int("track", 39, "Track number (format).")
 	heads          = flag.Int("head", 1, "Number of heads in the DSK (format)")
@@ -25,19 +28,57 @@ var (
 	remove         = flag.Bool("remove", false, "Remove the amsdosfile from the current dsk.")
 	basic          = flag.Bool("basic", false, "List a basic amsdosfile.")
 	put            = flag.Bool("put", false, "Put the amsdosfile in the current dsk.")
-	executeAddress = flag.Int("exec", -1, "Execute address of the inserted file.")
+	executeAddress = flag.String("exec", "", "Execute address of the inserted file.")
 	loadingAddress = flag.Int("load", -1, "Loading address of the inserted file.")
 	user           = flag.Int("user", 0, "User number of the inserted file.")
 	force          = flag.Bool("force", false, "Force overwriting of the inserted file.")
 	fileType       = flag.String("type", "", "Type of the inserted file \n\tascii : type ascii\n\tbinary : type binary\n")
 	snaPath        = flag.String("sna", "", "SNA file to handle")
 	analyse        = flag.Bool("analyze", false, "Returns the DSK header")
+	cpcType        = flag.Int("cpctype", 2, "CPC type (sna import feature): \n\tCPC464 : 0\n\tCPC664: 1\n\tCPC6128 : 2\n\tUnknown : 3\n\tCPCPlus6128 : 4\n\tCPCPlus464 : 5\n\tGX4000 : 6\n\t")
+	screenMode     = flag.Int("screenmode", 1, "screenmode of the importing file in sna.")
 	version        = "0.2"
 )
 
 func main() {
 	var dskFile dsk.DSK
+	var execAddress uint16
 	flag.Parse()
+
+	if *help {
+		sampleUsage()
+		os.Exit(0)
+	}
+
+	if *executeAddress != "" {
+		address := *executeAddress
+		switch address[0] {
+		case '#':
+			value := strings.Replace(address, "#", "", -1)
+			v, err := strconv.ParseUint(value, 16, 16)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "cannot get the hexadecimal value fom %s, error : %v\n", *executeAddress, err)
+			} else {
+				execAddress = uint16(v)
+			}
+		case '0':
+			value := strings.Replace(address, "0x", "", -1)
+			v, err := strconv.ParseUint(value, 16, 16)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "cannot get the hexadecimal value fom %s, error : %v\n", *executeAddress, err)
+			} else {
+				execAddress = uint16(v)
+			}
+		default:
+			v, err := strconv.ParseUint(address, 10, 16)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "cannot get the hexadecimal value fom %s, error : %v\n", *executeAddress, err)
+			} else {
+				execAddress = uint16(v)
+			}
+		}
+	}
+
 	fmt.Fprintf(os.Stdout, "DSK cli version [%s]\nMade by Sid (ImpAct)\n", version)
 	if *snaPath != "" {
 		if *info {
@@ -57,18 +98,38 @@ func main() {
 			fmt.Fprintf(os.Stdout, "%s\n", sna.Header.String())
 			os.Exit(0)
 		}
-		if *fileInDsk != "" {
-			if err := dsk.ImportInSna(*fileInDsk, *snaPath, 0x1AD, dsk.CPCPlus6128, dsk.ASIC_6845); err != nil {
-				fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
-					*fileInDsk,
-					*snaPath,
-					err)
+		if *format {
+			if _, err := dsk.CreateSna(*snaPath); err != nil {
+				fmt.Fprintf(os.Stderr, "Cannot create Sna file (%s) error : %v\n", *snaPath, err)
+				os.Exit(1)
+			}
+			fmt.Fprintf(os.Stdout, "Sna file (%s) created.\n", *snaPath)
+			os.Exit(0)
+		}
+		if *put {
+			if *fileInDsk != "" {
+				cpcTYPE := dsk.CPCType(*cpcType)
+				crtc := dsk.UM6845R
+				if *cpcType > 3 {
+					crtc = dsk.ASIC_6845
+				}
+				if err := dsk.ImportInSna(*fileInDsk, *snaPath, execAddress, uint8(*screenMode), cpcTYPE, crtc); err != nil {
+					fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
+						*fileInDsk,
+						*snaPath,
+						err)
+					os.Exit(1)
+				}
+				os.Exit(0)
+			} else {
+				fmt.Fprintf(os.Stderr, "Missing input file to import in sna file (%s)\n", *snaPath)
 			}
 		}
 	}
 	if *dskPath == "" {
 		fmt.Fprintf(os.Stdout, "No dsk set.\n")
 		flag.PrintDefaults()
+
 		os.Exit(-1)
 	}
 	if *format {
@@ -84,7 +145,7 @@ func main() {
 			os.Exit(-1)
 		}
 		defer f.Close()
-		fmt.Fprintf(os.Stdout, "Formating number of sectors (%d), tracks (%d)\n", *sector, *track)
+		fmt.Fprintf(os.Stdout, "Formating number of sectors (%d), tracks (%d), head number (%d)\n", *sector, *track, *heads)
 		dskFile := dsk.FormatDsk(uint8(*sector), uint8(*track), uint8(*heads), (*dskType))
 		if err := dskFile.Write(f); err != nil {
 			fmt.Fprintf(os.Stderr, "Error while write file (%s) error %v\n", *dskPath, err)
@@ -282,7 +343,7 @@ func main() {
 				resumeAction(*dskPath, "put ascii", *fileInDsk, informations)
 			case "binary":
 				informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", *executeAddress, *loadingAddress)
-				if err := dskFile.PutFile(*fileInDsk, dsk.MODE_BINAIRE, uint16(*loadingAddress), uint16(*executeAddress), uint16(*user), false, false); err != nil {
+				if err := dskFile.PutFile(*fileInDsk, dsk.MODE_BINAIRE, uint16(*loadingAddress), execAddress, uint16(*user), false, false); err != nil {
 					fmt.Fprintf(os.Stderr, "Error while inserted file (%s) in dsk (%s) error :%v\n", *fileInDsk, *dskPath, err)
 					os.Exit(-1)
 				}
@@ -338,4 +399,20 @@ func resumeAction(dskFilepath, action, amsdosfile, informations string) {
 	fmt.Fprintf(os.Stderr, "DSK path [%s]\n", dskFilepath)
 	fmt.Fprintf(os.Stderr, "Action on DSK [%s] on amsdos file [%s]\n", action, amsdosfile)
 	fmt.Fprintf(os.Stderr, "%s\n", informations)
+}
+
+func sampleUsage() {
+	flag.PrintDefaults()
+	fmt.Fprintf(os.Stdout, "\nHere sample usages :\n"+
+		"\t* Create empty simple dsk file : dsk -dsk output.dsk -format\n"+
+		"\t* Create empty simple dsk file with custom tracks and sectors: dsk -dsk output.dsk -format -sector 8 -track 42\n"+
+		"\t* Create empty extended dsk file with custom head, tracks and sectors: dsk -dsk output.dsk -format -sector 8 -track 42 -dsktype 1 -head 2\n"+
+		"\t* Create empty sna file : dsk -sna output.sna\n"+
+		"\t* List dsk content : dsk -dsk output.dsk -list\n"+
+		"\t* Get information on Sna file : dsk -sna output.sna -info\n"+
+		"\t* Get information on file in dsk  : dsk -dsk output.dsk -amsdosfile hello.bin -info\n"+
+		"\t* List file content in hexadecimal in dsk file : dsk -dsk output.dsk -amsdosfile hello.bin -hex\n",
+		"\n* Put file in dsk file : dsk -dsk output.dsk -put -amsdosfile hello.bin -exec #1000 -load 500\n"+
+			"\n* Put file in sna file (here for a cpc plus): dsk -sna output.sna -put -amsdosfile hello.bin -exec #1000 -load 500 -screenmode 0 -cpctype 4\n")
+
 }

@@ -4,9 +4,10 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
-	m "github.com/jeromelesaux/m4client/cpc"
 	"io"
 	"os"
+
+	m "github.com/jeromelesaux/m4client/cpc"
 )
 
 type SNA struct {
@@ -205,6 +206,27 @@ func CPCValue(cpc CPC) uint8 {
 	return 0
 }
 
+func CPCType(cpc int) CPC {
+	switch cpc {
+	case 0:
+		return CPC464
+	case 1:
+		return CPC664
+	case 2:
+		return CPC6128
+	case 3:
+		return Unknown
+	case 4:
+		return CPCPlus6128
+	case 5:
+		return CPCPlus464
+	case 6:
+		return GX4000
+	default:
+		return Unknown
+	}
+}
+
 func (s *SNA) CPCType() string {
 	switch CPC(s.Header.CPCType) {
 	case CPC464:
@@ -301,9 +323,9 @@ func (s *SNA) Get(startAddress, lenght uint16) ([]byte, error) {
 	return content, nil
 }
 
-func ImportInSna(filePath, snaPath string, execAddress uint16, cpcType CPC, crtcType CRTC) error {
+func ImportInSna(filePath, snaPath string, execAddress uint16, screenMode uint8, cpcType CPC, crtcType CRTC) error {
 	sna := &SNA{Data: make([]byte, 0xFFFF), Header: NewSnaHeader()}
-
+	var filesize uint16
 	f, err := os.Open(filePath)
 	if err != nil {
 		return err
@@ -313,31 +335,38 @@ func ImportInSna(filePath, snaPath string, execAddress uint16, cpcType CPC, crtc
 	if err := binary.Read(f, binary.LittleEndian, header); err != nil {
 		return err
 	}
+	filesize = header.Size
+	if header.Size == 0 {
+		filesize = header.LogicalSize
+	}
 	//	f.Seek(0, 0)
-	fmt.Fprintf(os.Stdout, "Import file %s at address:#%4x size:%4x\n", filePath, header.Address, header.Size)
+	fmt.Fprintf(os.Stdout, "Import file %s at address:#%4x size:%4x\n", filePath, header.Address, filesize)
 	buff := make([]byte, 0xFFFF)
 	_, err = f.Read(buff)
 	if err != nil {
 		return err
 	}
-	if err := sna.Put(buff, header.Address, header.Size); err != nil {
+	if err := sna.Put(buff, header.Address, filesize); err != nil {
 		return err
+	}
+	if execAddress == 0 {
+		execAddress = header.Exec
 	}
 
 	sna.Header.RegisterPCHigh = uint8(execAddress >> 8)
 	sna.Header.RegisterPCLow = uint8(execAddress & 0xff)
-	sna.Header.GAMultiConfiguration = 0x88
+	//sna.Header.GAMultiConfiguration = 0x88
 	sna.Header.CPCType = CPCValue(cpcType)
 	sna.Header.CRTCType = CRTCValue(crtcType)
 
-	/*switch screenMode {
+	switch screenMode {
 	case 0:
 		sna.Header.GAMultiConfiguration = 0x8c
 	case 1:
 		sna.Header.GAMultiConfiguration = 0x8d
 	case 2:
 		sna.Header.GAMultiConfiguration = 0x8e
-	}*/
+	}
 	w, err := os.Create(snaPath)
 	if err != nil {
 		return err
@@ -350,4 +379,20 @@ func ImportInSna(filePath, snaPath string, execAddress uint16, cpcType CPC, crtc
 		return err
 	}
 	return nil
+}
+
+func CreateSna(snaPath string) (*SNA, error) {
+	s := &SNA{Data: make([]byte, 0xFFFF), Header: NewSnaHeader()}
+	w, err := os.Create(snaPath)
+	if err != nil {
+		return s, err
+	}
+	defer w.Close()
+	if err := binary.Write(w, binary.LittleEndian, s.Header); err != nil {
+		return s, err
+	}
+	if err := binary.Write(w, binary.LittleEndian, s.Data); err != nil {
+		return s, err
+	}
+	return s, nil
 }
