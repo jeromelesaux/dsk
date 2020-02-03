@@ -400,22 +400,26 @@ func main() {
 		}
 		amsdosFile := dsk.GetNomDir(*fileInDsk)
 		indice := dskFile.FileExists(amsdosFile)
-		if indice != dsk.NOT_FOUND && !*force {
-			fmt.Fprintf(os.Stderr, "File %s already exists\n", *fileInDsk)
+		if indice == dsk.NOT_FOUND {
+			fmt.Fprintf(os.Stderr, "File (%s) not found in dsk (%s)\n", *fileInDsk, *dskPath)
+			os.Exit(-1)
+		}
+		if err := dskFile.RemoveFile(uint8(indice)); err != nil {
+			fmt.Fprintf(os.Stderr, "Error while removing file %s (indice:%d) error :%v\n", *fileInDsk, indice, err)
 		} else {
-			if err := dskFile.RemoveFile(uint8(indice)); err != nil {
-				fmt.Fprintf(os.Stderr, "Error while removing file %s (indice:%d) error :%v\n", *fileInDsk, indice, err)
-			} else {
-				f, err := os.Create(*dskPath)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error while write file (%s) error %v\n", *dskPath, err)
-					os.Exit(-1)
-				}
-				defer f.Close()
-				if err := dskFile.Write(f); err != nil {
-					fmt.Fprintf(os.Stderr, "Error while write file (%s) error %v\n", *dskPath, err)
-					os.Exit(-1)
-				}
+			fmt.Fprintf(os.Stderr, "File (%.8s.%.3s) deleted in dsk (%s)\n",
+				amsdosFile.Nom,
+				amsdosFile.Ext,
+				*dskPath)
+			f, err := os.Create(*dskPath)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error while write file (%s) error %v\n", *dskPath, err)
+				os.Exit(-1)
+			}
+			defer f.Close()
+			if err := dskFile.Write(f); err != nil {
+				fmt.Fprintf(os.Stderr, "Error while write file (%s) error %v\n", *dskPath, err)
+				os.Exit(-1)
 			}
 		}
 	}
