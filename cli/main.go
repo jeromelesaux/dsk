@@ -28,8 +28,8 @@ var (
 	remove         = flag.Bool("remove", false, "Remove the amsdosfile from the current dsk.")
 	basic          = flag.Bool("basic", false, "List a basic amsdosfile.")
 	put            = flag.Bool("put", false, "Put the amsdosfile in the current dsk.")
-	executeAddress = flag.String("exec", "", "Execute address of the inserted file.")
-	loadingAddress = flag.Int("load", -1, "Loading address of the inserted file.")
+	executeAddress = flag.String("exec", "", "Execute address of the inserted file. (hexadecimal #170 allowed.)")
+	loadingAddress = flag.String("load", "", "Loading address of the inserted file. (hexadecimal #170 allowed.)")
 	user           = flag.Int("user", 0, "User number of the inserted file.")
 	force          = flag.Bool("force", false, "Force overwriting of the inserted file.")
 	fileType       = flag.String("type", "", "Type of the inserted file \n\tascii : type ascii\n\tbinary : type binary\n")
@@ -42,7 +42,7 @@ var (
 
 func main() {
 	var dskFile dsk.DSK
-	var execAddress uint16
+	var execAddress, loadAddress uint16
 	flag.Parse()
 
 	if *help {
@@ -75,6 +75,34 @@ func main() {
 				fmt.Fprintf(os.Stderr, "cannot get the hexadecimal value fom %s, error : %v\n", *executeAddress, err)
 			} else {
 				execAddress = uint16(v)
+			}
+		}
+	}
+	if *loadingAddress != "" {
+		address := *loadingAddress
+		switch address[0] {
+		case '#':
+			value := strings.Replace(address, "#", "", -1)
+			v, err := strconv.ParseUint(value, 16, 16)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "cannot get the hexadecimal value fom %s, error : %v\n", *loadingAddress, err)
+			} else {
+				loadAddress = uint16(v)
+			}
+		case '0':
+			value := strings.Replace(address, "0x", "", -1)
+			v, err := strconv.ParseUint(value, 16, 16)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "cannot get the hexadecimal value fom %s, error : %v\n", *loadingAddress, err)
+			} else {
+				loadAddress = uint16(v)
+			}
+		default:
+			v, err := strconv.ParseUint(address, 10, 16)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "cannot get the hexadecimal value fom %s, error : %v\n", *loadingAddress, err)
+			} else {
+				loadAddress = uint16(v)
 			}
 		}
 	}
@@ -343,7 +371,7 @@ func main() {
 				resumeAction(*dskPath, "put ascii", *fileInDsk, informations)
 			case "binary":
 				informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", *executeAddress, *loadingAddress)
-				if err := dskFile.PutFile(*fileInDsk, dsk.MODE_BINAIRE, uint16(*loadingAddress), execAddress, uint16(*user), false, false); err != nil {
+				if err := dskFile.PutFile(*fileInDsk, dsk.MODE_BINAIRE, loadAddress, execAddress, uint16(*user), false, false); err != nil {
 					fmt.Fprintf(os.Stderr, "Error while inserted file (%s) in dsk (%s) error :%v\n", *fileInDsk, *dskPath, err)
 					os.Exit(-1)
 				}
