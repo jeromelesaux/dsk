@@ -1244,6 +1244,7 @@ func (d *DSK) RemoveFile(indice uint8) error {
 		if err != nil {
 			return ErrorNoDirEntry
 		}
+		entry.User = USER_DELETED
 		if err := d.SetInfoDirEntry(indice, entry); err != nil {
 			return ErrorNoDirEntry
 		}
