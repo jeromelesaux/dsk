@@ -631,8 +631,9 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 		fmt.Fprintf(os.Stderr, "Cannot read the content of the file (%s) with error %v\n", masque, err)
 		return err
 	}
-	rbuff := bytes.NewReader(buff)
-	if err := binary.Read(rbuff, binary.LittleEndian, header); err != nil {
+	fmt.Fprintf(os.Stdout, "file (%s) read (%d bytes).\n", masque, fileLength)
+	fr.Seek(0, io.SeekStart)
+	if err := binary.Read(fr, binary.LittleEndian, header); err != nil {
 		fmt.Fprintf(os.Stdout, "No header found for file :%s, error :%v\n", masque, err)
 	}
 
@@ -654,14 +655,16 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 	if !isAmsdos {
 		// Creer une en-tete amsdos par defaut
 		fmt.Fprintf(os.Stdout, "Create header... (%s)\n", masque)
-		header = &StAmsdos{Size: uint16(len(buff)), Size2: uint16(len(buff))}
+		header.Size = uint16(fileLength)
+		header.Size2 = uint16(fileLength)
+		//header = &StAmsdos{Size: uint16(fileLength), Size2: uint16(fileLength)}
 		copy(header.Filename[:], []byte(cFileName[0:12]))
+		header.Address = loadAdress
 		if loadAdress != 0 {
-			header.Address = loadAdress
 			typeModeImport = MODE_BINAIRE
 		}
+		header.Exec = exeAdress
 		if exeAdress != 0 {
-			header.Exec = exeAdress
 			typeModeImport = MODE_BINAIRE
 		}
 		// Il faut recalculer le checksum en comptant es adresses !
