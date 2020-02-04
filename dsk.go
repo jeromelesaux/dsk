@@ -667,8 +667,13 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 		if exeAdress != 0 {
 			typeModeImport = MODE_BINAIRE
 		}
+		if typeModeImport == MODE_BINAIRE {
+			header.Type = 1
+		}
+
 		// Il faut recalculer le checksum en comptant es adresses !
 		header.Checksum = header.ComputedChecksum16()
+
 	} else {
 		fmt.Fprintf(os.Stdout, "File has already header...(%s)\n", masque)
 	}
@@ -685,7 +690,6 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 			fmt.Fprintf(os.Stdout, "Removing header...(%s)\n", masque)
 			copy(buff[0:], buff[binary.Size(StAmsdos{}):])
 		}
-		break
 	case MODE_BINAIRE:
 		//
 		// Importation en mode BINAIRE
@@ -697,7 +701,6 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 			//
 			addHeader = true
 		}
-		break
 	}
 	//
 	// Si fichier ok pour etre import
