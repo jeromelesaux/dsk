@@ -37,7 +37,7 @@ var (
 	analyse        = flag.Bool("analyze", false, "Returns the DSK header")
 	cpcType        = flag.Int("cpctype", 2, "CPC type (sna import feature): \n\tCPC464 : 0\n\tCPC664: 1\n\tCPC6128 : 2\n\tUnknown : 3\n\tCPCPlus6128 : 4\n\tCPCPlus464 : 5\n\tGX4000 : 6\n\t")
 	screenMode     = flag.Int("screenmode", 1, "screenmode of the importing file in sna.")
-	version        = "0.5"
+	version        = "0.6rc"
 )
 
 func main() {
@@ -327,28 +327,57 @@ func main() {
 			fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
 			os.Exit(-1)
 		}
-		amsdosFile := dsk.GetNomDir(*fileInDsk)
-		indice := dskFile.FileExists(amsdosFile)
-		if indice == dsk.NOT_FOUND {
-			fmt.Fprintf(os.Stderr, "File %s does not exist\n", *fileInDsk)
+		if *fileInDsk == "*" {
+			dskFile.GetCatalogue()
+			for indice, v := range dskFile.Catalogue {
+				if v.User != dsk.USER_DELETED && v.NbPages != 0 {
+
+					filename := fmt.Sprintf("%s.%s", v.Nom, v.Ext)
+
+					fmt.Fprintf(os.Stdout, "Filename to get : %s\n", filename)
+					content, err := dskFile.GetFileIn(filename, indice)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
+					}
+					af, err := os.Create(filename)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "Error while creating file (%s) error %v\n", filename, err)
+						os.Exit(-1)
+					}
+					defer af.Close()
+					_, err = af.Write(content)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "Error while copying content in file (%s) error %v\n", filename, err)
+						os.Exit(-1)
+					}
+
+				}
+			}
 		} else {
-			content, err := dskFile.GetFileIn(*fileInDsk, indice)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
+
+			amsdosFile := dsk.GetNomDir(*fileInDsk)
+			indice := dskFile.FileExists(amsdosFile)
+			if indice == dsk.NOT_FOUND {
+				fmt.Fprintf(os.Stderr, "File %s does not exist\n", *fileInDsk)
+			} else {
+				content, err := dskFile.GetFileIn(*fileInDsk, indice)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
+				}
+				af, err := os.Create(*fileInDsk)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error while creating file (%s) error %v\n", *fileInDsk, err)
+					os.Exit(-1)
+				}
+				defer af.Close()
+				_, err = af.Write(content)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error while copying content in file (%s) error %v\n", *fileInDsk, err)
+					os.Exit(-1)
+				}
+				informations := fmt.Sprintf("Extract file [%s]\nIndice in DSK [%d]\n", *fileInDsk, indice)
+				resumeAction(*dskPath, "get amsdosfile", *fileInDsk, informations)
 			}
-			af, err := os.Create(*fileInDsk)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error while creating file (%s) error %v\n", *fileInDsk, err)
-				os.Exit(-1)
-			}
-			defer af.Close()
-			_, err = af.Write(content)
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error while copying content in file (%s) error %v\n", *fileInDsk, err)
-				os.Exit(-1)
-			}
-			informations := fmt.Sprintf("Extract file [%s]\nIndice in DSK [%d]\n", *fileInDsk, indice)
-			resumeAction(*dskPath, "get amsdosfile", *fileInDsk, informations)
 		}
 	}
 	if *put {
