@@ -329,11 +329,14 @@ func main() {
 		}
 		if *fileInDsk == "*" {
 			dskFile.GetCatalogue()
+			var lastFilename string
 			for indice, v := range dskFile.Catalogue {
 				if v.User != dsk.USER_DELETED && v.NbPages != 0 {
-
 					filename := fmt.Sprintf("%s.%s", v.Nom, v.Ext)
-
+					if lastFilename == filename {
+						continue
+					}
+					lastFilename = filename
 					fmt.Fprintf(os.Stdout, "Filename to get : %s\n", filename)
 					content, err := dskFile.GetFileIn(filename, indice)
 					if err != nil {
@@ -350,11 +353,9 @@ func main() {
 						fmt.Fprintf(os.Stderr, "Error while copying content in file (%s) error %v\n", filename, err)
 						os.Exit(-1)
 					}
-
 				}
 			}
 		} else {
-
 			amsdosFile := dsk.GetNomDir(*fileInDsk)
 			indice := dskFile.FileExists(amsdosFile)
 			if indice == dsk.NOT_FOUND {
