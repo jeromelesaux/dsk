@@ -35,3 +35,9 @@ build:
 	@echo "Compilation for older macos"
 	GOOS=darwin ARCH=386 go build ${LDFLAGS} -o dsk $(SOURCEDIR)/main.go 
 	zip dsk-$(appversion)-macos-older.zip dsk  
+
+clean:
+	@echo "Cleaning project"
+	rm -f dsk.exe
+	rm -f dsk
+	rm dsk-*.zip
