@@ -393,14 +393,15 @@ func Hex(input string, position int, valeur, digit int) string {
 //
 // Convertir le buffer en listing desassemble
 //
-func Desass(Prg []byte, Longueur uint16) string {
+func Desass(Prg []byte, Longueur, StartAddress uint16) string {
 	var Instr, Inst2, Inst3, Inst4 uint8
 	var Inst string
 	var Adr, OldAdr uint16
 	//var Ad8 uint8
 	//var p int
 	Listing := ""
-	Adr = 0
+	//	Adr = 0
+
 	for (Adr + 1) < Longueur {
 		OldAdr = Adr
 		Instr = Prg[Adr]
@@ -496,7 +497,7 @@ func Desass(Prg []byte, Longueur uint16) string {
 		} else {
 			fmt.Sprintf(Inst, "%.2X %.2X %2.X ????", Instr, Inst2, Inst3)
 		}
-		OldAdrHex := fmt.Sprintf("%.4X", OldAdr)
+		OldAdrHex := fmt.Sprintf("%.4X", (OldAdr + StartAddress))
 		Listing += OldAdrHex
 		//copy([]byte(Listing[PosD:4]), []byte(OldAdrHex))
 		Listing += " "

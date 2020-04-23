@@ -281,7 +281,18 @@ func main() {
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 			}
-			fmt.Println(dsk.Desass(content[0:filesize], uint16(filesize)))
+			var address uint16
+			raw, err := dskFile.GetFileIn(*fileInDsk, indice)
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
+			} else {
+				isAmsdos, header := dsk.CheckAmsdos(raw)
+				if isAmsdos {
+					address = header.Exec
+				}
+			}
+
+			fmt.Println(dsk.Desass(content[0:filesize], uint16(filesize), address))
 		}
 	}
 
