@@ -107,7 +107,7 @@ func main() {
 		}
 	}
 
-	fmt.Fprintf(os.Stdout, "DSK cli version [%s]\nMade by Sid (ImpAct)\n", version)
+	fmt.Fprintf(os.Stderr, "DSK cli version [%s]\nMade by Sid (ImpAct)\n", version)
 	if *snaPath != "" {
 		if *info {
 			f, err := os.Open(*snaPath)
@@ -121,9 +121,9 @@ func main() {
 				fmt.Fprintf(os.Stderr, "Error while reading sna file (%s) error %v\n", *snaPath, err)
 				os.Exit(-1)
 			}
-			fmt.Fprintf(os.Stdout, "Sna (%s) description :\n\tCPC type:%s\n\tCRTC type:%s\n", *snaPath, sna.CPCType(), sna.CRTCType())
-			fmt.Fprintf(os.Stdout, "\tSna version:%d\n\tMemory size:%dKo\n", sna.Header.Version, sna.Header.MemoryDumpSize)
-			fmt.Fprintf(os.Stdout, "%s\n", sna.Header.String())
+			fmt.Fprintf(os.Stderr, "Sna (%s) description :\n\tCPC type:%s\n\tCRTC type:%s\n", *snaPath, sna.CPCType(), sna.CRTCType())
+			fmt.Fprintf(os.Stderr, "\tSna version:%d\n\tMemory size:%dKo\n", sna.Header.Version, sna.Header.MemoryDumpSize)
+			fmt.Fprintf(os.Stderr, "%s\n", sna.Header.String())
 			os.Exit(0)
 		}
 		if *format {
@@ -131,7 +131,7 @@ func main() {
 				fmt.Fprintf(os.Stderr, "Cannot create Sna file (%s) error : %v\n", *snaPath, err)
 				os.Exit(1)
 			}
-			fmt.Fprintf(os.Stdout, "Sna file (%s) created.\n", *snaPath)
+			fmt.Fprintf(os.Stderr, "Sna file (%s) created.\n", *snaPath)
 			os.Exit(0)
 		}
 		if *put {
@@ -155,7 +155,7 @@ func main() {
 		}
 	}
 	if *dskPath == "" {
-		fmt.Fprintf(os.Stdout, "No dsk set.\n")
+		fmt.Fprintf(os.Stderr, "No dsk set.\n")
 		flag.PrintDefaults()
 
 		os.Exit(-1)
@@ -173,7 +173,7 @@ func main() {
 			os.Exit(-1)
 		}
 		defer f.Close()
-		fmt.Fprintf(os.Stdout, "Formating number of sectors (%d), tracks (%d), head number (%d)\n", *sector, *track, *heads)
+		fmt.Fprintf(os.Stderr, "Formating number of sectors (%d), tracks (%d), head number (%d)\n", *sector, *track, *heads)
 		dskFile := dsk.FormatDsk(uint8(*sector), uint8(*track), uint8(*heads), (*dskType))
 		if err := dskFile.Write(f); err != nil {
 			fmt.Fprintf(os.Stderr, "Error while write file (%s) error %v\n", *dskPath, err)
@@ -195,7 +195,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "Error while read dsk file (%s) error %v\n", *dskPath, err)
 		os.Exit(-1)
 	}
-	fmt.Fprintf(os.Stdout, "Dsk file (%s)\n", *dskPath)
+	fmt.Fprintf(os.Stderr, "Dsk file (%s)\n", *dskPath)
 	if *list {
 		if err := dskFile.GetCatalogue(); err != nil {
 			fmt.Fprintf(os.Stderr, "Error while getting catalogue in dsk file (%s) error %v\n", *dskPath, err)
@@ -205,13 +205,13 @@ func main() {
 		for _, i := range dskFile.GetFilesIndices() {
 			size := fmt.Sprintf("%.3d ko", dskFile.GetFilesize(dskFile.Catalogue[i]))
 			filename := fmt.Sprintf("%s.%s", dskFile.Catalogue[i].Nom, dskFile.Catalogue[i].Ext)
-			fmt.Fprintf(os.Stdout, "[%.2d] : %s : %d %s\n", i, filename, int(dskFile.Catalogue[i].User), size)
+			fmt.Fprintf(os.Stderr, "[%.2d] : %s : %d %s\n", i, filename, int(dskFile.Catalogue[i].User), size)
 		}
 	}
 
 	if *analyse {
 		entry := dskFile.Entry
-		fmt.Fprintf(os.Stdout, "Dsk entry %s\n", entry.ToString())
+		fmt.Fprintf(os.Stderr, "Dsk entry %s\n", entry.ToString())
 	}
 
 	if *info {
@@ -328,7 +328,7 @@ func main() {
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 			}
-			fmt.Fprintf(os.Stdout, "File %s filesize :%d octets\n", *fileInDsk, filesize)
+			fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", *fileInDsk, filesize)
 			fmt.Fprintf(os.Stdout, "%s", dsk.Basic(content, uint16(filesize), true))
 		}
 	}
@@ -348,7 +348,7 @@ func main() {
 						continue
 					}
 					lastFilename = filename
-					fmt.Fprintf(os.Stdout, "Filename to get : %s\n", filename)
+					fmt.Fprintf(os.Stderr, "Filename to get : %s\n", filename)
 					content, err := dskFile.GetFileIn(filename, indice)
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
@@ -476,7 +476,7 @@ func resumeAction(dskFilepath, action, amsdosfile, informations string) {
 
 func sampleUsage() {
 	flag.PrintDefaults()
-	fmt.Fprintf(os.Stdout, "\nHere sample usages :\n"+
+	fmt.Fprintf(os.Stderr, "\nHere sample usages :\n"+
 		"\t* Create empty simple dsk file : dsk -dsk output.dsk -format\n"+
 		"\t* Create empty simple dsk file with custom tracks and sectors: dsk -dsk output.dsk -format -sector 8 -track 42\n"+
 		"\t* Create empty extended dsk file with custom head, tracks and sectors: dsk -dsk output.dsk -format -sector 8 -track 42 -dsktype 1 -head 2\n"+

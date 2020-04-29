@@ -102,14 +102,14 @@ func (m *M4Client) Url() string {
 func PerformHttpAction(req *http.Request) error {
 	client := &http.Client{}
 	req.Header.Add("user-agent", userAgent)
-	fmt.Fprintf(os.Stdout, "User-agent:%s\n", req.Header.Get("user-agent"))
-	fmt.Fprintf(os.Stdout, "Query:%s\n", req.RemoteAddr)
+	fmt.Fprintf(os.Stderr, "User-agent:%s\n", req.Header.Get("user-agent"))
+	fmt.Fprintf(os.Stderr, "Query:%s\n", req.RemoteAddr)
 	resp, err := client.Do(req)
 	if err != nil {
 		return err
 	}
 	defer resp.Body.Close()
-	fmt.Fprintf(os.Stdout, "Response code :%d\n", resp.StatusCode)
+	fmt.Fprintf(os.Stderr, "Response code :%d\n", resp.StatusCode)
 	if resp.StatusCode != http.StatusOK {
 		return errors.New("Response from cpc http server differs from 200")
 	}
@@ -209,7 +209,7 @@ func UniversalBase(filePath string) string {
 func (m *M4Client) Upload(remotePath, localPath string) error {
 	m.action = Upload
 	remoteFilePath := remotePath + "/" + UniversalBase(localPath)
-	fmt.Fprintf(os.Stdout, "M4 action :%s,input file:%s url:%s, parameter:%s\n", m.action, localPath, m.Url(), remoteFilePath)
+	fmt.Fprintf(os.Stderr, "M4 action :%s,input file:%s url:%s, parameter:%s\n", m.action, localPath, m.Url(), remoteFilePath)
 	fh, err := os.Open(localPath)
 	if err != nil {
 		return err
@@ -222,7 +222,7 @@ func (m *M4Client) Upload(remotePath, localPath string) error {
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 
-	fmt.Fprintf(os.Stdout, "remote file path (%s)\n", remoteFilePath)
+	fmt.Fprintf(os.Stderr, "remote file path (%s)\n", remoteFilePath)
 	part, err := writer.CreateFormFile("upfile", remoteFilePath)
 	if err != nil {
 		return err
@@ -287,7 +287,7 @@ func (m *M4Client) Run(cpcfile string) error {
 
 func (m *M4Client) MakeDirectory(remotedirectory string) error {
 	m.action = Mkdir
-	fmt.Fprintf(os.Stdout, "M4 action :%s, url:%s\n", m.action, m.Url()+remotedirectory)
+	fmt.Fprintf(os.Stderr, "M4 action :%s, url:%s\n", m.action, m.Url()+remotedirectory)
 	req, err := http.NewRequest("GET", m.Url()+remotedirectory, nil)
 	if err != nil {
 		return err

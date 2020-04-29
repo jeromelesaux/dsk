@@ -473,7 +473,7 @@ func (d *DSK) CheckDsk() error {
 		tr := d.Tracks[track]
 		if !d.Extended {
 			if tr.NbSect != 9 {
-				fmt.Fprintf(os.Stdout, "Warning : track :%d has %d sectors ! wanted 9\n", track, tr.NbSect)
+				fmt.Fprintf(os.Stderr, "Warning : track :%d has %d sectors ! wanted 9\n", track, tr.NbSect)
 			}
 		}
 		var minSect, maxSect, s uint8
@@ -489,11 +489,11 @@ func (d *DSK) CheckDsk() error {
 		}
 		if !d.Extended {
 			if maxSect-minSect != 8 {
-				fmt.Fprintf(os.Stdout, "Warning : strange sector numbering in track %d! (maxSect:%X,minSect:%X)\n", track, maxSect, minSect)
+				fmt.Fprintf(os.Stderr, "Warning : strange sector numbering in track %d! (maxSect:%X,minSect:%X)\n", track, maxSect, minSect)
 			}
 		}
 		if minSect != minSectFirst {
-			fmt.Fprintf(os.Stdout, "Warning : track %d start at sector %d while track 0 starts at %d\n", track, minSect, minSectFirst)
+			fmt.Fprintf(os.Stderr, "Warning : track %d start at sector %d while track 0 starts at %d\n", track, minSect, minSectFirst)
 		}
 	}
 	return nil
@@ -631,10 +631,10 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 		fmt.Fprintf(os.Stderr, "Cannot read the content of the file (%s) with error %v\n", masque, err)
 		return err
 	}
-	fmt.Fprintf(os.Stdout, "file (%s) read (%d bytes).\n", masque, fileLength)
+	fmt.Fprintf(os.Stderr, "file (%s) read (%d bytes).\n", masque, fileLength)
 	fr.Seek(0, io.SeekStart)
 	if err := binary.Read(fr, binary.LittleEndian, header); err != nil {
-		fmt.Fprintf(os.Stdout, "No header found for file :%s, error :%v\n", masque, err)
+		fmt.Fprintf(os.Stderr, "No header found for file :%s, error :%v\n", masque, err)
 	}
 
 	if typeModeImport == MODE_ASCII {
@@ -654,7 +654,7 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 	}
 	if !isAmsdos {
 		// Creer une en-tete amsdos par defaut
-		fmt.Fprintf(os.Stdout, "Create header... (%s)\n", masque)
+		fmt.Fprintf(os.Stderr, "Create header... (%s)\n", masque)
 		header.Size = uint16(fileLength)
 		header.Size2 = uint16(fileLength)
 		//header = &StAmsdos{Size: uint16(fileLength), Size2: uint16(fileLength)}
@@ -675,7 +675,7 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 		header.Checksum = header.ComputedChecksum16()
 
 	} else {
-		fmt.Fprintf(os.Stdout, "File has already header...(%s)\n", masque)
+		fmt.Fprintf(os.Stderr, "File has already header...(%s)\n", masque)
 	}
 	//
 	// En fonction du mode d'importation...
@@ -687,7 +687,7 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 		//
 		if isAmsdos {
 			// Supprmier en-tete si elle existe
-			fmt.Fprintf(os.Stdout, "Removing header...(%s)\n", masque)
+			fmt.Fprintf(os.Stderr, "Removing header...(%s)\n", masque)
 			copy(buff[0:], buff[binary.Size(StAmsdos{}):])
 		}
 	case MODE_BINAIRE:
@@ -932,7 +932,7 @@ func (d *DSK) DisplayCatalogue() {
 	for i := 0; i < 64; i++ {
 		entry := d.Catalogue[i]
 		if entry.User != USER_DELETED && entry.NumPage != 0 {
-			fmt.Fprintf(os.Stdout, "%s.%s : %d\n", entry.Nom, entry.Ext, entry.User)
+			fmt.Fprintf(os.Stderr, "%s.%s : %d\n", entry.Nom, entry.Ext, entry.User)
 		}
 	}
 }

@@ -299,7 +299,7 @@ func (s *SNA) Put(content []byte, startAddress, length uint16) error {
 		copy(s.Data[header.Exec:], content[128:])
 		return nil
 	}
-	fmt.Fprintf(os.Stdout, "Copying into SNA start address #%4x is amsdos %v\n", startAddress, isAmsdos)
+	fmt.Fprintf(os.Stderr, "Copying into SNA start address #%4x is amsdos %v\n", startAddress, isAmsdos)
 	if startAddress != 0 {
 		if isAmsdos {
 			copy(s.Data[startAddress:(len(content)-128)], content[128:])
@@ -340,7 +340,7 @@ func ImportInSna(filePath, snaPath string, execAddress uint16, screenMode uint8,
 		filesize = header.LogicalSize
 	}
 	//	f.Seek(0, 0)
-	fmt.Fprintf(os.Stdout, "Import file %s at address:#%4x size:%4x\n", filePath, header.Address, filesize)
+	fmt.Fprintf(os.Stderr, "Import file %s at address:#%4x size:%4x\n", filePath, header.Address, filesize)
 	buff := make([]byte, 0xFFFF)
 	_, err = f.Read(buff)
 	if err != nil {
