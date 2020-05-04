@@ -30,11 +30,14 @@ build:
 	GOOS=darwin go build ${LDFLAGS} -o dsk $(SOURCEDIR)/main.go
 	zip dsk-$(appversion)-macos.zip dsk  
 	@echo "Compilation for raspberry pi Raspbian"
-	GOOS=linux ARCH=arm GOARM=5 go build ${LDFLAGS} -o dsk $(SOURCEDIR)/main.go 
+	GOOS=linux GOARCH=arm GOARM=5 go build ${LDFLAGS} -o dsk $(SOURCEDIR)/main.go 
 	zip dsk-$(appversion)-arm.zip dsk  
 	@echo "Compilation for older macos"
-	GOOS=darwin ARCH=386 go build ${LDFLAGS} -o dsk $(SOURCEDIR)/main.go 
+	GOOS=darwin GOARCH=386 go build ${LDFLAGS} -o dsk $(SOURCEDIR)/main.go 
 	zip dsk-$(appversion)-macos-older.zip dsk  
+	@echo "Compilation for older windows"
+	GOOS=windows GOARCH=386 go build ${LDFLAGS} -o dsk.exe $(SOURCEDIR)/main.go 
+	zip dsk-$(appversion)-windows-older.zip dsk  
 
 clean:
 	@echo "Cleaning project"
