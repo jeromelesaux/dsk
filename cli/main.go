@@ -1,6 +1,8 @@
 package main
 
 import (
+	"bytes"
+	"encoding/binary"
 	"flag"
 	"fmt"
 	"io/ioutil"
@@ -38,6 +40,7 @@ var (
 	analyse        = flag.Bool("analyze", false, "Returns the DSK header")
 	cpcType        = flag.Int("cpctype", 2, "CPC type (sna import feature): \n\tCPC464 : 0\n\tCPC664: 1\n\tCPC6128 : 2\n\tUnknown : 3\n\tCPCPlus6128 : 4\n\tCPCPlus464 : 5\n\tGX4000 : 6\n\t")
 	screenMode     = flag.Int("screenmode", 1, "screenmode of the importing file in sna.")
+	addHeader      = flag.Bool("addheader", false, "Add header to the standalone file (must be set with exec, load and type options).")
 	version        = "0.8.rc"
 )
 
@@ -469,7 +472,7 @@ func main() {
 		}
 	} else {
 		if *fileInDsk == "" {
-			fmt.Fprintf(os.Stderr, "Error no amsdosfile is set\n")
+			fmt.Fprintf(os.Stderr, "Error no amsdos file is set\n")
 			os.Exit(-1)
 		}
 		f, err := os.Open(*fileInDsk)
@@ -530,7 +533,61 @@ func main() {
 				header.Type,
 				header.User)
 		}
+		if *addHeader {
+			if *executeAddress == "" {
+				fmt.Fprintf(os.Stderr, "When adding amsdos header executing address must be set.")
+				os.Exit(-1)
+			}
+			if *loadingAddress == "" {
+				fmt.Fprintf(os.Stderr, "When adding amsdos header loading address must be set.")
+				os.Exit(-1)
+			}
+			switch *fileType {
+			case "binary":
+				informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", execAddress, loadAddress)
+				isAmsdos, header := dsk.CheckAmsdos(content)
+				if !isAmsdos {
+					fmt.Fprintf(os.Stderr, "File (%s) does not contain amsdos header.\n", *fileInDsk)
+					os.Exit(-1)
+				} else {
+					content = content[128:]
+				}
+				var typeModeImport uint8
+				filename := dsk.GetNomAmsdos(*fileInDsk)
+				header.Size = uint16(len(content))
+				header.Size2 = uint16(len(content))
+				copy(header.Filename[:], []byte(filename[0:12]))
+				header.Address = loadAddress
+				if loadAddress != 0 {
+					typeModeImport = dsk.MODE_BINAIRE
+				}
+				header.Exec = execAddress
+				if execAddress != 0 {
+					typeModeImport = dsk.MODE_BINAIRE
+				}
+				if typeModeImport == dsk.MODE_BINAIRE {
+					header.Type = 1
+				}
+				// Il faut recalculer le checksum en comptant es adresses !
+				header.Checksum = header.ComputedChecksum16()
+				var rbuff bytes.Buffer
+				binary.Write(&rbuff, binary.LittleEndian, header)
+				binary.Write(&rbuff, binary.LittleEndian, content)
 
+				f, err := os.Create(*fileInDsk)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error while creating file [%s] error:%v\n", *fileInDsk, err)
+					os.Exit(-1)
+				}
+				defer f.Close()
+				_, err = f.Write(rbuff.Bytes())
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error while writing data in file [%s] error:%v\n", *fileInDsk, err)
+					os.Exit(-1)
+				}
+				resumeAction("none", "add amsdos header", *fileInDsk, informations)
+			}
+		}
 	}
 
 	os.Exit(0)
