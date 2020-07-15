@@ -41,7 +41,7 @@ var (
 	cpcType        = flag.Int("cpctype", 2, "CPC type (sna import feature): \n\tCPC464 : 0\n\tCPC664: 1\n\tCPC6128 : 2\n\tUnknown : 3\n\tCPCPlus6128 : 4\n\tCPCPlus464 : 5\n\tGX4000 : 6\n\t")
 	screenMode     = flag.Int("screenmode", 1, "screen mode parameter for the sna.")
 	addHeader      = flag.Bool("addheader", false, "Add header to the standalone file (must be set with exec, load and type options).")
-	version        = "0.8.rc"
+	version        = "0.8"
 )
 
 func main() {
