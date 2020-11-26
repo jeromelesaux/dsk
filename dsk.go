@@ -598,6 +598,19 @@ func (d *DSK) GetFile(path string, indice int) error {
 	return nil
 }
 
+func (d *DSK) DskSize() uint16 {
+	d.GetCatalogue()
+	// var size uint16
+	// size = len(d.Tracks) *
+	// for _, t := range d.Tracks {
+	// 	for _, s := range t.Sect {
+	// 		size += uint16(s.N)
+	// 	}
+	// 	//	size /= uint16(t.NbSect)
+	// }
+	return d.Entry.DataSize * uint16(d.Entry.NbTracks)
+}
+
 func GetNomAmsdos(masque string) string {
 	amsdosFile := make([]byte, 12)
 	for i := 0; i < 12; i++ {

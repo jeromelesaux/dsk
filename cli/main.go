@@ -207,12 +207,14 @@ func main() {
 				fmt.Fprintf(os.Stderr, "Error while getting catalogue in dsk file (%s) error %v\n", *dskPath, err)
 				os.Exit(-1)
 			}
-
+			totalUsed := 0
 			for _, i := range dskFile.GetFilesIndices() {
 				size := fmt.Sprintf("%.3d ko", dskFile.GetFilesize(dskFile.Catalogue[i]))
+				totalUsed += dskFile.GetFilesize(dskFile.Catalogue[i])
 				filename := fmt.Sprintf("%s.%s", dskFile.Catalogue[i].Nom, dskFile.Catalogue[i].Ext)
 				fmt.Fprintf(os.Stderr, "[%.2d] : %s : %d %s\n", i, filename, int(dskFile.Catalogue[i].User), size)
 			}
+			fmt.Fprintf(os.Stderr, "Dsk %.3d Ko used\n", totalUsed)
 		}
 
 		if *analyse {
