@@ -41,7 +41,7 @@ var (
 	cpcType        = flag.Int("cpctype", 2, "CPC type (sna import feature): \n\tCPC464 : 0\n\tCPC664: 1\n\tCPC6128 : 2\n\tUnknown : 3\n\tCPCPlus6128 : 4\n\tCPCPlus464 : 5\n\tGX4000 : 6\n\t")
 	screenMode     = flag.Int("screenmode", 1, "screen mode parameter for the sna.")
 	addHeader      = flag.Bool("addheader", false, "Add header to the standalone file (must be set with exec, load and type options).")
-	version        = "0.8"
+	version        = "0.9"
 )
 
 func main() {
@@ -361,6 +361,7 @@ func main() {
 						if err != nil {
 							fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 						}
+						filename = strings.TrimSpace(filename)
 						af, err := os.Create(filename)
 						if err != nil {
 							fmt.Fprintf(os.Stderr, "Error while creating file (%s) error %v\n", filename, err)
@@ -372,6 +373,8 @@ func main() {
 							fmt.Fprintf(os.Stderr, "Error while copying content in file (%s) error %v\n", filename, err)
 							os.Exit(-1)
 						}
+						informations := fmt.Sprintf("Extract file [%s] Indice in DSK [%d] is saved\n", *fileInDsk, indice)
+						resumeAction(*dskPath, "get amsdosfile", *fileInDsk, informations)
 					}
 				}
 			} else {
@@ -384,19 +387,20 @@ func main() {
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 					}
-					af, err := os.Create(*fileInDsk)
+					filename := strings.TrimSpace(*fileInDsk)
+					af, err := os.Create(filename)
 					if err != nil {
-						fmt.Fprintf(os.Stderr, "Error while creating file (%s) error %v\n", *fileInDsk, err)
+						fmt.Fprintf(os.Stderr, "Error while creating file (%s) error %v\n", filename, err)
 						os.Exit(-1)
 					}
 					defer af.Close()
 					_, err = af.Write(content)
 					if err != nil {
-						fmt.Fprintf(os.Stderr, "Error while copying content in file (%s) error %v\n", *fileInDsk, err)
+						fmt.Fprintf(os.Stderr, "Error while copying content in file (%s) error %v\n", filename, err)
 						os.Exit(-1)
 					}
-					informations := fmt.Sprintf("Extract file [%s]\nIndice in DSK [%d]\n", *fileInDsk, indice)
-					resumeAction(*dskPath, "get amsdosfile", *fileInDsk, informations)
+					informations := fmt.Sprintf("Extract file [%s] Indice in DSK [%d] is saved\n", filename, indice)
+					resumeAction(*dskPath, "get amsdosfile", filename, informations)
 				}
 			}
 		}
@@ -611,8 +615,8 @@ func main() {
 
 func resumeAction(dskFilepath, action, amsdosfile, informations string) {
 	fmt.Fprintf(os.Stderr, "DSK path [%s]\n", dskFilepath)
-	fmt.Fprintf(os.Stderr, "Action on DSK [%s] on amsdos file [%s]\n", action, amsdosfile)
-	fmt.Fprintf(os.Stderr, "%s\n", informations)
+	fmt.Fprintf(os.Stderr, "ACTION: Action on DSK [%s] on amsdos file [%s]\n", action, amsdosfile)
+	fmt.Fprintf(os.Stderr, "INFO:   %s\n", informations)
 }
 
 func sampleUsage() {
