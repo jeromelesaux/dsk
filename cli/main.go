@@ -41,7 +41,7 @@ var (
 	cpcType        = flag.Int("cpctype", 2, "CPC type (sna import feature): \n\tCPC464 : 0\n\tCPC664: 1\n\tCPC6128 : 2\n\tUnknown : 3\n\tCPCPlus6128 : 4\n\tCPCPlus464 : 5\n\tGX4000 : 6\n\t")
 	screenMode     = flag.Int("screenmode", 1, "screen mode parameter for the sna.")
 	addHeader      = flag.Bool("addheader", false, "Add header to the standalone file (must be set with exec, load and type options).")
-	version        = "0.9"
+	version        = "0.10"
 )
 
 func main() {
@@ -361,7 +361,7 @@ func main() {
 						if err != nil {
 							fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 						}
-						filename = strings.TrimSpace(filename)
+						filename = strings.ReplaceAll(filename, " ", "")
 						af, err := os.Create(filename)
 						if err != nil {
 							fmt.Fprintf(os.Stderr, "Error while creating file (%s) error %v\n", filename, err)
@@ -373,7 +373,7 @@ func main() {
 							fmt.Fprintf(os.Stderr, "Error while copying content in file (%s) error %v\n", filename, err)
 							os.Exit(-1)
 						}
-						informations := fmt.Sprintf("Extract file [%s] Indice in DSK [%d] is saved\n", *fileInDsk, indice)
+						informations := fmt.Sprintf("Extract file [%s] Indice in DSK [%d] is saved\n", filename, indice)
 						resumeAction(*dskPath, "get amsdosfile", *fileInDsk, informations)
 					}
 				}
@@ -387,7 +387,7 @@ func main() {
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 					}
-					filename := strings.TrimSpace(*fileInDsk)
+					filename := strings.ReplaceAll(*fileInDsk, " ", "")
 					af, err := os.Create(filename)
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "Error while creating file (%s) error %v\n", filename, err)
