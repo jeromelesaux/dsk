@@ -118,14 +118,12 @@ func main() {
 			cmdRunned = true
 			f, err := os.Open(*snaPath)
 			if err != nil {
-				fmt.Fprintf(os.Stderr, "Error while read sna file (%s) error %v\n", *snaPath, err)
-				os.Exit(-1)
+				exitOnError(fmt.Sprintf("Error while read sna file (%s) error %v", *snaPath, err), "Check your sna file")
 			}
 			defer f.Close()
 			sna := &dsk.SNA{}
 			if err := sna.Read(f); err != nil {
-				fmt.Fprintf(os.Stderr, "Error while reading sna file (%s) error %v\n", *snaPath, err)
-				os.Exit(-1)
+				exitOnError(fmt.Sprintf("Error while reading sna file (%s) error %v", *snaPath, err), "Check your sna file")
 			}
 			fmt.Fprintf(os.Stderr, "Sna (%s) description :\n\tCPC type:%s\n\tCRTC type:%s\n", *snaPath, sna.CPCType(), sna.CRTCType())
 			fmt.Fprintf(os.Stderr, "\tSna version:%d\n\tMemory size:%dKo\n", sna.Header.Version, sna.Header.MemoryDumpSize)
@@ -163,55 +161,45 @@ func main() {
 		}
 	}
 	if *dskPath == "" && *fileInDsk == "" {
-		fmt.Fprintf(os.Stderr, "No dsk set.\n")
-		flag.PrintDefaults()
-
-		os.Exit(-1)
+		exitOnError("No dsk set.", "")
 	}
 	if *format {
 		cmdRunned = true
 		_, err := os.Stat(*dskPath)
 		if err == nil {
-			fmt.Fprintf(os.Stderr, "Error file (%s) already exists\n", *dskPath)
-			os.Exit(-1)
+			exitOnError(fmt.Sprintf("Error file (%s) already exists", *dskPath), "Use option -force to avoid this message")
 		}
 
 		f, err := os.Create(*dskPath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error while write file (%s) error %v\n", *dskPath, err)
-			os.Exit(-1)
+			exitOnError(fmt.Sprintf("Error while write file (%s) error %v", *dskPath, err), "Check your dsk file path.")
 		}
 		defer f.Close()
 		fmt.Fprintf(os.Stderr, "Formating number of sectors (%d), tracks (%d), head number (%d)\n", *sector, *track, *heads)
 		dskFile := dsk.FormatDsk(uint8(*sector), uint8(*track), uint8(*heads), (*dskType))
 		if err := dskFile.Write(f); err != nil {
-			fmt.Fprintf(os.Stderr, "Error while write file (%s) error %v\n", *dskPath, err)
-			os.Exit(-1)
+			exitOnError(fmt.Sprintf("Error while write file (%s) error %v\n", *dskPath, err), "Check your dsk file with option -dsk yourdsk.dsk -analyze")
 		}
 	}
 
 	if *dskPath != "" {
 		f, err := os.Open(*dskPath)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error while read file (%s) error %v\n", *dskPath, err)
-			os.Exit(-1)
+			exitOnError(fmt.Sprintf("Error while read file (%s) error %v\n", *dskPath, err), "Check your dsk file path")
 		}
 		defer f.Close()
 		if err := dskFile.Read(f); err != nil {
-			fmt.Fprintf(os.Stderr, "Error while read dsk file (%s) error %v\n", *dskPath, err)
-			os.Exit(-1)
+			exitOnError(fmt.Sprintf("Error while read dsk file (%s) error %v\n", *dskPath, err), "Check your dsk file path or Check your dsk file with option -dsk yourdsk.dsk -analyze")
 		}
 
 		if err := dskFile.CheckDsk(); err != nil {
-			fmt.Fprintf(os.Stderr, "Error while read dsk file (%s) error %v\n", *dskPath, err)
-			os.Exit(-1)
+			exitOnError(fmt.Sprintf("Error while read dsk file (%s) error %v\n", *dskPath, err), "Check your dsk file path or Check your dsk file with option -dsk yourdsk.dsk -analyze")
 		}
 		fmt.Fprintf(os.Stderr, "Dsk file (%s)\n", *dskPath)
 		if *list {
 			cmdRunned = true
 			if err := dskFile.GetCatalogue(); err != nil {
-				fmt.Fprintf(os.Stderr, "Error while getting catalogue in dsk file (%s) error %v\n", *dskPath, err)
-				os.Exit(-1)
+				exitOnError(fmt.Sprintf("Error while getting catalogue in dsk file (%s) error %v\n", *dskPath, err), "Check your dsk file with option -dsk yourdsk.dsk -analyze")
 			}
 			totalUsed := 0
 			for _, i := range dskFile.GetFilesIndices() {
@@ -232,8 +220,7 @@ func main() {
 		if *info {
 			cmdRunned = true
 			if *fileInDsk == "" {
-				fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
-				os.Exit(-1)
+				exitOnError("amsdosfile option is empty, set it.", "usage sample : dsk -dsk output.dsk -amsdosfile hello.bin -info ")
 			}
 			amsdosFile := dsk.GetNomDir(*fileInDsk)
 			indice := dskFile.FileExists(amsdosFile)
@@ -246,8 +233,7 @@ func main() {
 				}
 				isAmsdos, header := dsk.CheckAmsdos(content)
 				if !isAmsdos {
-					fmt.Fprintf(os.Stderr, "File (%s) does not contain amsdos header.\n", *fileInDsk)
-					os.Exit(-1)
+					exitOnError(fmt.Sprintf("File (%s) does not contain amsdos header.\n", *fileInDsk), "add address of execution and loading like : dsk -dsk output.dsk -put -amsdosfile hello.bin -exec #1000 -load 500")
 				}
 				fmt.Fprintf(os.Stdout, "Amsdos informations :\n\tFilename:%s\n\tSize:#%X (%.2f Ko)\n\tSize2:#%X (%.2f Ko)\n\tLogical Size:#%X (%.2f Ko)\n\tExecute Address:#%X\n\tLoading Address:#%X\n\tChecksum:#%X\n\tType:%d\n\tUser:%d\n",
 					header.Filename,
@@ -268,8 +254,7 @@ func main() {
 		if *hexa {
 			cmdRunned = true
 			if *fileInDsk == "" {
-				fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
-				os.Exit(-1)
+				exitOnError("amsdosfile option is empty, set it.", "dsk -dsk output.dsk -hex -amsdosfile hello.bin")
 			}
 			amsdosFile := dsk.GetNomDir(*fileInDsk)
 			indice := dskFile.FileExists(amsdosFile)
@@ -287,8 +272,7 @@ func main() {
 		if *desassemble {
 			cmdRunned = true
 			if *fileInDsk == "" {
-				fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
-				os.Exit(-1)
+				exitOnError("amsdosfile option is empty, set it.", "dsk -dsk output.dsk -desassemble -amsdosfile hello.bin")
 			}
 			amsdosFile := dsk.GetNomDir(*fileInDsk)
 			indice := dskFile.FileExists(amsdosFile)
@@ -317,8 +301,7 @@ func main() {
 		if *ascii {
 			cmdRunned = true
 			if *fileInDsk == "" {
-				fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
-				os.Exit(-1)
+				exitOnError("amsdosfile option is empty, set it.", "dsk -dsk output.dsk -ascii -amsdosfile hello.txt")
 			}
 			amsdosFile := dsk.GetNomDir(*fileInDsk)
 			indice := dskFile.FileExists(amsdosFile)
@@ -336,8 +319,7 @@ func main() {
 		if *basic {
 			cmdRunned = true
 			if *fileInDsk == "" {
-				fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
-				os.Exit(-1)
+				exitOnError("amsdosfile option is empty, set it.", "dsk -dsk output.dsk -basic -amsdosfile hello.bin")
 			}
 			amsdosFile := dsk.GetNomDir(*fileInDsk)
 			indice := dskFile.FileExists(amsdosFile)
@@ -356,8 +338,7 @@ func main() {
 		if *get {
 			cmdRunned = true
 			if *fileInDsk == "" {
-				fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
-				os.Exit(-1)
+				exitOnError("amsdosfile option is empty, set it.", "dsk -dsk output.dsk -get -amsdosfile hello.bin")
 			}
 			if *fileInDsk == "*" {
 				dskFile.GetCatalogue()
@@ -377,14 +358,12 @@ func main() {
 						filename = strings.ReplaceAll(filename, " ", "")
 						af, err := os.Create(filename)
 						if err != nil {
-							fmt.Fprintf(os.Stderr, "Error while creating file (%s) error %v\n", filename, err)
-							os.Exit(-1)
+							exitOnError(fmt.Sprintf("Error while creating file (%s) error %v\n", filename, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze")
 						}
 						defer af.Close()
 						_, err = af.Write(content)
 						if err != nil {
-							fmt.Fprintf(os.Stderr, "Error while copying content in file (%s) error %v\n", filename, err)
-							os.Exit(-1)
+							exitOnError(fmt.Sprintf("Error while copying content in file (%s) error %v\n", filename, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze")
 						}
 						informations := fmt.Sprintf("Extract file [%s] Indice in DSK [%d] is saved\n", filename, indice)
 						resumeAction(*dskPath, "get amsdosfile", *fileInDsk, informations)
@@ -403,14 +382,12 @@ func main() {
 					filename := strings.ReplaceAll(*fileInDsk, " ", "")
 					af, err := os.Create(filename)
 					if err != nil {
-						fmt.Fprintf(os.Stderr, "Error while creating file (%s) error %v\n", filename, err)
-						os.Exit(-1)
+						exitOnError(fmt.Sprintf("Error while creating file (%s) error %v\n", filename, err), "Check your file path")
 					}
 					defer af.Close()
 					_, err = af.Write(content)
 					if err != nil {
-						fmt.Fprintf(os.Stderr, "Error while copying content in file (%s) error %v\n", filename, err)
-						os.Exit(-1)
+						exitOnError(fmt.Sprintf("Error while copying content in file (%s) error %v\n", filename, err), " Check your dsk  with option -dsk yourdsk.dsk -analyze")
 					}
 					informations := fmt.Sprintf("Extract file [%s] Indice in DSK [%d] is saved\n", filename, indice)
 					resumeAction(*dskPath, "get amsdosfile", filename, informations)
@@ -420,8 +397,7 @@ func main() {
 		if *put {
 			cmdRunned = true
 			if *fileInDsk == "" {
-				fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
-				os.Exit(-1)
+				exitOnError("amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put -amsdosfile hello.bin -exec #1000 -load 500")
 			}
 			amsdosFile := dsk.GetNomDir(*fileInDsk)
 			indice := dskFile.FileExists(amsdosFile)
@@ -432,15 +408,13 @@ func main() {
 				case "ascii":
 					informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", execAddress, loadAddress)
 					if err := dskFile.PutFile(*fileInDsk, dsk.MODE_ASCII, 0, 0, uint16(*user), false, false); err != nil {
-						fmt.Fprintf(os.Stderr, "Error while inserted file (%s) in dsk (%s) error :%v\n", *fileInDsk, *dskPath, err)
-						os.Exit(-1)
+						exitOnError(fmt.Sprintf("Error while inserted file (%s) in dsk (%s) error :%v\n", *fileInDsk, *dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze")
 					}
 					resumeAction(*dskPath, "put ascii", *fileInDsk, informations)
 				case "binary":
 					informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", execAddress, loadAddress)
 					if err := dskFile.PutFile(*fileInDsk, dsk.MODE_BINAIRE, loadAddress, execAddress, uint16(*user), false, false); err != nil {
-						fmt.Fprintf(os.Stderr, "Error while inserted file (%s) in dsk (%s) error :%v\n", *fileInDsk, *dskPath, err)
-						os.Exit(-1)
+						exitOnError(fmt.Sprintf("Error while inserted file (%s) in dsk (%s) error :%v\n", *fileInDsk, *dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze")
 					}
 					resumeAction(*dskPath, "put binary", *fileInDsk, informations)
 				default:
@@ -448,14 +422,12 @@ func main() {
 				}
 				f, err := os.Create(*dskPath)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error while write file (%s) error %v\n", *dskPath, err)
-					os.Exit(-1)
+					exitOnError(fmt.Sprintf("Error while write file (%s) error %v\n", *dskPath, err), "Check your dsk path file")
 				}
 				defer f.Close()
 
 				if err := dskFile.Write(f); err != nil {
-					fmt.Fprintf(os.Stderr, "Error while write file (%s) error %v\n", *dskPath, err)
-					os.Exit(-1)
+					exitOnError(fmt.Sprintf("Error while write file (%s) error %v\n", *dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze")
 				}
 			}
 		}
@@ -463,14 +435,12 @@ func main() {
 		if *remove {
 			cmdRunned = true
 			if *fileInDsk == "" {
-				fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
-				os.Exit(-1)
+				exitOnError("amsdosfile option is empty, set it.", "dsk -dsk output.dsk -remove -amsdosfile hello.bin")
 			}
 			amsdosFile := dsk.GetNomDir(*fileInDsk)
 			indice := dskFile.FileExists(amsdosFile)
 			if indice == dsk.NOT_FOUND {
-				fmt.Fprintf(os.Stderr, "File (%s) not found in dsk (%s)\n", *fileInDsk, *dskPath)
-				os.Exit(-1)
+				exitOnError(fmt.Sprintf("File (%s) not found in dsk (%s)\n", *fileInDsk, *dskPath), "Check you dsk")
 			}
 			if err := dskFile.RemoveFile(uint8(indice)); err != nil {
 				fmt.Fprintf(os.Stderr, "Error while removing file %s (indice:%d) error :%v\n", *fileInDsk, indice, err)
@@ -481,30 +451,25 @@ func main() {
 					*dskPath)
 				f, err := os.Create(*dskPath)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error while write file (%s) error %v\n", *dskPath, err)
-					os.Exit(-1)
+					exitOnError(fmt.Sprintf("Error while write file (%s) error %v\n", *dskPath, err), "Check your dsk path file")
 				}
 				defer f.Close()
 				if err := dskFile.Write(f); err != nil {
-					fmt.Fprintf(os.Stderr, "Error while write file (%s) error %v\n", *dskPath, err)
-					os.Exit(-1)
+					exitOnError(fmt.Sprintf("Error while write file (%s) error %v\n", *dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze")
 				}
 			}
 		}
 	} else {
 		if *fileInDsk == "" {
-			fmt.Fprintf(os.Stderr, "Error no amsdos file is set\n")
-			os.Exit(-1)
+			exitOnError("Error no amsdos file is set\n", "set your amsdos file with option -amsdosfile like dsk -dsk output.dsk -put -amsdosfile hello.bin")
 		}
 		f, err := os.Open(*fileInDsk)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Cannot open file %s error :%v\n", *fileInDsk, err)
-			os.Exit(-1)
+			exitOnError(fmt.Sprintf("Cannot open file %s error :%v\n", *fileInDsk, err), "Check your dsk file path")
 		}
 		content, err := ioutil.ReadAll(f)
 		if err != nil {
-			fmt.Fprintf(os.Stderr, "Cannot read file %s error :%v\n", *fileInDsk, err)
-			os.Exit(-1)
+			exitOnError(fmt.Sprintf("Cannot read file %s error :%v\n", *fileInDsk, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze")
 		}
 
 		if *basic {
@@ -541,8 +506,7 @@ func main() {
 			cmdRunned = true
 			isAmsdos, header := dsk.CheckAmsdos(content)
 			if !isAmsdos {
-				fmt.Fprintf(os.Stderr, "File (%s) does not contain amsdos header.\n", *fileInDsk)
-				os.Exit(-1)
+				exitOnError(fmt.Sprintf("File (%s) does not contain amsdos header.\n", *fileInDsk), "may be a ascii file")
 			}
 			fmt.Fprintf(os.Stdout, "Amsdos informations :\n\tFilename:%s\n\tSize:#%X (%.2f Ko)\n\tSize2:#%X (%.2f Ko)\n\tLogical Size:#%X (%.2f Ko)\n\tExecute Address:#%X\n\tLoading Address:#%X\n\tChecksum:#%X\n\tType:%d\n\tUser:%d\n",
 				header.Filename,
@@ -560,20 +524,17 @@ func main() {
 		}
 		if *addHeader {
 			if *executeAddress == "" {
-				fmt.Fprintf(os.Stderr, "When adding amsdos header executing address must be set.")
-				os.Exit(-1)
+				exitOnError("When adding amsdos header executing address must be set.", "dsk -addheader -amsdosfile hello.bin -exec #1000 -load 500")
 			}
 			if *loadingAddress == "" {
-				fmt.Fprintf(os.Stderr, "When adding amsdos header loading address must be set.")
-				os.Exit(-1)
+				exitOnError("When adding amsdos header loading address must be set.", "dsk -addheader -amsdosfile hello.bin -exec #1000 -load 500")
 			}
 			switch *fileType {
 			case "binary":
 				informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", execAddress, loadAddress)
 				isAmsdos, header := dsk.CheckAmsdos(content)
 				if !isAmsdos {
-					fmt.Fprintf(os.Stderr, "File (%s) does not contain amsdos header.\n", *fileInDsk)
-					os.Exit(-1)
+					exitOnError(fmt.Sprintf("File (%s) does not contain amsdos header.\n", *fileInDsk), "dsk -addheader -amsdosfile hello.bin -exec #1000 -load 500")
 				} else {
 					fmt.Fprintf(os.Stdout, "File (%s) removing current amsdos header.\n", *fileInDsk)
 					content = content[128:]
@@ -602,14 +563,12 @@ func main() {
 
 				f, err := os.Create(*fileInDsk)
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error while creating file [%s] error:%v\n", *fileInDsk, err)
-					os.Exit(-1)
+					exitOnError(fmt.Sprintf("Error while creating file [%s] error:%v\n", *fileInDsk, err), "Check your dsk file path")
 				}
 				defer f.Close()
 				_, err = f.Write(rbuff.Bytes())
 				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error while writing data in file [%s] error:%v\n", *fileInDsk, err)
-					os.Exit(-1)
+					exitOnError(fmt.Sprintf("Error while writing data in file [%s] error:%v\n", *fileInDsk, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze")
 				}
 				resumeAction("none", "add amsdos header", *fileInDsk, informations)
 				fmt.Fprintf(os.Stdout, "Amsdos informations :\n\tFilename:%s\n\tSize:#%X (%.2f Ko)\n\tSize2:#%X (%.2f Ko)\n\tLogical Size:#%X (%.2f Ko)\n\tExecute Address:#%X\n\tLoading Address:#%X\n\tChecksum:#%X\n\tType:%d\n\tUser:%d\n",
@@ -643,7 +602,7 @@ func resumeAction(dskFilepath, action, amsdosfile, informations string) {
 }
 
 func sampleUsage() {
-	flag.PrintDefaults()
+
 	fmt.Fprintf(os.Stderr, "\nHere sample usages :\n"+
 		"\t* Create empty simple dsk file : dsk -dsk output.dsk -format\n"+
 		"\t* Create empty simple dsk file with custom tracks and sectors: dsk -dsk output.dsk -format -sector 8 -track 42\n"+
@@ -654,6 +613,15 @@ func sampleUsage() {
 		"\t* Get information on file in dsk  : dsk -dsk output.dsk -amsdosfile hello.bin -info\n"+
 		"\t* List file content in hexadecimal in dsk file : dsk -dsk output.dsk -amsdosfile hello.bin -hex\n"+
 		"\t* Put file in dsk file : dsk -dsk output.dsk -put -amsdosfile hello.bin -exec #1000 -load 500\n"+
-		"\t* Put file in sna file (here for a cpc plus): dsk -sna output.sna -put -amsdosfile hello.bin -exec #1000 -load 500 -screenmode 0 -cpctype 4\n")
+		"\t* Put file in sna file (here for a cpc plus): dsk -sna output.sna -put -amsdosfile hello.bin -exec #1000 -load 500 -screenmode 0 -cpctype 4\n\n\n")
+	flag.PrintDefaults()
+}
 
+func exitOnError(errorMessage, hint string) {
+	//sampleUsage()
+	fmt.Fprintf(os.Stderr, "*************************************************************************\n")
+	fmt.Fprintf(os.Stderr, "[ERROR] :\t%s\n", errorMessage)
+	fmt.Fprintf(os.Stderr, "[HINT ] :\t%s\n", hint)
+	fmt.Fprintf(os.Stderr, "*************************************************************************\n")
+	os.Exit(-1)
 }
