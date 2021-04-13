@@ -45,6 +45,7 @@ var (
 )
 
 func main() {
+	var cmdRunned bool = false
 	var dskFile dsk.DSK
 	var execAddress, loadAddress uint16
 	flag.Parse()
@@ -114,6 +115,7 @@ func main() {
 	fmt.Fprintf(os.Stderr, "DSK cli version [%s]\nMade by Sid (ImpAct)\n", version)
 	if *snaPath != "" {
 		if *info {
+			cmdRunned = true
 			f, err := os.Open(*snaPath)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error while read sna file (%s) error %v\n", *snaPath, err)
@@ -131,6 +133,7 @@ func main() {
 			os.Exit(0)
 		}
 		if *format {
+			cmdRunned = true
 			if _, err := dsk.CreateSna(*snaPath); err != nil {
 				fmt.Fprintf(os.Stderr, "Cannot create Sna file (%s) error : %v\n", *snaPath, err)
 				os.Exit(1)
@@ -139,6 +142,7 @@ func main() {
 			os.Exit(0)
 		}
 		if *put {
+			cmdRunned = true
 			if *fileInDsk != "" {
 				cpcTYPE := dsk.CPCType(*cpcType)
 				crtc := dsk.UM6845R
@@ -165,6 +169,7 @@ func main() {
 		os.Exit(-1)
 	}
 	if *format {
+		cmdRunned = true
 		_, err := os.Stat(*dskPath)
 		if err == nil {
 			fmt.Fprintf(os.Stderr, "Error file (%s) already exists\n", *dskPath)
@@ -203,6 +208,7 @@ func main() {
 		}
 		fmt.Fprintf(os.Stderr, "Dsk file (%s)\n", *dskPath)
 		if *list {
+			cmdRunned = true
 			if err := dskFile.GetCatalogue(); err != nil {
 				fmt.Fprintf(os.Stderr, "Error while getting catalogue in dsk file (%s) error %v\n", *dskPath, err)
 				os.Exit(-1)
@@ -218,11 +224,13 @@ func main() {
 		}
 
 		if *analyse {
+			cmdRunned = true
 			entry := dskFile.Entry
 			fmt.Fprintf(os.Stderr, "Dsk entry %s\n", entry.ToString())
 		}
 
 		if *info {
+			cmdRunned = true
 			if *fileInDsk == "" {
 				fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
 				os.Exit(-1)
@@ -258,6 +266,7 @@ func main() {
 		}
 
 		if *hexa {
+			cmdRunned = true
 			if *fileInDsk == "" {
 				fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
 				os.Exit(-1)
@@ -276,6 +285,7 @@ func main() {
 		}
 
 		if *desassemble {
+			cmdRunned = true
 			if *fileInDsk == "" {
 				fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
 				os.Exit(-1)
@@ -305,6 +315,7 @@ func main() {
 		}
 
 		if *ascii {
+			cmdRunned = true
 			if *fileInDsk == "" {
 				fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
 				os.Exit(-1)
@@ -323,6 +334,7 @@ func main() {
 		}
 
 		if *basic {
+			cmdRunned = true
 			if *fileInDsk == "" {
 				fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
 				os.Exit(-1)
@@ -342,6 +354,7 @@ func main() {
 		}
 
 		if *get {
+			cmdRunned = true
 			if *fileInDsk == "" {
 				fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
 				os.Exit(-1)
@@ -405,6 +418,7 @@ func main() {
 			}
 		}
 		if *put {
+			cmdRunned = true
 			if *fileInDsk == "" {
 				fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
 				os.Exit(-1)
@@ -447,6 +461,7 @@ func main() {
 		}
 
 		if *remove {
+			cmdRunned = true
 			if *fileInDsk == "" {
 				fmt.Fprintf(os.Stderr, "amsdosfile option is empty, set it.")
 				os.Exit(-1)
@@ -493,6 +508,7 @@ func main() {
 		}
 
 		if *basic {
+			cmdRunned = true
 			isAmsdos, _ := dsk.CheckAmsdos(content)
 			// remove amsdos header
 			if isAmsdos {
@@ -503,6 +519,7 @@ func main() {
 			fmt.Fprintf(os.Stdout, "%s", dsk.Basic(content, uint16(len(content)), true))
 		}
 		if *desassemble {
+			cmdRunned = true
 			var address uint16
 			isAmsdos, header := dsk.CheckAmsdos(content)
 			if isAmsdos {
@@ -512,6 +529,7 @@ func main() {
 			fmt.Println(dsk.Desass(content, uint16(len(content)), address))
 		}
 		if *hexa {
+			cmdRunned = true
 			isAmsdos, _ := dsk.CheckAmsdos(content)
 			// remove amsdos header
 			if isAmsdos {
@@ -520,6 +538,7 @@ func main() {
 			fmt.Println(dsk.DisplayHex(content, 16))
 		}
 		if *info {
+			cmdRunned = true
 			isAmsdos, header := dsk.CheckAmsdos(content)
 			if !isAmsdos {
 				fmt.Fprintf(os.Stderr, "File (%s) does not contain amsdos header.\n", *fileInDsk)
@@ -608,6 +627,10 @@ func main() {
 					header.User)
 			}
 		}
+	}
+
+	if !cmdRunned {
+		sampleUsage()
 	}
 
 	os.Exit(0)
