@@ -650,12 +650,8 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 		fmt.Fprintf(os.Stderr, "No header found for file :%s, error :%v\n", masque, err)
 	}
 
-	if typeModeImport == MODE_ASCII {
-		for i := 0; i < 0x20000; i++ {
-			if buff[i] > 136 {
-				buff[i] = '?'
-			}
-		}
+	if typeModeImport == MODE_ASCII && fileLength%128 != 0 {
+		buff[fileLength] = 0x1A
 	}
 
 	var isAmsdos bool
