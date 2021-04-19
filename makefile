@@ -36,7 +36,6 @@ build:
 clean:
 	@echo "Cleaning project"
 	rm -f dsk-*
-	rm dsk-*.zip
 
 compile:
 	GOOS=${OS} GOARCH=${ARCH} go build ${LDFLAGS} -o dsk-${OS}-${ARCH} $(SOURCEDIR)/main.go 
