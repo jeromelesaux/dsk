@@ -1131,13 +1131,15 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 	d.GetCatalogue()
 	entryIndice := d.Catalogue[i]
 	var cumul, tailleFichier int
+	var isAmsdos bool
 	for {
 		l := (d.Catalogue[i].NbPages + 7) >> 3
 		for j := 0; uint8(j) < l; j++ {
 			tailleBloc := 1024
 			bloc := d.ReadBloc(int(d.Catalogue[i].Blocks[j]))
 			if firstBlock {
-				isAmsdos, header := CheckAmsdos(bloc)
+				var header *cpc.CpcHead
+				isAmsdos, header = CheckAmsdos(bloc)
 				if isAmsdos {
 					tailleFichier = int(header.LogicalSize) + 0x80
 				}
@@ -1165,6 +1167,20 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 	}
 	if tailleFichier <= 0 {
 		tailleFichier = cumul
+	}
+
+	if !isAmsdos {
+		keepOn := true
+		for i = tailleFichier - 1; i >= 0; i-- {
+			if b[i] == 0 {
+				tailleFichier--
+			} else {
+				keepOn = false
+			}
+			if !keepOn {
+				break
+			}
+		}
 	}
 	for i := len(b) - 1; i >= 0; i-- {
 		if b[i] == 0xE5 {
