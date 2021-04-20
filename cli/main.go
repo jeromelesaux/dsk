@@ -530,62 +530,47 @@ func main() {
 			if *loadingAddress == "" {
 				exitOnError("When adding amsdos header loading address must be set.", "dsk -addheader -amsdosfile hello.bin -exec #1000 -load 500")
 			}
-			switch *fileType {
-			case "binary":
-				informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", execAddress, loadAddress)
-				isAmsdos, header := dsk.CheckAmsdos(content)
-				if !isAmsdos {
-					exitOnError(fmt.Sprintf("File (%s) does not contain amsdos header.\n", *fileInDsk), "dsk -addheader -amsdosfile hello.bin -exec #1000 -load 500")
-				} else {
-					fmt.Fprintf(os.Stdout, "File (%s) removing current amsdos header.\n", *fileInDsk)
-					content = content[128:]
-				}
-				var typeModeImport uint8
-				filename := dsk.GetNomAmsdos(*fileInDsk)
-				header.Size = uint16(len(content))
-				header.Size2 = uint16(len(content))
-				copy(header.Filename[:], []byte(filename[0:12]))
-				header.Address = loadAddress
-				if loadAddress != 0 {
-					typeModeImport = dsk.MODE_BINAIRE
-				}
-				header.Exec = execAddress
-				if execAddress != 0 {
-					typeModeImport = dsk.MODE_BINAIRE
-				}
-				if typeModeImport == dsk.MODE_BINAIRE {
-					header.Type = 1
-				}
-				// Il faut recalculer le checksum en comptant es adresses !
-				header.Checksum = header.ComputedChecksum16()
-				var rbuff bytes.Buffer
-				binary.Write(&rbuff, binary.LittleEndian, header)
-				binary.Write(&rbuff, binary.LittleEndian, content)
 
-				f, err := os.Create(*fileInDsk)
-				if err != nil {
-					exitOnError(fmt.Sprintf("Error while creating file [%s] error:%v\n", *fileInDsk, err), "Check your dsk file path")
-				}
-				defer f.Close()
-				_, err = f.Write(rbuff.Bytes())
-				if err != nil {
-					exitOnError(fmt.Sprintf("Error while writing data in file [%s] error:%v\n", *fileInDsk, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze")
-				}
-				resumeAction("none", "add amsdos header", *fileInDsk, informations)
-				fmt.Fprintf(os.Stdout, "Amsdos informations :\n\tFilename:%s\n\tSize:#%X (%.2f Ko)\n\tSize2:#%X (%.2f Ko)\n\tLogical Size:#%X (%.2f Ko)\n\tExecute Address:#%X\n\tLoading Address:#%X\n\tChecksum:#%X\n\tType:%d\n\tUser:%d\n",
-					header.Filename,
-					header.Size,
-					float64(header.Size)/1024.,
-					header.Size2,
-					float64(header.Size2)/1024.,
-					header.LogicalSize,
-					float64(header.LogicalSize)/1024.,
-					header.Exec,
-					header.Address,
-					header.Checksum,
-					header.Type,
-					header.User)
+			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", execAddress, loadAddress)
+			isAmsdos, header := dsk.CheckAmsdos(content)
+			if isAmsdos {
+				exitOnError("The file already contains an amsdos header", "Check your file")
 			}
+			filename := dsk.GetNomAmsdos(*fileInDsk)
+			header.Size = uint16(len(content))
+			header.Size2 = uint16(len(content))
+			copy(header.Filename[:], []byte(filename[0:12]))
+			header.Address = loadAddress
+			header.Exec = execAddress
+			// Il faut recalculer le checksum en comptant es adresses !
+			header.Checksum = header.ComputedChecksum16()
+			var rbuff bytes.Buffer
+			binary.Write(&rbuff, binary.LittleEndian, header)
+			binary.Write(&rbuff, binary.LittleEndian, content)
+
+			f, err := os.Create(*fileInDsk)
+			if err != nil {
+				exitOnError(fmt.Sprintf("Error while creating file [%s] error:%v\n", *fileInDsk, err), "Check your dsk file path")
+			}
+			defer f.Close()
+			_, err = f.Write(rbuff.Bytes())
+			if err != nil {
+				exitOnError(fmt.Sprintf("Error while writing data in file [%s] error:%v\n", *fileInDsk, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze")
+			}
+			resumeAction("none", "add amsdos header", *fileInDsk, informations)
+			fmt.Fprintf(os.Stdout, "Amsdos informations :\n\tFilename:%s\n\tSize:#%X (%.2f Ko)\n\tSize2:#%X (%.2f Ko)\n\tLogical Size:#%X (%.2f Ko)\n\tExecute Address:#%X\n\tLoading Address:#%X\n\tChecksum:#%X\n\tType:%d\n\tUser:%d\n",
+				header.Filename,
+				header.Size,
+				float64(header.Size)/1024.,
+				header.Size2,
+				float64(header.Size2)/1024.,
+				header.LogicalSize,
+				float64(header.LogicalSize)/1024.,
+				header.Exec,
+				header.Address,
+				header.Checksum,
+				header.Type,
+				header.User)
 		}
 	}
 
