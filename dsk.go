@@ -1202,7 +1202,7 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 		}
 		i++
 		if i >= 64 {
-			return b, errors.New("Cannot get the file, Exceed catalogue indice")
+			return b, errors.New("cannot get the file, Exceed catalogue indice")
 		}
 		if entryIndice.Nom != d.Catalogue[i].Nom || entryIndice.Ext != d.Catalogue[i].Ext {
 			break
@@ -1212,7 +1212,7 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 		tailleFichier = cumul
 	}
 
-	if !isAmsdos {
+	/*if !isAmsdos {
 		keepOn := true
 		for i = tailleFichier - 1; i >= 0; i-- {
 			if b[i] == 0 {
@@ -1224,14 +1224,8 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 				break
 			}
 		}
-	}
-	for i := len(b) - 1; i >= 0; i-- {
-		if b[i] == 0xE5 {
-			tailleFichier = i
-		} else {
-			break
-		}
-	}
+	}*/
+
 	return b[0:tailleFichier], nil
 }
 
