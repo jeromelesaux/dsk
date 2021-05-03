@@ -27,11 +27,15 @@ var (
 	ErrorFileSizeExceed          = errors.New("Filesize exceed.")
 )
 var (
-	MODE_ASCII        uint8 = 0
-	MODE_BINAIRE      uint8 = 1
-	EXTENDED_DSK_TYPE       = 1
-	DSK_TYPE                = 0
+	MODE_ASCII        uint8     = 0
+	MODE_BINAIRE      uint8     = 1
+	EXTENDED_DSK_TYPE           = 1
+	DSK_TYPE                    = 0
+	DataFormat        DskFormat = 0
+	VendorFormat      DskFormat = 1
 )
+
+type DskFormat = int
 
 type StAmsdos = cpc.CpcHead
 
@@ -170,19 +174,22 @@ func (c *CPCEMUTrack) Read(r io.Reader) error {
 
 	//	fmt.Fprintf(os.Stdout,"Track:%s\n",c.ToString())
 	var i uint8
-	for i = 0; i < c.NbSect; i++ {
+	var sectorSize uint16
+	for i = 0; i < c.NbSect && i < 29; i++ {
 		sect := &CPCEMUSect{}
 		if err := sect.Read(r); err != nil {
 			fmt.Fprintf(os.Stderr, "Cannot read sector (%d) error :%v\n", i, err)
 			return err
 		}
 		c.Sect[i] = *sect
+		sectorSize += c.Sect[i].SizeByte
 	}
 	for i = c.NbSect; i < 29; i++ {
 		sect := &CPCEMUSect{}
 		sect.Read(r)
+		sectorSize += sect.SizeByte
 	}
-	c.Data = make([]byte, 0x200*uint16(c.NbSect))
+	c.Data = make([]byte, sectorSize)
 	if err := binary.Read(r, binary.LittleEndian, &c.Data); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.Data error :%v\n", err)
 		return err
@@ -310,6 +317,7 @@ func (d *DSK) Read(r io.Reader) error {
 		track := &CPCEMUTrack{}
 		if err := track.Read(r); err != nil {
 			fmt.Fprintf(os.Stderr, "Error track (%d) error :%v\n", i, err)
+			track = &CPCEMUTrack{}
 		}
 		d.Tracks[i] = *track
 		//fmt.Fprintf(os.Stdout, "Track %d %s\n", i, d.Tracks[i].ToString())
@@ -317,10 +325,10 @@ func (d *DSK) Read(r io.Reader) error {
 	return nil
 }
 
-func FormatDsk(nbSect, nbTrack, nbHead uint8, dskType int) *DSK {
+func FormatDsk(nbSect, nbTrack, nbHead uint8, diskFormat DskFormat, dskType int) *DSK {
 	dsk := &DSK{}
 	entry := CPCEMUEnt{}
-	if dskType == EXTENDED_DSK_TYPE {
+	if dskType == EXTENDED_DSK_TYPE || diskFormat == VendorFormat {
 		dsk.Extended = true
 		copy(entry.Debut[:], "EXTENDED CPC DSK File\r\nDisk-Info\r\n")
 	} else {
@@ -336,24 +344,53 @@ func FormatDsk(nbSect, nbTrack, nbHead uint8, dskType int) *DSK {
 			dsk.TrackSizeTable[i] = byte(0x100 + (SECTSIZE*uint16(nbSect))/256 + 1)
 		}
 	} else {
-		dsk.TrackSizeTable = make([]byte, 0xCC)
+		switch diskFormat {
+		case DataFormat:
+			dsk.TrackSizeTable = make([]byte, 0xCC)
+		case VendorFormat:
+			dsk.TrackSizeTable = make([]byte, 0x49)
+		default:
+			fmt.Fprintf(os.Stderr, "Unknown format track.")
+		}
 	}
 	dsk.Entry = entry
 	dsk.Tracks = make([]CPCEMUTrack, nbTrack*nbHead)
 	var i uint8
 	if nbHead == 1 {
 		for i = 0; i < nbTrack; i++ {
-			dsk.FormatTrack(i, i, 0, 0xC1, nbSect)
+			switch diskFormat {
+			case DataFormat:
+				dsk.FormatTrack(i, i, 0, 0xC1, nbSect)
+			case VendorFormat:
+				dsk.FormatTrack(i, i, 0, 0x41, nbSect)
+			default:
+				fmt.Fprintf(os.Stderr, "Unknown format track.")
+			}
+
 		}
 	} else {
 		index := 0
 		for i = 0; i < nbTrack; i++ {
-			dsk.FormatTrack(uint8(index), uint8(i), 0, 0xC1, nbSect)
+			switch diskFormat {
+			case DataFormat:
+				dsk.FormatTrack(uint8(index), uint8(i), 0, 0xC1, nbSect)
+			case VendorFormat:
+				dsk.FormatTrack(uint8(index), uint8(i), 0, 0x41, nbSect)
+			default:
+				fmt.Fprintf(os.Stderr, "Unknown format track.")
+			}
 			index += 2
 		}
 		index = 1
 		for i = 1; i < nbTrack; i++ {
-			dsk.FormatTrack(uint8(index), uint8(i), 1, 0xC1, nbSect)
+			switch diskFormat {
+			case DataFormat:
+				dsk.FormatTrack(uint8(index), uint8(i), 1, 0xC1, nbSect)
+			case VendorFormat:
+				dsk.FormatTrack(uint8(index), uint8(i), 1, 0x41, nbSect)
+			default:
+				fmt.Fprintf(os.Stderr, "Unknown format track.")
+			}
 			index += 2
 		}
 	}
@@ -374,12 +411,14 @@ func (d *DSK) FormatTrack(indexTrack, track, head, minSect, nbSect uint8) {
 	//
 	var s uint8
 	var ss uint8
+	var sectorSize uint16
 	for s = 0; s < nbSect; {
 		t.Sect[s].C = track
 		t.Sect[s].H = head
 		t.Sect[s].R = (ss + minSect)
 		t.Sect[s].N = 2
 		t.Sect[s].SizeByte = 0x200
+		sectorSize += t.Sect[s].SizeByte
 		ss++
 		s++
 		if s < nbSect {
@@ -388,10 +427,11 @@ func (d *DSK) FormatTrack(indexTrack, track, head, minSect, nbSect uint8) {
 			t.Sect[s].R = (ss + minSect + 4)
 			t.Sect[s].N = 2
 			t.Sect[s].SizeByte = 0x200
+			sectorSize += t.Sect[s].SizeByte
 			s++
 		}
 	}
-	t.Data = make([]byte, 0x200*uint16(nbSect))
+	t.Data = make([]byte, sectorSize)
 	for i := 0; i < len(t.Data); i++ {
 		t.Data[i] = 0xE5
 	}
@@ -1066,6 +1106,9 @@ func (d *DSK) GetInfoDirEntry(numDir uint8) (StDirEntry, error) {
 	}
 
 	pos := d.GetPosData(t, s, true)
+	if int(pos) >= len(d.Tracks[t].Data) {
+		pos = 0
+	}
 	data := d.Tracks[t].Data[((uint16(numDir)&15)<<5)+pos : ((uint16(numDir)&15)<<5)+pos+32]
 	buffer := bytes.NewReader(data[:])
 	if err := binary.Read(buffer, binary.LittleEndian, &dir); err != nil {

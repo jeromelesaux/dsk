@@ -41,6 +41,8 @@ var (
 	cpcType        = flag.Int("cpctype", 2, "CPC type (sna import feature): \n\tCPC464 : 0\n\tCPC664: 1\n\tCPC6128 : 2\n\tUnknown : 3\n\tCPCPlus6128 : 4\n\tCPCPlus464 : 5\n\tGX4000 : 6\n\t")
 	screenMode     = flag.Int("screenmode", 1, "screen mode parameter for the sna.")
 	addHeader      = flag.Bool("addheader", false, "Add header to the standalone file (must be set with exec, load and type options).")
+	vendorFormat   = flag.Bool("vendor", false, "Format in vendor format (sectors number #09, end track #27)")
+	dataFormat     = flag.Bool("data", false, "Format in vendor format (sectors number #09, end track #27)")
 	version        = "0.13"
 )
 
@@ -177,7 +179,15 @@ func main() {
 		}
 		defer f.Close()
 		fmt.Fprintf(os.Stderr, "Formating number of sectors (%d), tracks (%d), head number (%d)\n", *sector, *track, *heads)
-		dskFile := dsk.FormatDsk(uint8(*sector), uint8(*track), uint8(*heads), (*dskType))
+		var dskFile *dsk.DSK
+		if *dataFormat {
+			dskFile = dsk.FormatDsk(uint8(*sector), uint8(*track), uint8(*heads), dsk.DataFormat, (*dskType))
+		} else {
+			if *vendorFormat {
+				dskFile = dsk.FormatDsk(uint8(*sector), uint8(*track), uint8(*heads), dsk.VendorFormat, (*dskType))
+			}
+		}
+
 		if err := dskFile.Write(f); err != nil {
 			exitOnError(fmt.Sprintf("Error while write file (%s) error %v\n", *dskPath, err), "Check your dsk file with option -dsk yourdsk.dsk -analyze")
 		}
@@ -234,7 +244,7 @@ func main() {
 				}
 				isAmsdos, header := dsk.CheckAmsdos(content)
 				if !isAmsdos {
-					exitOnError(fmt.Sprintf("File (%s) does not contain amsdos header.\n", *fileInDsk), "add address of execution and loading like : dsk -dsk output.dsk -put -amsdosfile hello.bin -exec #1000 -load 500")
+					exitOnError(fmt.Sprintf("File (%s) does not contain amsdos header.\n", *fileInDsk), "add address of execution and loading like : dsk -dsk output.dsk -put -amsdosfile hello.bin -exec \"#1000\" -load 500")
 				}
 				fmt.Fprintf(os.Stdout, "Amsdos informations :\n\tFilename:%s\n\tSize:#%X (%.2f Ko)\n\tSize2:#%X (%.2f Ko)\n\tLogical Size:#%X (%.2f Ko)\n\tExecute Address:#%X\n\tLoading Address:#%X\n\tChecksum:#%X\n\tType:%d\n\tUser:%d\n",
 					header.Filename,
@@ -398,7 +408,7 @@ func main() {
 		if *put {
 			cmdRunned = true
 			if *fileInDsk == "" {
-				exitOnError("amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put -amsdosfile hello.bin -exec #1000 -load 500")
+				exitOnError("amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put -amsdosfile hello.bin -exec \"#1000\" -load 500")
 			}
 			amsdosFile := dsk.GetNomDir(*fileInDsk)
 			indice := dskFile.FileExists(amsdosFile)
