@@ -43,6 +43,7 @@ var (
 	addHeader      = flag.Bool("addheader", false, "Add header to the standalone file (must be set with exec, load and type options).")
 	vendorFormat   = flag.Bool("vendor", false, "Format in vendor format (sectors number #09, end track #27)")
 	dataFormat     = flag.Bool("data", false, "Format in vendor format (sectors number #09, end track #27)")
+	rawimport      = flag.Bool("rawimport", false, "raw import the amsdosfile, this option is associated with -dsk, -track and -sector.\nThis option will do a raw copy of the file starting to track and sector values.\nfor instance : dsk -dsk mydskfile.dsk -amsdosfile file.bin -rawimport -track 1 -sector 0")
 	version        = "0.13"
 )
 
@@ -405,6 +406,59 @@ func main() {
 				}
 			}
 		}
+
+		if *rawimport {
+			cmdRunned = true
+			if *fileInDsk == "" {
+				exitOnError("amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put -amsdosfile hello.bin -rawimport -track 1 -sector 0")
+			}
+
+			if *track == 39 {
+				fmt.Fprintf(os.Stdout, "Warning the starting track is set as default : [%d]\n", *track)
+			}
+			if *sector == 9 {
+				fmt.Fprintf(os.Stdout, "Warning the starting sector is set as default : [%d]\n", *sector)
+			}
+			fr, err := os.Open(*fileInDsk)
+			if err != nil {
+				exitOnError(fmt.Sprintf("Cannot open file %s error :%v\n", *fileInDsk, err), "Check your file path")
+			}
+			defer fr.Close()
+			buf, err := ioutil.ReadAll(fr)
+			if err != nil {
+				if err != nil {
+					exitOnError(fmt.Sprintf("Cannot read file %s error :%v\n", *fileInDsk, err), "Check your file path")
+				}
+			}
+			fmt.Fprintf(os.Stdout, "Writing file content [%s] in dsk [%s] starting at track [%d] sector [%d]\n",
+				*fileInDsk,
+				*dskPath,
+				*track,
+				*sector,
+			)
+			endedTrack, endedSector, err := dskFile.CopyRawFile(buf, uint16(len(buf)), *track, *sector)
+			if err != nil {
+				exitOnError(fmt.Sprintf("Cannot write file %s error :%v\n", *fileInDsk, err), "Check your file path")
+			}
+			f, err := os.Create(*dskPath)
+			if err != nil {
+				exitOnError(fmt.Sprintf("Error while write file (%s) error %v\n", *dskPath, err), "Check your dsk path file")
+			}
+			defer f.Close()
+
+			if err := dskFile.Write(f); err != nil {
+				exitOnError(fmt.Sprintf("Error while write file (%s) error %v\n", *dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze")
+			}
+			informations := fmt.Sprintf("raw copy file [%s] size [%d] starting at track [%d] sector [%d] and ending at track [%d] sector [%d]",
+				*fileInDsk,
+				len(buf),
+				*track,
+				*sector,
+				endedTrack,
+				endedSector)
+			resumeAction(*dskPath, "raw import ", *fileInDsk, informations)
+		}
+
 		if *put {
 			cmdRunned = true
 			if *fileInDsk == "" {
@@ -471,6 +525,9 @@ func main() {
 			}
 		}
 	} else {
+		//
+		// now dsk will work on an amsdosfile
+		//
 		if *fileInDsk == "" {
 			exitOnError("Error no amsdos file is set\n", "set your amsdos file with option -amsdosfile like dsk -dsk output.dsk -put -amsdosfile hello.bin")
 		}

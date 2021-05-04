@@ -865,6 +865,78 @@ func (d *DSK) GetNomDir(nomFile string) StDirEntry {
 	return e
 }
 
+func (d *DSK) CopyRawFile(bufFile []byte, fileLength uint16, track, sector int) (int, int, error) {
+	d.FillBitmap()
+
+	var posFile uint16 //Construit l'entree pour mettre dans le catalogue
+	var err error
+	var written int
+	for posFile = 0; posFile < fileLength; { //Pour chaque bloc du fichier
+		track, sector, written, err = d.WriteAtTrackSector(track, sector, bufFile, posFile)
+		if err != nil {
+			return track, sector, err
+		}
+		posFile += uint16(written) // Passe à la position suivante
+	}
+	return track, sector, nil
+}
+
+func (d *DSK) WriteAtTrackSector(track int, sect int, bufBloc []byte, offset uint16) (int, int, int, error) {
+	var dataWritten int
+	minSect := d.GetMinSect()
+	if minSect == 0x41 {
+		track += 2
+	} else {
+		if minSect == 0x01 {
+			track++
+		}
+	}
+	//
+	// Ajuste le nombre de pistes si depassement capacite
+	//
+	if track > int(d.Entry.NbTracks-1) {
+		if d.Entry.NbHeads == 1 {
+			d.FormatTrack(0, uint8(track), 0, minSect, 9)
+		} else {
+			currentHead := d.Tracks[track-1].Head
+			if currentHead == 0 {
+				d.FormatTrack(0, uint8(track), 0, minSect, 9)
+			} else {
+				d.FormatTrack(0, uint8(track), 1, minSect, 9)
+			}
+		}
+	}
+	if sect > 8 {
+		track++
+		sect = 0
+	}
+	sectorSize := uint16(d.Tracks[track].Sect[sect].SizeByte)
+	pos := d.GetPosData(uint8(track), uint8(sect)+minSect, true)
+	dataWritten += copy(d.Tracks[track].Data[pos:], bufBloc[offset:offset+sectorSize])
+	sect++
+	if sect > 8 {
+		track++
+		sect = 0
+	}
+	if track > int(d.Entry.NbTracks-1) {
+		if d.Entry.NbHeads == 1 {
+			d.FormatTrack(0, uint8(track), 0, minSect, 9)
+		} else {
+			currentHead := d.Tracks[track-1].Head
+			if currentHead == 0 {
+				d.FormatTrack(0, uint8(track), 0, minSect, 9)
+			} else {
+				d.FormatTrack(0, uint8(track), 1, minSect, 9)
+			}
+		}
+	}
+	sectorSize = uint16(d.Tracks[track].Sect[sect].SizeByte)
+	pos = d.GetPosData(uint8(track), uint8(sect)+minSect, true)
+	dataWritten += copy(d.Tracks[track].Data[pos:], bufBloc[offset+sectorSize:offset+(sectorSize*2)])
+	sect++
+	return track, sect, dataWritten, nil
+}
+
 func (d *DSK) WriteBloc(bloc int, bufBloc []byte, offset uint16) error {
 	track := (bloc << 1) / 9
 	sect := (bloc << 1) % 9
