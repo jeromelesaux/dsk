@@ -55,7 +55,7 @@ func DisplayHex(b []byte, width int) string {
 				hexa += fmt.Sprintf("%.2X ", b[j+i])
 			} else {
 				ascii += " "
-				hexa += fmt.Sprintf("   ")
+				hexa += "   "
 			}
 		}
 		out += fmt.Sprintf("#%.4X ", offset) + hexa + " | " + ascii + " |\n"

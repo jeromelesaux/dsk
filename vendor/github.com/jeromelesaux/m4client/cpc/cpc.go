@@ -42,6 +42,24 @@ func NewCpcHeader(f *os.File) (*CpcHead, error) {
 	return header, nil
 }
 
+func BytesCpcHeader(b []byte) (*CpcHead, error) {
+	header := &CpcHead{}
+	buff := bytes.NewReader(b)
+	err := binary.Read(buff, binary.LittleEndian, header)
+	if err != nil {
+		return &CpcHead{}, err
+	}
+	return header, nil
+}
+
+func (c *CpcHead) Bytes() ([]byte, error) {
+	var b bytes.Buffer
+	if err := binary.Write(&b, binary.LittleEndian, c); err != nil {
+		return b.Bytes(), err
+	}
+	return b.Bytes(), nil
+}
+
 func (c *CpcHead) ComputedChecksum16() uint16 {
 	var checksum uint16
 	bf := make([]byte, 2)

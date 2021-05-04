@@ -173,10 +173,10 @@ func Basic(buf []byte, fileSize uint16, isBasic bool) []byte {
 								pos += 2
 
 							case 0x1F: // Constante flottante
-								f := float64((getByte(buf, pos+2, deprotect) << 16) +
-									(getByte(buf, pos+1, deprotect) << 8) +
-									getByte(buf, pos, deprotect) +
-									((getByte(buf, pos+3, deprotect) & 0x7F) << 24))
+								f := float64((int(getByte(buf, pos+2, deprotect)) << 16) +
+									(int(getByte(buf, pos+1, deprotect)) << 8) +
+									int(getByte(buf, pos, deprotect)) +
+									((int(getByte(buf, pos+3, deprotect) & 0x7F)) << 24))
 								f = 1 + (f / 0x80000000)
 
 								if getByte(buf, pos+3, deprotect)&0x80 == 0 {
@@ -203,7 +203,7 @@ func Basic(buf []byte, fileSize uint16, isBasic bool) []byte {
 									listing = append(listing, tmp...)
 								}
 							default:
-								token = token
+
 							}
 						}
 					}

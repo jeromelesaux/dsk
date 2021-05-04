@@ -129,7 +129,7 @@ func (s *SNAHeader) String() string {
 }
 
 var (
-	ErrorNoHeaderOrStartAddress = errors.New("No Amsdos header found and no startAddress. Quit.")
+	ErrorNoHeaderOrStartAddress = errors.New("no Amsdos header found and no startAddress. Quit")
 )
 
 type CRTC uint8

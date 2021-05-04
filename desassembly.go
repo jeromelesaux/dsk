@@ -495,7 +495,7 @@ func Desass(Prg []byte, Longueur, StartAddress uint16) string {
 				}
 			}
 		} else {
-			fmt.Sprintf(Inst, "%.2X %.2X %2.X ????", Instr, Inst2, Inst3)
+			Inst = fmt.Sprintf("%.2X %.2X %2.X ????", Instr, Inst2, Inst3)
 		}
 		OldAdrHex := fmt.Sprintf("%.4X", (OldAdr + StartAddress))
 		Listing += OldAdrHex

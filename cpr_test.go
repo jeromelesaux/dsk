@@ -27,7 +27,7 @@ func TestCopyData(t *testing.T) {
 	defer f.Close()
 	b, err := ioutil.ReadAll(f)
 	if err != nil {
-
+		t.Fatal()
 	}
 
 	if err := cpr.Copy(b[128:], 3); err != nil {

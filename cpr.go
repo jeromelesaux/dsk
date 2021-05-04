@@ -9,8 +9,8 @@ import (
 )
 
 var (
-	ErrorBanknumber         = errors.New("Bad banknumber, overflow.")
-	ErrorBankdataExceed     = errors.New("Size exceed bank size #4000")
+	ErrorBanknumber         = errors.New("bad banknumber, overflow")
+	ErrorBankdataExceed     = errors.New("size exceed bank size #4000")
 	CartChunckLength        = 0x4000
 	CartAmsdosPatchFilename = 0x1c04
 )

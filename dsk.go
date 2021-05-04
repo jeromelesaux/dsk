@@ -18,13 +18,13 @@ var SECTSIZE uint16 = 512
 var NOT_FOUND int = -1
 
 var (
-	ErrorUnsupportedDskFormat    = errors.New("Unsupported DSK Format.")
-	ErrorUnsupportedMultiHeadDsk = errors.New("Multi-side dsk ! Expected 1 head")
-	ErrorBadSectorNumber         = errors.New("DSK has wrong sector number!")
-	ErrorCatalogueExceed         = errors.New("Catalogue indice exceed.")
-	ErrorNoBloc                  = errors.New("Error no more block available.")
-	ErrorNoDirEntry              = errors.New("Error no more dir entry available.")
-	ErrorFileSizeExceed          = errors.New("Filesize exceed.")
+	ErrorUnsupportedDskFormat    = errors.New("unsupported DSK Format")
+	ErrorUnsupportedMultiHeadDsk = errors.New("multi-side dsk ! Expected 1 head")
+	ErrorBadSectorNumber         = errors.New("dsk has wrong sector number")
+	ErrorCatalogueExceed         = errors.New("catalogue indice exceed")
+	ErrorNoBloc                  = errors.New("error no more block available")
+	ErrorNoDirEntry              = errors.New("error no more dir entry available")
+	ErrorFileSizeExceed          = errors.New("filesize exceed")
 )
 var (
 	MODE_ASCII        uint8     = 0
@@ -664,7 +664,7 @@ func GetNomAmsdos(masque string) string {
 	copy(amsdosFile[0:filenameSize], file[0:filenameSize])
 	amsdosFile[8] = '.'
 	ext := strings.ToUpper(filepath.Ext(masque))
-	copy(amsdosFile[9:12], ext[1:len(ext)])
+	copy(amsdosFile[9:12], ext[1:])
 	return string(amsdosFile)
 }
 
@@ -1268,7 +1268,7 @@ func (d *DSK) ViewFile(indice int) ([]byte, int, error) {
 		}
 		i++
 		if i >= 64 {
-			return b, cumul, errors.New("Cannot get the file, Exceed catalogue indice")
+			return b, cumul, errors.New("cannot get the file, Exceed catalogue indice")
 		}
 		if entryIndice.Nom != d.Catalogue[i].Nom || entryIndice.Ext != d.Catalogue[i].Ext {
 			break

@@ -3,13 +3,15 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:27855664e09e2cdb71813e8c4098ce8843336cdce356ea33d091af80e7c62847"
   name = "github.com/jeromelesaux/m4client"
   packages = ["cpc"]
-  revision = "d7d79ba9630bf2ea9fd424626d97b88d452b8487"
+  pruneopts = "UT"
+  revision = "efb59c22369cef93b4c59366c081756d5477618f"
 
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "3475b1dadf8665c77f31f4609882f02a900ccfdd0175637547500d9b8080eeab"
+  input-imports = ["github.com/jeromelesaux/m4client/cpc"]
   solver-name = "gps-cdcl"
   solver-version = 1
