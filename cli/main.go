@@ -43,7 +43,9 @@ var (
 	addHeader      = flag.Bool("addheader", false, "Add header to the standalone file (must be set with exec, load and type options).")
 	vendorFormat   = flag.Bool("vendor", false, "Format in vendor format (sectors number #09, end track #27)")
 	dataFormat     = flag.Bool("data", false, "Format in vendor format (sectors number #09, end track #27)")
-	rawimport      = flag.Bool("rawimport", false, "raw import the amsdosfile, this option is associated with -dsk, -track and -sector.\nThis option will do a raw copy of the file starting to track and sector values.\nfor instance : dsk -dsk mydskfile.dsk -amsdosfile file.bin -rawimport -track 1 -sector 0")
+	rawimport      = flag.Bool("rawimport", false, "raw imports the amsdosfile, this option is associated with -dsk, -track and -sector.\nThis option will do a raw copy of the file starting to track and sector values.\nfor instance : dsk -dsk mydskfile.dsk -amsdosfile file.bin -rawimport -track 1 -sector 0")
+	rawexport      = flag.Bool("rawexport", false, "raw exports the amsdosfile, this option is associated with -dsk, -track and -sector.\nThis option will do a raw extract of the content beginning to track and sector values and will stop when size is reached.\nfor instance : dsk -dsk mydskfile.dsk -amsdosfile file.bin -rawexport -track 1 -sector 0 -size 16384")
+	size           = flag.Int("size", 0, "Size to extract in rawexport, see rawexport for more details.")
 	version        = "0.13"
 )
 
@@ -457,6 +459,50 @@ func main() {
 				endedTrack,
 				endedSector)
 			resumeAction(*dskPath, "raw import ", *fileInDsk, informations)
+		}
+
+		if *rawexport {
+			cmdRunned = true
+			if *fileInDsk == "" {
+				exitOnError("amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put -amsdosfile hello.bin -rawimport -track 1 -sector 0")
+			}
+
+			if *track == 39 {
+				fmt.Fprintf(os.Stdout, "Warning the starting track is set as default : [%d]\n", *track)
+			}
+			if *sector == 9 {
+				fmt.Fprintf(os.Stdout, "Warning the starting sector is set as default : [%d]\n", *sector)
+			}
+			if *size == 0 {
+				fmt.Fprintf(os.Stdout, "Warning the size is set as default : [%d]\n", *size)
+			}
+
+			fmt.Fprintf(os.Stdout, "Writing file content starting from track [%d] sector [%d] to file  [%s] in dsk [%s] size [%d]\n",
+				*track,
+				*sector,
+				*fileInDsk,
+				*dskPath,
+				*size,
+			)
+			endedTrack, endedSector, content := dskFile.ExtractRawFile(uint16(*size), *track, *sector)
+
+			fw, err := os.Create(*fileInDsk)
+			if err != nil {
+				exitOnError(fmt.Sprintf("Error while write file (%s) error %v\n", *fileInDsk, err), "Check your amsdos path file")
+			}
+			defer fw.Close()
+			_, err = fw.Write(content)
+			if err != nil {
+				exitOnError(fmt.Sprintf("Error while write file (%s) error %v\n", *dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze")
+			}
+			informations := fmt.Sprintf("raw extract to file [%s] size [%d] starting at track [%d] sector [%d] and ending at track [%d] sector [%d]",
+				*fileInDsk,
+				*size,
+				*track,
+				*sector,
+				endedTrack,
+				endedSector)
+			resumeAction(*dskPath, "raw export ", *fileInDsk, informations)
 		}
 
 		if *put {

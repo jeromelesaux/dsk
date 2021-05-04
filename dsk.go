@@ -991,6 +991,53 @@ func (d *DSK) WriteBloc(bloc int, bufBloc []byte, offset uint16) error {
 	return nil
 }
 
+func (d *DSK) ExtractRawFile(fileLength uint16, track, sector int) (int, int, []byte) {
+	d.FillBitmap()
+	content := make([]byte, 0)
+	var posFile uint16 //Construit l'entree pour mettre dans le catalogue
+	var buf []byte
+
+	for posFile = 0; posFile < fileLength; { //Pour chaque bloc du fichier
+		track, sector, buf = d.ReadAtTrackSector(track, sector)
+		posFile += uint16(len(buf)) // Passe à la position suivante
+		content = append(content, buf...)
+	}
+	return track, sector, content
+}
+
+func (d *DSK) ReadAtTrackSector(track, sect int) (int, int, []byte) {
+
+	minSect := d.GetMinSect()
+	if minSect == 0x41 {
+		track += 2
+	} else {
+		if minSect == 0x01 {
+			track++
+		}
+	}
+	sectorSize := uint16(d.Tracks[track].Sect[sect].SizeByte)
+	pos := d.GetPosData(uint8(track), uint8(sect)+minSect, true)
+	bufBloc1 := make([]byte, sectorSize)
+	copy(bufBloc1, d.Tracks[track].Data[pos:pos+sectorSize])
+	//int Pos = GetPosData( track, sect + MinSect, true );
+	//memcpy( BufBloc, &ImgDsk[ Pos ], SECTSIZE );
+	sect++
+	if sect > 8 {
+		track++
+		sect = 0
+	}
+	sectorSize = uint16(d.Tracks[track].Sect[sect].SizeByte)
+
+	bufBloc2 := make([]byte, sectorSize)
+	pos = d.GetPosData(uint8(track), uint8(sect)+minSect, true)
+	copy(bufBloc2, d.Tracks[track].Data[pos:pos+sectorSize])
+	sect++
+	//   Pos = GetPosData( track, sect + MinSect, true );
+	// memcpy( &BufBloc[ SECTSIZE ], &ImgDsk[ Pos ], SECTSIZE );
+	bufBloc1 = append(bufBloc1, bufBloc2...)
+	return track, sect, bufBloc1
+}
+
 func (d *DSK) ReadBloc(bloc int) []byte {
 	bufBloc := make([]byte, SECTSIZE*2)
 	track := (bloc << 1) / 9
