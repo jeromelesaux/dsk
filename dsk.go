@@ -349,6 +349,9 @@ func FormatDsk(nbSect, nbTrack, nbHead uint8, diskFormat DskFormat, dskType int)
 			dsk.TrackSizeTable = make([]byte, 0xCC)
 		case VendorFormat:
 			dsk.TrackSizeTable = make([]byte, entry.NbHeads*(entry.NbTracks))
+			for i := 0; i < len(dsk.TrackSizeTable); i++ {
+				dsk.TrackSizeTable[i] = byte(0x100 + (SECTSIZE*uint16(nbSect))/256 + 1)
+			}
 		default:
 			fmt.Fprintf(os.Stderr, "Unknown format track.")
 		}

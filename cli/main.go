@@ -173,7 +173,9 @@ func main() {
 		cmdRunned = true
 		_, err := os.Stat(*dskPath)
 		if err == nil {
-			exitOnError(fmt.Sprintf("Error file (%s) already exists", *dskPath), "Use option -force to avoid this message")
+			if !*force {
+				exitOnError(fmt.Sprintf("Error file (%s) already exists", *dskPath), "Use option -force to avoid this message")
+			}
 		}
 
 		f, err := os.Create(*dskPath)
