@@ -915,7 +915,11 @@ func (d *DSK) WriteAtTrackSector(track int, sect int, bufBloc []byte, offset uin
 	}
 	sectorSize := uint16(d.Tracks[track].Sect[sect].SizeByte)
 	pos := d.GetPosData(uint8(track), uint8(sect)+minSect, true)
-	dataWritten += copy(d.Tracks[track].Data[pos:], bufBloc[offset:offset+sectorSize])
+	maxSize := sectorSize
+	if len(bufBloc) < int(offset+maxSize) {
+		maxSize = uint16(len(bufBloc))
+	}
+	dataWritten += copy(d.Tracks[track].Data[pos:], bufBloc[offset:offset+maxSize])
 	sect++
 	if sect > 8 {
 		track++
@@ -935,7 +939,10 @@ func (d *DSK) WriteAtTrackSector(track int, sect int, bufBloc []byte, offset uin
 	}
 	sectorSize = uint16(d.Tracks[track].Sect[sect].SizeByte)
 	pos = d.GetPosData(uint8(track), uint8(sect)+minSect, true)
-	dataWritten += copy(d.Tracks[track].Data[pos:], bufBloc[offset+sectorSize:offset+(sectorSize*2)])
+	if len(bufBloc) < int(offset+(maxSize*2)) {
+		return track, sect, dataWritten, nil
+	}
+	dataWritten += copy(d.Tracks[track].Data[pos:], bufBloc[offset+sectorSize:maxSize])
 	sect++
 	return track, sect, dataWritten, nil
 }
