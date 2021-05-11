@@ -35,6 +35,8 @@ var (
 	VendorFormat      DskFormat = 1
 )
 
+const HeaderSize = 0x80
+
 type DskFormat = int
 
 type StAmsdos = cpc.CpcHead
@@ -1373,9 +1375,9 @@ func (d *DSK) ViewFile(indice int) ([]byte, int, error) {
 				isAmsdos, header := CheckAmsdos(bloc)
 				if isAmsdos {
 					t := make([]byte, len(bloc))
-					copy(t, bloc[0x80:])
+					copy(t, bloc[HeaderSize:])
 					bloc = t
-					tailleBloc -= 0x80
+					tailleBloc -= HeaderSize
 					tailleFichier = int(header.Size)
 				}
 				firstBlock = false

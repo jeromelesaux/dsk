@@ -256,7 +256,7 @@ func main() {
 			isAmsdos, _ := dsk.CheckAmsdos(content)
 			// remove amsdos header
 			if isAmsdos {
-				content = content[128:]
+				content = content[dsk.HeaderSize:]
 			}
 
 			fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", *fileInDsk, len(content))
@@ -268,7 +268,7 @@ func main() {
 			isAmsdos, header := dsk.CheckAmsdos(content)
 			if isAmsdos {
 				address = header.Address
-				content = content[128:]
+				content = content[dsk.HeaderSize:]
 			}
 			fmt.Println(dsk.Desass(content, uint16(len(content)), address))
 		}
@@ -277,7 +277,7 @@ func main() {
 			isAmsdos, _ := dsk.CheckAmsdos(content)
 			// remove amsdos header
 			if isAmsdos {
-				content = content[128:]
+				content = content[dsk.HeaderSize:]
 			}
 			fmt.Println(dsk.DisplayHex(content, 16))
 		}
