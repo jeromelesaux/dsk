@@ -887,13 +887,6 @@ func (d *DSK) CopyRawFile(bufFile []byte, fileLength uint16, track, sector int) 
 func (d *DSK) WriteAtTrackSector(track int, sect int, bufBloc []byte, offset uint16) (int, int, int, error) {
 	var dataWritten int
 	minSect := d.GetMinSect()
-	if minSect == 0x41 {
-		track += 2
-	} else {
-		if minSect == 0x01 {
-			track++
-		}
-	}
 	//
 	// Ajuste le nombre de pistes si depassement capacite
 	//
@@ -920,6 +913,9 @@ func (d *DSK) WriteAtTrackSector(track int, sect int, bufBloc []byte, offset uin
 		maxSize = uint16(len(bufBloc))
 	}
 	dataWritten += copy(d.Tracks[track].Data[pos:], bufBloc[offset:offset+maxSize])
+	if len(bufBloc) < int(offset+(maxSize*2)) {
+		return track, sect, dataWritten, nil
+	}
 	sect++
 	if sect > 8 {
 		track++
@@ -939,8 +935,9 @@ func (d *DSK) WriteAtTrackSector(track int, sect int, bufBloc []byte, offset uin
 	}
 	sectorSize = uint16(d.Tracks[track].Sect[sect].SizeByte)
 	pos = d.GetPosData(uint8(track), uint8(sect)+minSect, true)
-	if len(bufBloc) < int(offset+(maxSize*2)) {
-		return track, sect, dataWritten, nil
+	maxSize = sectorSize*2 + offset
+	if (len(bufBloc) - dataWritten - int(offset)) < int(maxSize) {
+		maxSize = uint16(len(bufBloc))
 	}
 	dataWritten += copy(d.Tracks[track].Data[pos:], bufBloc[offset+sectorSize:maxSize])
 	sect++
@@ -1313,7 +1310,7 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 				var header *cpc.CpcHead
 				isAmsdos, header = CheckAmsdos(bloc)
 				if isAmsdos {
-					tailleFichier = int(header.LogicalSize) + 0x80
+					tailleFichier = int(header.Size) + 0x80
 				}
 				firstBlock = false
 			}
@@ -1379,7 +1376,7 @@ func (d *DSK) ViewFile(indice int) ([]byte, int, error) {
 					copy(t, bloc[0x80:])
 					bloc = t
 					tailleBloc -= 0x80
-					tailleFichier = int(header.LogicalSize)
+					tailleFichier = int(header.Size)
 				}
 				firstBlock = false
 			}
