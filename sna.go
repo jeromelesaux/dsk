@@ -323,6 +323,20 @@ func (s *SNA) Get(startAddress, lenght uint16) ([]byte, error) {
 	return content, nil
 }
 
+func ExportFromSna(snaPath string) ([]byte, error) {
+	f, err := os.Open(snaPath)
+
+	if err != nil {
+		return []byte{}, err
+	}
+	defer f.Close()
+	s := &SNA{}
+	if err = s.Read(f); err != nil {
+		return []byte{}, err
+	}
+	return s.Data, nil
+}
+
 func ImportInSna(filePath, snaPath string, execAddress uint16, screenMode uint8, cpcType CPC, crtcType CRTC) error {
 	sna := &SNA{Data: make([]byte, 0xFFFF), Header: NewSnaHeader()}
 	var filesize uint16

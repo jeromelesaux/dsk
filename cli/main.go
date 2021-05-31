@@ -110,6 +110,59 @@ func main() {
 				fmt.Fprintf(os.Stderr, "Missing input file to import in sna file (%s)\n", *snaPath)
 			}
 		}
+		if *get {
+			cmdRunned = true
+			if *fileInDsk != "" {
+				content, err := dsk.ExportFromSna(*snaPath)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
+						*fileInDsk,
+						*snaPath,
+						err)
+					os.Exit(1)
+				}
+				f, err := os.Create(*fileInDsk)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
+						*fileInDsk,
+						*snaPath,
+						err)
+					os.Exit(1)
+				}
+				defer f.Close()
+				_, err = f.Write(content)
+				if err != nil {
+					fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
+						*fileInDsk,
+						*snaPath,
+						err)
+					os.Exit(1)
+				}
+				os.Exit(0)
+			} else {
+				if *dskPath != "" {
+					content, err := dsk.ExportFromSna(*snaPath)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
+							*fileInDsk,
+							*snaPath,
+							err)
+						os.Exit(1)
+					}
+					d, isError, msg, hint := openDsk()
+					if isError {
+						exitOnError(msg, hint)
+					}
+					isError, msg, hint = rawImportDataInDsk(d, content)
+					if isError {
+						exitOnError(msg, hint)
+					}
+
+				} else {
+					fmt.Fprintf(os.Stderr, "Missing input file to import in sna file (%s)\n", *snaPath)
+				}
+			}
+		}
 	}
 	if *dskPath == "" && *fileInDsk == "" {
 		sampleUsage()
@@ -740,17 +793,42 @@ func hexaFileDsk(d dsk.DSK) (onError bool, message, hint string) {
 	return false, "", ""
 }
 
-func rawImportDsk(d dsk.DSK) (onError bool, message, hint string) {
-	if *fileInDsk == "" {
-		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put -amsdosfile hello.bin -rawimport -track 1 -sector 0"
-	}
-
+func rawImportDataInDsk(d dsk.DSK, content []byte) (onError bool, message, hint string) {
 	if *track == 39 {
 		fmt.Fprintf(os.Stdout, "Warning the starting track is set as default : [%d]\n", *track)
 	}
 	if *sector == 9 {
 		fmt.Fprintf(os.Stdout, "Warning the starting sector is set as default : [%d]\n", *sector)
 	}
+	endedTrack, endedSector, err := d.CopyRawFile(content, uint16(len(content)), *track, *sector)
+	if err != nil {
+		return true, fmt.Sprintf("Cannot write file %s error :%v\n", *fileInDsk, err), "Check your file path"
+	}
+	f, err := os.Create(*dskPath)
+	if err != nil {
+		return true, fmt.Sprintf("Error while write file (%s) error %v\n", *dskPath, err), "Check your dsk path file"
+	}
+	defer f.Close()
+
+	if err := d.Write(f); err != nil {
+		return true, fmt.Sprintf("Error while write file (%s) error %v\n", *dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
+	}
+	informations := fmt.Sprintf("raw copy file [%s] size [%d] starting at track [%d] sector [%d] and ending at track [%d] sector [%d]",
+		*fileInDsk,
+		len(content),
+		*track,
+		*sector,
+		endedTrack,
+		endedSector)
+	resumeAction(*dskPath, "raw import ", *fileInDsk, informations)
+	return false, "", ""
+}
+
+func rawImportDsk(d dsk.DSK) (onError bool, message, hint string) {
+	if *fileInDsk == "" {
+		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put -amsdosfile hello.bin -rawimport -track 1 -sector 0"
+	}
+
 	fr, err := os.Open(*fileInDsk)
 	if err != nil {
 		return true, fmt.Sprintf("Cannot open file %s error :%v\n", *fileInDsk, err), "Check your file path"
@@ -768,28 +846,7 @@ func rawImportDsk(d dsk.DSK) (onError bool, message, hint string) {
 		*track,
 		*sector,
 	)
-	endedTrack, endedSector, err := d.CopyRawFile(buf, uint16(len(buf)), *track, *sector)
-	if err != nil {
-		return true, fmt.Sprintf("Cannot write file %s error :%v\n", *fileInDsk, err), "Check your file path"
-	}
-	f, err := os.Create(*dskPath)
-	if err != nil {
-		return true, fmt.Sprintf("Error while write file (%s) error %v\n", *dskPath, err), "Check your dsk path file"
-	}
-	defer f.Close()
-
-	if err := d.Write(f); err != nil {
-		return true, fmt.Sprintf("Error while write file (%s) error %v\n", *dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
-	}
-	informations := fmt.Sprintf("raw copy file [%s] size [%d] starting at track [%d] sector [%d] and ending at track [%d] sector [%d]",
-		*fileInDsk,
-		len(buf),
-		*track,
-		*sector,
-		endedTrack,
-		endedSector)
-	resumeAction(*dskPath, "raw import ", *fileInDsk, informations)
-	return false, "", ""
+	return rawImportDataInDsk(d, buf)
 }
 
 func rawExportDsk(d dsk.DSK) (onError bool, message, hint string) {
