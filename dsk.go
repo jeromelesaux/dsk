@@ -524,7 +524,11 @@ func (d *DSK) CheckDsk() error {
 		var minSect, maxSect, s uint8
 		minSect = 0xFF
 		maxSect = 0
-		for s = 0; s < tr.NbSect; s++ {
+		nbSecteur := int(tr.NbSect)
+		if nbSecteur > len(tr.Sect) {
+			nbSecteur = len(tr.Sect)
+		}
+		for s = 0; s < uint8(nbSecteur); s++ {
 			if minSect > tr.Sect[s].R {
 				minSect = tr.Sect[s].R
 			}
