@@ -189,9 +189,15 @@ func (c *CPCEMUTrack) Read(r io.Reader) error {
 	for i = c.NbSect; i < 29; i++ {
 		sect := &CPCEMUSect{}
 		sect.Read(r)
-		sectorSize += sect.SizeByte
 	}
-	c.Data = make([]byte, sectorSize)
+	if int(sectorSize) > int(c.SectSize)*0x100*int(c.NbSect) {
+		fmt.Fprintf(os.Stderr, "Warning : Sector size [%d] differs from the amount of data found [%d], enlarge data part\n",
+			int(c.SectSize)*0x100*int(c.NbSect),
+			sectorSize)
+		c.Data = make([]byte, sectorSize)
+	} else {
+		c.Data = make([]byte, int(c.SectSize)*0x100*int(c.NbSect))
+	}
 	if err := binary.Read(r, binary.LittleEndian, &c.Data); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.Data error :%v\n", err)
 		return err
