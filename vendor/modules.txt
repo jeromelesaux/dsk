@@ -1,3 +1,0 @@
-# github.com/jeromelesaux/m4client v0.0.0-20200309212559-efb59c22369c
-## explicit
-github.com/jeromelesaux/m4client/cpc

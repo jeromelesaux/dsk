@@ -21,7 +21,7 @@ endif
 
 build: 
 	@echo "Update packages"
-	dep ensure -update
+	go get -d ./...
 	@echo "Compilation for linux amd64"
 	(make compile ARCH=amd64 OS=linux)
 	@echo "Compilation for windows amd64"
