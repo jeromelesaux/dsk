@@ -1346,7 +1346,7 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 			break
 		}
 	}
-	if tailleFichier <= 0 {
+	if tailleFichier <= 0 || tailleFichier <= cumul {
 		tailleFichier = cumul
 	}
 

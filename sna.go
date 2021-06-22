@@ -334,6 +334,10 @@ func ExportFromSna(snaPath string) ([]byte, error) {
 	if err = s.Read(f); err != nil {
 		return []byte{}, err
 	}
+	var startingAddress uint16
+	startingAddress += uint16(s.Header.RegisterPCHigh) << 8
+	startingAddress += uint16(s.Header.RegisterPCLow) | 0xff
+	s.Get(startingAddress, uint16(len(s.Data))-startingAddress)
 	return s.Data, nil
 }
 
