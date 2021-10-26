@@ -7,7 +7,7 @@
   name = "github.com/jeromelesaux/m4client"
   packages = ["cpc"]
   pruneopts = "UT"
-  revision = "efb59c22369cef93b4c59366c081756d5477618f"
+  revision = "66015db694c60a24be98b331c1d96bc6f8d1c424"
 
 [solve-meta]
   analyzer-name = "dep"

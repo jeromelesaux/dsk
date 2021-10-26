@@ -48,7 +48,7 @@ var (
 	rawexport      = flag.Bool("rawexport", false, "raw exports the amsdosfile, this option is associated with -dsk, -track and -sector.\nThis option will do a raw extract of the content beginning to track and sector values and will stop when size is reached.\nfor instance : dsk -dsk mydskfile.dsk -amsdosfile file.bin -rawexport -track 1 -sector 0 -size 16384")
 	size           = flag.Int("size", 0, "Size to extract in rawexport, see rawexport for more details.")
 	autotest       = flag.Bool("autotest", false, "Executs all tests.")
-	version        = "0.14"
+	version        = "0.15"
 )
 
 func main() {
@@ -649,7 +649,10 @@ func getFileDsk(d dsk.DSK) (onError bool, message, hint string) {
 		var lastFilename string
 		for indice, v := range d.Catalogue {
 			if v.User != dsk.USER_DELETED && v.NbPages != 0 {
-				filename := fmt.Sprintf("%s.%s", v.Nom, v.Ext)
+				var nom, ext string
+				nom = dsk.ToAscii(v.Nom[:])
+				ext = dsk.ToAscii(v.Ext[:])
+				filename := fmt.Sprintf("%s.%s", nom, ext)
 				if lastFilename == filename {
 					continue
 				}

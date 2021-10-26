@@ -66,3 +66,12 @@ func DisplayHex(b []byte, width int) string {
 	}
 	return out
 }
+
+func ToAscii(b []byte) string {
+	var out string
+	for _, v := range b {
+		v &= 127
+		out += string(v)
+	}
+	return out
+}

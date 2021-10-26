@@ -25,7 +25,7 @@ build:
 	@echo "Compilation for linux amd64"
 	(make compile ARCH=amd64 OS=linux)
 	@echo "Compilation for windows amd64"
-	(make compile ARCH=amd64 OS=windows)
+	(make compile ARCH=amd64 OS=windows EXT=.exe)
 	@echo "Compilation for macos"
 	(make compile ARCH=amd64 OS=darwin)
 	@echo "Compilation for raspberry pi Raspbian 64bits"
@@ -33,12 +33,12 @@ build:
 	@echo "Compilation for raspberry pi Raspbian 32bits"
 	(make compile ARCH=arm OS=linux GOARM=5)
 	@echo "Compilation for older windows"
-	(make compile ARCH=386 OS=windows)
+	(make compile ARCH=386 OS=windows EXT=.exe)
 
 clean:
 	@echo "Cleaning project"
 	rm -f dsk-*
 
 compile:
-	GOOS=${OS} GOARCH=${ARCH} go build ${LDFLAGS} -o dsk-${OS}-${ARCH} $(SOURCEDIR)/main.go 
-	zip dsk-$(appversion)-${OS}-${ARCH}.zip dsk-${OS}-${ARCH}
+	GOOS=${OS} GOARCH=${ARCH} go build ${LDFLAGS} -o dsk-${OS}-${ARCH}${EXT} $(SOURCEDIR)/main.go 
+	zip dsk-$(appversion)-${OS}-${ARCH}.zip dsk-${OS}-${ARCH}${EXT}
