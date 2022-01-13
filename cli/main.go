@@ -97,7 +97,7 @@ func main() {
 				exitOnError(err.Error(), "Check your sna path")
 			}
 			content := sna.Hexadecimal()
-			fmt.Println(dsk.DisplayHex(content, 16))
+			fmt.Println(dsk.DisplayHex([]byte(content), 16))
 			os.Exit(0)
 		}
 		if *put {
