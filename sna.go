@@ -414,3 +414,7 @@ func CreateSna(snaPath string) (*SNA, error) {
 	}
 	return s, nil
 }
+
+func (s *SNA) Hexadecimal() string {
+	return DisplayHex(s.Data, 16)
+}

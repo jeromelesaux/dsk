@@ -48,7 +48,7 @@ var (
 	rawexport      = flag.Bool("rawexport", false, "raw exports the amsdosfile, this option is associated with -dsk, -track and -sector.\nThis option will do a raw extract of the content beginning to track and sector values and will stop when size is reached.\nfor instance : dsk -dsk mydskfile.dsk -amsdosfile file.bin -rawexport -track 1 -sector 0 -size 16384")
 	size           = flag.Int("size", 0, "Size to extract in rawexport, see rawexport for more details.")
 	autotest       = flag.Bool("autotest", false, "Executs all tests.")
-	version        = "0.15"
+	version        = "0.16"
 )
 
 func main() {
@@ -89,6 +89,16 @@ func main() {
 			if isError {
 				exitOnError(msg, hint)
 			}
+		}
+		if *hexa {
+			cmdRunned = true
+			sna, err := dsk.ReadSna(*snaPath)
+			if err != nil {
+				exitOnError(err.Error(), "Check your sna path")
+			}
+			content := sna.Hexadecimal()
+			fmt.Println(dsk.DisplayHex(content, 16))
+			os.Exit(0)
 		}
 		if *put {
 			cmdRunned = true
