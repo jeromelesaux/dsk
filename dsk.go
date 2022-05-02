@@ -333,10 +333,10 @@ func (d *DSK) Read(r io.Reader) error {
 	return nil
 }
 
-func FormatDsk(nbSect, nbTrack, nbHead uint8, diskFormat DskFormat, dskType int) *DSK {
+func FormatDsk(nbSect, nbTrack, nbHead uint8, diskFormat DskFormat, extendedDskType int) *DSK {
 	dsk := &DSK{}
 	entry := CPCEMUEnt{}
-	if dskType == EXTENDED_DSK_TYPE || diskFormat == VendorFormat {
+	if extendedDskType == EXTENDED_DSK_TYPE || diskFormat == VendorFormat {
 		dsk.Extended = true
 		copy(entry.Debut[:], "EXTENDED CPC DSK File\r\nDisk-Info\r\n")
 	} else {
@@ -346,7 +346,7 @@ func FormatDsk(nbSect, nbTrack, nbHead uint8, diskFormat DskFormat, dskType int)
 	entry.DataSize = 0x100 + (SECTSIZE * uint16(nbSect))
 	entry.NbTracks = nbTrack
 	entry.NbHeads = nbHead
-	if dskType == EXTENDED_DSK_TYPE {
+	if extendedDskType == EXTENDED_DSK_TYPE {
 		dsk.TrackSizeTable = make([]byte, entry.NbHeads*(entry.NbTracks))
 		for i := 0; i < len(dsk.TrackSizeTable); i++ {
 			dsk.TrackSizeTable[i] = byte(0x100 + (SECTSIZE*uint16(nbSect))/256 + 1)

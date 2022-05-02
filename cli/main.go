@@ -78,14 +78,15 @@ func main() {
 	if *snaPath != "" {
 		if *info {
 			cmdRunned = true
-			isError, msg, hint := infoSna()
+			isError, msg, hint := infoSna(*snaPath)
 			if isError {
 				exitOnError(msg, hint)
 			}
+			os.Exit(0)
 		}
 		if *format {
 			cmdRunned = true
-			isError, msg, hint := formatSna()
+			isError, msg, hint := formatSna(*snaPath)
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -159,11 +160,11 @@ func main() {
 							err)
 						os.Exit(1)
 					}
-					d, isError, msg, hint := openDsk()
+					d, isError, msg, hint := openDsk(*dskPath)
 					if isError {
 						exitOnError(msg, hint)
 					}
-					isError, msg, hint = rawImportDataInDsk(d, content)
+					isError, msg, hint = rawImportDataInDsk(d, *fileInDsk, *dskPath, *track, *sector, content)
 					if isError {
 						exitOnError(msg, hint)
 					}
@@ -180,7 +181,7 @@ func main() {
 	}
 	if *format {
 		cmdRunned = true
-		isError, msg, hint := formatDsk()
+		isError, msg, hint := formatDsk(*dskPath, *sector, *track, *heads, 0, *vendorFormat, *dataFormat)
 
 		if isError {
 			exitOnError(msg, hint)
@@ -188,13 +189,13 @@ func main() {
 	}
 
 	if *dskPath != "" {
-		d, isError, msg, hint := openDsk()
+		d, isError, msg, hint := openDsk(*dskPath)
 		if isError {
 			exitOnError(msg, hint)
 		}
 		if *list {
 			cmdRunned = true
-			isError, msg, hint := listDsk(d)
+			isError, msg, hint := listDsk(d, *dskPath)
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -202,7 +203,7 @@ func main() {
 
 		if *analyse {
 			cmdRunned = true
-			isError, msg, hint := analyseDsk(d)
+			isError, msg, hint := analyseDsk(d, *dskPath)
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -210,7 +211,7 @@ func main() {
 
 		if *info {
 			cmdRunned = true
-			isError, msg, hint := fileinfoDsk(d)
+			isError, msg, hint := fileinfoDsk(d, *fileInDsk)
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -218,7 +219,7 @@ func main() {
 
 		if *hexa {
 			cmdRunned = true
-			isError, msg, hint := hexaFileDsk(d)
+			isError, msg, hint := hexaFileDsk(d, *fileInDsk)
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -226,7 +227,7 @@ func main() {
 
 		if *desassemble {
 			cmdRunned = true
-			isError, msg, hint := desassembleFileDsk(d)
+			isError, msg, hint := desassembleFileDsk(d, *fileInDsk)
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -234,7 +235,7 @@ func main() {
 
 		if *ascii {
 			cmdRunned = true
-			isError, msg, hint := asciiFileDsk(d)
+			isError, msg, hint := asciiFileDsk(d, *fileInDsk)
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -265,7 +266,7 @@ func main() {
 
 		if *get {
 			cmdRunned = true
-			isError, msg, hint := getFileDsk(d)
+			isError, msg, hint := getFileDsk(d, *fileInDsk, *dskPath)
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -273,7 +274,7 @@ func main() {
 
 		if *rawimport {
 			cmdRunned = true
-			isError, msg, hint := rawImportDsk(d)
+			isError, msg, hint := rawImportDsk(d, *fileInDsk, *dskPath, *track, *sector)
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -281,7 +282,7 @@ func main() {
 
 		if *rawexport {
 			cmdRunned = true
-			isError, msg, hint := rawExportDsk(d)
+			isError, msg, hint := rawExportDsk(d, *fileInDsk, *dskPath, *track, *sector, *size)
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -289,7 +290,7 @@ func main() {
 
 		if *put {
 			cmdRunned = true
-			isError, msg, hint := putFileDsk(d, loadAddress, execAddress)
+			isError, msg, hint := putFileDsk(d, *fileInDsk, *dskPath, *fileType, loadAddress, execAddress)
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -297,7 +298,7 @@ func main() {
 
 		if *remove {
 			cmdRunned = true
-			isError, msg, hint := removeFileDsk(d)
+			isError, msg, hint := removeFileDsk(d, *dskPath, *fileInDsk)
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -458,61 +459,61 @@ func exitOnError(errorMessage, hint string) {
 	os.Exit(-1)
 }
 
-func formatDsk() (onError bool, message, hint string) {
-	_, err := os.Stat(*dskPath)
+func formatDsk(dskPath string, sector, track, heads, extendedDskType int, vendorFormat bool, dataFormat bool) (onError bool, message, hint string) {
+	_, err := os.Stat(dskPath)
 	if err == nil {
 		if !*force {
-			return true, fmt.Sprintf("Error file (%s) already exists", *dskPath), "Use option -force to avoid this message"
+			return true, fmt.Sprintf("Error file (%s) already exists", dskPath), "Use option -force to avoid this message"
 		}
 	}
-	f, err := os.Create(*dskPath)
+	f, err := os.Create(dskPath)
 	if err != nil {
-		return true, fmt.Sprintf("Error while write file (%s) error %v", *dskPath, err), "Check your dsk file path."
+		return true, fmt.Sprintf("Error while write file (%s) error %v", dskPath, err), "Check your dsk file path."
 	}
 	defer f.Close()
-	fmt.Fprintf(os.Stderr, "Formating number of sectors (%d), tracks (%d), head number (%d)\n", *sector, *track, *heads)
+	fmt.Fprintf(os.Stderr, "Formating number of sectors (%d), tracks (%d), head number (%d)\n", sector, track, heads)
 	var dskFile *dsk.DSK
-	if *dataFormat {
-		dskFile = dsk.FormatDsk(uint8(*sector), uint8(*track), uint8(*heads), dsk.DataFormat, (*dskType))
+	if dataFormat {
+		dskFile = dsk.FormatDsk(uint8(sector), uint8(track), uint8(heads), dsk.DataFormat, (extendedDskType))
 	} else {
-		if *vendorFormat {
-			dskFile = dsk.FormatDsk(uint8(*sector), uint8(*track), uint8(*heads), dsk.VendorFormat, (*dskType))
+		if vendorFormat {
+			dskFile = dsk.FormatDsk(uint8(sector), uint8(track), uint8(heads), dsk.VendorFormat, (extendedDskType))
 		}
 	}
 	if err := dskFile.Write(f); err != nil {
-		return true, fmt.Sprintf("Error while write file (%s) error %v\n", *dskPath, err), "Check your dsk file with option -dsk yourdsk.dsk -analyze"
+		return true, fmt.Sprintf("Error while write file (%s) error %v\n", dskPath, err), "Check your dsk file with option -dsk yourdsk.dsk -analyze"
 	}
 	return false, "", ""
 }
 
-func formatSna() (onError bool, message, hint string) {
-	if _, err := dsk.CreateSna(*snaPath); err != nil {
-		return true, fmt.Sprintf("Cannot create Sna file (%s) error : %v\n", *snaPath, err), ""
+func formatSna(snaPath string) (onError bool, message, hint string) {
+	if _, err := dsk.CreateSna(snaPath); err != nil {
+		return true, fmt.Sprintf("Cannot create Sna file (%s) error : %v\n", snaPath, err), ""
 
 	}
-	fmt.Fprintf(os.Stderr, "Sna file (%s) created.\n", *snaPath)
+	fmt.Fprintf(os.Stderr, "Sna file (%s) created.\n", snaPath)
 	return false, "", ""
 }
 
-func infoSna() (onError bool, message, hint string) {
-	f, err := os.Open(*snaPath)
+func infoSna(snaPath string) (onError bool, message, hint string) {
+	f, err := os.Open(snaPath)
 	if err != nil {
-		exitOnError(fmt.Sprintf("Error while read sna file (%s) error %v", *snaPath, err), "Check your sna file")
+		exitOnError(fmt.Sprintf("Error while read sna file (%s) error %v", snaPath, err), "Check your sna file")
 	}
 	defer f.Close()
 	sna := &dsk.SNA{}
 	if err := sna.Read(f); err != nil {
-		return true, fmt.Sprintf("Error while reading sna file (%s) error %v", *snaPath, err), "Check your sna file"
+		return true, fmt.Sprintf("Error while reading sna file (%s) error %v", snaPath, err), "Check your sna file"
 	}
-	fmt.Fprintf(os.Stderr, "Sna (%s) description :\n\tCPC type:%s\n\tCRTC type:%s\n", *snaPath, sna.CPCType(), sna.CRTCType())
+	fmt.Fprintf(os.Stderr, "Sna (%s) description :\n\tCPC type:%s\n\tCRTC type:%s\n", snaPath, sna.CPCType(), sna.CRTCType())
 	fmt.Fprintf(os.Stderr, "\tSna version:%d\n\tMemory size:%dKo\n", sna.Header.Version, sna.Header.MemoryDumpSize)
 	fmt.Fprintf(os.Stderr, "%s\n", sna.Header.String())
 	return false, "", ""
 }
 
-func listDsk(d dsk.DSK) (onError bool, message, hint string) {
+func listDsk(d dsk.DSK, dskPath string) (onError bool, message, hint string) {
 	if err := d.GetCatalogue(); err != nil {
-		return true, fmt.Sprintf("Error while getting catalogue in dsk file (%s) error %v\n", *dskPath, err), "Check your dsk file with option -dsk yourdsk.dsk -analyze"
+		return true, fmt.Sprintf("Error while getting catalogue in dsk file (%s) error %v\n", dskPath, err), "Check your dsk file with option -dsk yourdsk.dsk -analyze"
 	}
 	totalUsed := 0
 	for _, i := range d.GetFilesIndices() {
@@ -525,39 +526,39 @@ func listDsk(d dsk.DSK) (onError bool, message, hint string) {
 	return false, "", ""
 }
 
-func openDsk() (d dsk.DSK, onError bool, message, hint string) {
-	f, err := os.Open(*dskPath)
+func openDsk(dskPath string) (d dsk.DSK, onError bool, message, hint string) {
+	f, err := os.Open(dskPath)
 	if err != nil {
-		return d, true, fmt.Sprintf("Error while read file (%s) error %v\n", *dskPath, err), "Check your dsk file path"
+		return d, true, fmt.Sprintf("Error while read file (%s) error %v\n", dskPath, err), "Check your dsk file path"
 	}
 	defer f.Close()
 	if err := d.Read(f); err != nil {
-		return d, true, fmt.Sprintf("Error while read dsk file (%s) error %v\n", *dskPath, err), "Check your dsk file path or Check your dsk file with option -dsk yourdsk.dsk -analyze"
+		return d, true, fmt.Sprintf("Error while read dsk file (%s) error %v\n", dskPath, err), "Check your dsk file path or Check your dsk file with option -dsk yourdsk.dsk -analyze"
 	}
 
 	if err := d.CheckDsk(); err != nil {
-		return d, true, fmt.Sprintf("Error while read dsk file (%s) error %v\n", *dskPath, err), "Check your dsk file path or Check your dsk file with option -dsk yourdsk.dsk -analyze"
+		return d, true, fmt.Sprintf("Error while read dsk file (%s) error %v\n", dskPath, err), "Check your dsk file path or Check your dsk file with option -dsk yourdsk.dsk -analyze"
 	}
-	fmt.Fprintf(os.Stderr, "Dsk file (%s)\n", *dskPath)
+	fmt.Fprintf(os.Stderr, "Dsk file (%s)\n", dskPath)
 	return d, false, "", ""
 }
 
-func fileinfoDsk(d dsk.DSK) (onError bool, message, hint string) {
-	if *fileInDsk == "" {
+func fileinfoDsk(d dsk.DSK, fileInDsk string) (onError bool, message, hint string) {
+	if fileInDsk == "" {
 		return true, "amsdosfile option is empty, set it.", "usage sample : dsk -dsk output.dsk -amsdosfile hello.bin -info "
 	}
-	amsdosFile := dsk.GetNomDir(*fileInDsk)
+	amsdosFile := dsk.GetNomDir(fileInDsk)
 	indice := d.FileExists(amsdosFile)
 	if indice == dsk.NOT_FOUND {
-		fmt.Fprintf(os.Stderr, "File %s does not exist\n", *fileInDsk)
+		fmt.Fprintf(os.Stderr, "File %s does not exist\n", fileInDsk)
 	} else {
-		content, err := d.GetFileIn(*fileInDsk, indice)
+		content, err := d.GetFileIn(fileInDsk, indice)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 		}
 		isAmsdos, header := dsk.CheckAmsdos(content)
 		if !isAmsdos {
-			return true, fmt.Sprintf("File (%s) does not contain amsdos header.\n", *fileInDsk), "add address of execution and loading like : dsk -dsk output.dsk -put -amsdosfile hello.bin -exec \"#1000\" -load 500"
+			return true, fmt.Sprintf("File (%s) does not contain amsdos header.\n", fileInDsk), "add address of execution and loading like : dsk -dsk output.dsk -put -amsdosfile hello.bin -exec \"#1000\" -load 500"
 		}
 		fmt.Fprintf(os.Stdout, "Amsdos informations :\n\tFilename:%s\n\tSize:#%X (%.2f Ko)\n\tSize2:#%X (%.2f Ko)\n\tLogical Size:#%X (%.2f Ko)\n\tExecute Address:#%X\n\tLoading Address:#%X\n\tChecksum:#%X\n\tType:%d\n\tUser:%d\n",
 			header.Filename,
@@ -606,59 +607,59 @@ func parseHexadecimal16bits(address string) (value16 uint16) {
 	return
 }
 
-func analyseDsk(d dsk.DSK) (onError bool, message, hint string) {
+func analyseDsk(d dsk.DSK, dskPath string) (onError bool, message, hint string) {
 	if err := d.CheckDsk(); err != nil {
-		return true, fmt.Sprintf("Error while read dsk file (%s) error %v\n", *dskPath, err), "Check your dsk file path or Check your dsk file with option -dsk yourdsk.dsk -analyze"
+		return true, fmt.Sprintf("Error while read dsk file (%s) error %v\n", dskPath, err), "Check your dsk file path or Check your dsk file with option -dsk yourdsk.dsk -analyze"
 	}
-	fmt.Fprintf(os.Stderr, "Dsk file (%s)\n", *dskPath)
+	fmt.Fprintf(os.Stderr, "Dsk file (%s)\n", dskPath)
 	entry := d.Entry
 	fmt.Fprintf(os.Stderr, "Dsk entry %s\n", entry.ToString())
 	return false, "", ""
 }
 
-func putFileDsk(d dsk.DSK, loadAddress, execAddress uint16) (onError bool, message, hint string) {
-	if *fileInDsk == "" {
+func putFileDsk(d dsk.DSK, fileInDsk, dskPath string, fileType string, loadAddress, execAddress uint16) (onError bool, message, hint string) {
+	if fileInDsk == "" {
 		exitOnError("amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put -amsdosfile hello.bin -exec \"#1000\" -load 500")
 	}
-	amsdosFile := dsk.GetNomDir(*fileInDsk)
+	amsdosFile := dsk.GetNomDir(fileInDsk)
 	indice := d.FileExists(amsdosFile)
 	if indice != dsk.NOT_FOUND && !*force {
-		fmt.Fprintf(os.Stderr, "File %s already exists\n", *fileInDsk)
+		fmt.Fprintf(os.Stderr, "File %s already exists\n", fileInDsk)
 	} else {
-		switch *fileType {
+		switch fileType {
 		case "ascii":
 			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", execAddress, loadAddress)
-			if err := d.PutFile(*fileInDsk, dsk.MODE_ASCII, 0, 0, uint16(*user), false, false); err != nil {
-				return true, fmt.Sprintf("Error while inserted file (%s) in dsk (%s) error :%v\n", *fileInDsk, *dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
+			if err := d.PutFile(fileInDsk, dsk.MODE_ASCII, 0, 0, uint16(*user), false, false); err != nil {
+				return true, fmt.Sprintf("Error while inserted file (%s) in dsk (%s) error :%v\n", fileInDsk, dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
 			}
-			resumeAction(*dskPath, "put ascii", *fileInDsk, informations)
+			resumeAction(dskPath, "put ascii", fileInDsk, informations)
 		case "binary":
 			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", execAddress, loadAddress)
-			if err := d.PutFile(*fileInDsk, dsk.MODE_BINAIRE, loadAddress, execAddress, uint16(*user), false, false); err != nil {
-				return true, fmt.Sprintf("Error while inserted file (%s) in dsk (%s) error :%v\n", *fileInDsk, *dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
+			if err := d.PutFile(fileInDsk, dsk.MODE_BINAIRE, loadAddress, execAddress, uint16(*user), false, false); err != nil {
+				return true, fmt.Sprintf("Error while inserted file (%s) in dsk (%s) error :%v\n", fileInDsk, dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
 			}
-			resumeAction(*dskPath, "put binary", *fileInDsk, informations)
+			resumeAction(dskPath, "put binary", fileInDsk, informations)
 		default:
 			fmt.Fprintf(os.Stderr, "File type option unknown please choose between ascii or binary.")
 		}
-		f, err := os.Create(*dskPath)
+		f, err := os.Create(dskPath)
 		if err != nil {
-			return true, fmt.Sprintf("Error while write file (%s) error %v\n", *dskPath, err), "Check your dsk path file"
+			return true, fmt.Sprintf("Error while write file (%s) error %v\n", dskPath, err), "Check your dsk path file"
 		}
 		defer f.Close()
 
 		if err := d.Write(f); err != nil {
-			return true, fmt.Sprintf("Error while write file (%s) error %v\n", *dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
+			return true, fmt.Sprintf("Error while write file (%s) error %v\n", dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
 		}
 	}
 	return false, "", ""
 }
 
-func getFileDsk(d dsk.DSK) (onError bool, message, hint string) {
-	if *fileInDsk == "" {
+func getFileDsk(d dsk.DSK, fileInDsk, dskPath string) (onError bool, message, hint string) {
+	if fileInDsk == "" {
 		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -get -amsdosfile hello.bin"
 	}
-	if *fileInDsk == "*" {
+	if fileInDsk == "*" {
 		d.GetCatalogue()
 		var lastFilename string
 		for indice, v := range d.Catalogue {
@@ -687,20 +688,20 @@ func getFileDsk(d dsk.DSK) (onError bool, message, hint string) {
 					return true, fmt.Sprintf("Error while copying content in file (%s) error %v\n", filename, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
 				}
 				informations := fmt.Sprintf("Extract file [%s] Indice in DSK [%d] is saved\n", filename, indice)
-				resumeAction(*dskPath, "get amsdosfile", *fileInDsk, informations)
+				resumeAction(dskPath, "get amsdosfile", fileInDsk, informations)
 			}
 		}
 	} else {
-		amsdosFile := dsk.GetNomDir(*fileInDsk)
+		amsdosFile := dsk.GetNomDir(fileInDsk)
 		indice := d.FileExists(amsdosFile)
 		if indice == dsk.NOT_FOUND {
-			fmt.Fprintf(os.Stderr, "File %s does not exist\n", *fileInDsk)
+			fmt.Fprintf(os.Stderr, "File %s does not exist\n", fileInDsk)
 		} else {
-			content, err := d.GetFileIn(*fileInDsk, indice)
+			content, err := d.GetFileIn(fileInDsk, indice)
 			if err != nil {
 				fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 			}
-			filename := strings.ReplaceAll(*fileInDsk, " ", "")
+			filename := strings.ReplaceAll(fileInDsk, " ", "")
 			af, err := os.Create(filename)
 			if err != nil {
 				return true, fmt.Sprintf("Error while creating file (%s) error %v\n", filename, err), "Check your file path"
@@ -711,48 +712,48 @@ func getFileDsk(d dsk.DSK) (onError bool, message, hint string) {
 				return true, fmt.Sprintf("Error while copying content in file (%s) error %v\n", filename, err), " Check your dsk  with option -dsk yourdsk.dsk -analyze"
 			}
 			informations := fmt.Sprintf("Extract file [%s] Indice in DSK [%d] is saved\n", filename, indice)
-			resumeAction(*dskPath, "get amsdosfile", filename, informations)
+			resumeAction(dskPath, "get amsdosfile", filename, informations)
 		}
 	}
 	return false, "", ""
 }
 
-func removeFileDsk(d dsk.DSK) (onError bool, message, hint string) {
-	if *fileInDsk == "" {
+func removeFileDsk(d dsk.DSK, dskPath, fileInDsk string) (onError bool, message, hint string) {
+	if fileInDsk == "" {
 		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -remove -amsdosfile hello.bin"
 	}
-	amsdosFile := dsk.GetNomDir(*fileInDsk)
+	amsdosFile := dsk.GetNomDir(fileInDsk)
 	indice := d.FileExists(amsdosFile)
 	if indice == dsk.NOT_FOUND {
-		return true, fmt.Sprintf("File (%s) not found in dsk (%s)\n", *fileInDsk, *dskPath), "Check you dsk"
+		return true, fmt.Sprintf("File (%s) not found in dsk (%s)\n", fileInDsk, dskPath), "Check you dsk"
 	}
 	if err := d.RemoveFile(uint8(indice)); err != nil {
-		fmt.Fprintf(os.Stderr, "Error while removing file %s (indice:%d) error :%v\n", *fileInDsk, indice, err)
+		fmt.Fprintf(os.Stderr, "Error while removing file %s (indice:%d) error :%v\n", fileInDsk, indice, err)
 	} else {
 		fmt.Fprintf(os.Stderr, "File (%.8s.%.3s) deleted in dsk (%s)\n",
 			amsdosFile.Nom,
 			amsdosFile.Ext,
-			*dskPath)
-		f, err := os.Create(*dskPath)
+			dskPath)
+		f, err := os.Create(dskPath)
 		if err != nil {
-			return true, fmt.Sprintf("Error while write file (%s) error %v\n", *dskPath, err), "Check your dsk path file"
+			return true, fmt.Sprintf("Error while write file (%s) error %v\n", dskPath, err), "Check your dsk path file"
 		}
 		defer f.Close()
 		if err := d.Write(f); err != nil {
-			return true, fmt.Sprintf("Error while write file (%s) error %v\n", *dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
+			return true, fmt.Sprintf("Error while write file (%s) error %v\n", dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
 		}
 	}
 	return false, "", ""
 }
 
-func asciiFileDsk(d dsk.DSK) (onError bool, message, hint string) {
-	if *fileInDsk == "" {
+func asciiFileDsk(d dsk.DSK, fileInDsk string) (onError bool, message, hint string) {
+	if fileInDsk == "" {
 		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -ascii -amsdosfile hello.txt"
 	}
-	amsdosFile := dsk.GetNomDir(*fileInDsk)
+	amsdosFile := dsk.GetNomDir(fileInDsk)
 	indice := d.FileExists(amsdosFile)
 	if indice == dsk.NOT_FOUND {
-		fmt.Fprintf(os.Stderr, "File %s does not exist\n", *fileInDsk)
+		fmt.Fprintf(os.Stderr, "File %s does not exist\n", fileInDsk)
 	} else {
 		content, filesize, err := d.ViewFile(indice)
 		if err != nil {
@@ -763,21 +764,21 @@ func asciiFileDsk(d dsk.DSK) (onError bool, message, hint string) {
 	return false, "", ""
 }
 
-func desassembleFileDsk(d dsk.DSK) (onError bool, message, hint string) {
-	if *fileInDsk == "" {
+func desassembleFileDsk(d dsk.DSK, fileInDsk string) (onError bool, message, hint string) {
+	if fileInDsk == "" {
 		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -desassemble -amsdosfile hello.bin"
 	}
-	amsdosFile := dsk.GetNomDir(*fileInDsk)
+	amsdosFile := dsk.GetNomDir(fileInDsk)
 	indice := d.FileExists(amsdosFile)
 	if indice == dsk.NOT_FOUND {
-		fmt.Fprintf(os.Stderr, "File %s does not exist\n", *fileInDsk)
+		fmt.Fprintf(os.Stderr, "File %s does not exist\n", fileInDsk)
 	} else {
 		content, filesize, err := d.ViewFile(indice)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 		}
 		var address uint16
-		raw, err := d.GetFileIn(*fileInDsk, indice)
+		raw, err := d.GetFileIn(fileInDsk, indice)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 		} else {
@@ -792,14 +793,14 @@ func desassembleFileDsk(d dsk.DSK) (onError bool, message, hint string) {
 	return false, "", ""
 }
 
-func hexaFileDsk(d dsk.DSK) (onError bool, message, hint string) {
-	if *fileInDsk == "" {
+func hexaFileDsk(d dsk.DSK, fileInDsk string) (onError bool, message, hint string) {
+	if fileInDsk == "" {
 		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -hex -amsdosfile hello.bin"
 	}
-	amsdosFile := dsk.GetNomDir(*fileInDsk)
+	amsdosFile := dsk.GetNomDir(fileInDsk)
 	indice := d.FileExists(amsdosFile)
 	if indice == dsk.NOT_FOUND {
-		fmt.Fprintf(os.Stderr, "File %s does not exist\n", *fileInDsk)
+		fmt.Fprintf(os.Stderr, "File %s does not exist\n", fileInDsk)
 	} else {
 		content, fileSize, err := d.ViewFile(indice)
 		if err != nil {
@@ -810,103 +811,103 @@ func hexaFileDsk(d dsk.DSK) (onError bool, message, hint string) {
 	return false, "", ""
 }
 
-func rawImportDataInDsk(d dsk.DSK, content []byte) (onError bool, message, hint string) {
-	if *track == 39 {
-		fmt.Fprintf(os.Stdout, "Warning the starting track is set as default : [%d]\n", *track)
+func rawImportDataInDsk(d dsk.DSK, fileInDsk, dskPath string, track, sector int, content []byte) (onError bool, message, hint string) {
+	if track == 39 {
+		fmt.Fprintf(os.Stdout, "Warning the starting track is set as default : [%d]\n", track)
 	}
-	if *sector == 9 {
-		fmt.Fprintf(os.Stdout, "Warning the starting sector is set as default : [%d]\n", *sector)
+	if sector == 9 {
+		fmt.Fprintf(os.Stdout, "Warning the starting sector is set as default : [%d]\n", sector)
 	}
-	endedTrack, endedSector, err := d.CopyRawFile(content, uint16(len(content)), *track, *sector)
+	endedTrack, endedSector, err := d.CopyRawFile(content, uint16(len(content)), track, sector)
 	if err != nil {
-		return true, fmt.Sprintf("Cannot write file %s error :%v\n", *fileInDsk, err), "Check your file path"
+		return true, fmt.Sprintf("Cannot write file %s error :%v\n", fileInDsk, err), "Check your file path"
 	}
-	f, err := os.Create(*dskPath)
+	f, err := os.Create(dskPath)
 	if err != nil {
-		return true, fmt.Sprintf("Error while write file (%s) error %v\n", *dskPath, err), "Check your dsk path file"
+		return true, fmt.Sprintf("Error while write file (%s) error %v\n", dskPath, err), "Check your dsk path file"
 	}
 	defer f.Close()
 
 	if err := d.Write(f); err != nil {
-		return true, fmt.Sprintf("Error while write file (%s) error %v\n", *dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
+		return true, fmt.Sprintf("Error while write file (%s) error %v\n", dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
 	}
 	informations := fmt.Sprintf("raw copy file [%s] size [%d] starting at track [%d] sector [%d] and ending at track [%d] sector [%d]",
-		*fileInDsk,
+		fileInDsk,
 		len(content),
-		*track,
-		*sector,
+		track,
+		sector,
 		endedTrack,
 		endedSector)
-	resumeAction(*dskPath, "raw import ", *fileInDsk, informations)
+	resumeAction(dskPath, "raw import ", fileInDsk, informations)
 	return false, "", ""
 }
 
-func rawImportDsk(d dsk.DSK) (onError bool, message, hint string) {
-	if *fileInDsk == "" {
+func rawImportDsk(d dsk.DSK, fileInDsk, dskPath string, track, sector int) (onError bool, message, hint string) {
+	if fileInDsk == "" {
 		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put -amsdosfile hello.bin -rawimport -track 1 -sector 0"
 	}
 
-	fr, err := os.Open(*fileInDsk)
+	fr, err := os.Open(fileInDsk)
 	if err != nil {
-		return true, fmt.Sprintf("Cannot open file %s error :%v\n", *fileInDsk, err), "Check your file path"
+		return true, fmt.Sprintf("Cannot open file %s error :%v\n", fileInDsk, err), "Check your file path"
 	}
 	defer fr.Close()
 	buf, err := ioutil.ReadAll(fr)
 	if err != nil {
 		if err != nil {
-			return true, fmt.Sprintf("Cannot read file %s error :%v\n", *fileInDsk, err), "Check your file path"
+			return true, fmt.Sprintf("Cannot read file %s error :%v\n", fileInDsk, err), "Check your file path"
 		}
 	}
 	fmt.Fprintf(os.Stdout, "Writing file content [%s] in dsk [%s] starting at track [%d] sector [%d]\n",
-		*fileInDsk,
-		*dskPath,
-		*track,
-		*sector,
+		fileInDsk,
+		dskPath,
+		track,
+		sector,
 	)
-	return rawImportDataInDsk(d, buf)
+	return rawImportDataInDsk(d, fileInDsk, dskPath, track, sector, buf)
 }
 
-func rawExportDsk(d dsk.DSK) (onError bool, message, hint string) {
-	if *fileInDsk == "" {
+func rawExportDsk(d dsk.DSK, fileInDsk, dskPath string, track, sector, size int) (onError bool, message, hint string) {
+	if fileInDsk == "" {
 		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put -amsdosfile hello.bin -rawimport -track 1 -sector 0"
 	}
 
-	if *track == 39 {
-		fmt.Fprintf(os.Stdout, "Warning the starting track is set as default : [%d]\n", *track)
+	if track == 39 {
+		fmt.Fprintf(os.Stdout, "Warning the starting track is set as default : [%d]\n", track)
 	}
-	if *sector == 9 {
-		fmt.Fprintf(os.Stdout, "Warning the starting sector is set as default : [%d]\n", *sector)
+	if sector == 9 {
+		fmt.Fprintf(os.Stdout, "Warning the starting sector is set as default : [%d]\n", sector)
 	}
-	if *size == 0 {
-		fmt.Fprintf(os.Stdout, "Warning the size is set as default : [%d]\n", *size)
+	if size == 0 {
+		fmt.Fprintf(os.Stdout, "Warning the size is set as default : [%d]\n", size)
 	}
 
 	fmt.Fprintf(os.Stdout, "Writing file content starting from track [%d] sector [%d] to file  [%s] in dsk [%s] size [%d]\n",
-		*track,
-		*sector,
-		*fileInDsk,
-		*dskPath,
-		*size,
+		track,
+		sector,
+		fileInDsk,
+		dskPath,
+		size,
 	)
-	endedTrack, endedSector, content := d.ExtractRawFile(uint16(*size), *track, *sector)
+	endedTrack, endedSector, content := d.ExtractRawFile(uint16(size), track, sector)
 
-	fw, err := os.Create(*fileInDsk)
+	fw, err := os.Create(fileInDsk)
 	if err != nil {
-		return true, fmt.Sprintf("Error while write file (%s) error %v\n", *fileInDsk, err), "Check your amsdos path file"
+		return true, fmt.Sprintf("Error while write file (%s) error %v\n", fileInDsk, err), "Check your amsdos path file"
 	}
 	defer fw.Close()
 	_, err = fw.Write(content)
 	if err != nil {
-		return true, fmt.Sprintf("Error while write file (%s) error %v\n", *dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
+		return true, fmt.Sprintf("Error while write file (%s) error %v\n", dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
 	}
 	informations := fmt.Sprintf("raw extract to file [%s] size [%d] starting at track [%d] sector [%d] and ending at track [%d] sector [%d]",
-		*fileInDsk,
-		*size,
-		*track,
-		*sector,
+		fileInDsk,
+		size,
+		track,
+		sector,
 		endedTrack,
 		endedSector)
-	resumeAction(*dskPath, "raw export ", *fileInDsk, informations)
+	resumeAction(dskPath, "raw export ", fileInDsk, informations)
 	return false, "", ""
 }
 
@@ -1200,21 +1201,23 @@ func generateSliceByte(size int) []byte {
 func formatVendorTest(dskFilepath string) bool {
 	resetArguments()
 	fmt.Printf("Format vendor format ")
-	*vendorFormat = true
 	*format = true
-	*dskPath = dskFilepath
-	onError, _, _ := formatDsk()
+	sector := *sector
+	track := *track
+	heads := *heads
+	onError, _, _ := formatDsk(dskFilepath, sector, track, heads, 0, true, false)
 	return onError
 }
 
 func formatVendorForceTest(dskFilepath string) bool {
 	resetArguments()
 	fmt.Printf("Format vendor format force option ")
-	*vendorFormat = true
 	*format = true
-	*dskPath = dskFilepath
+	sector := *sector
+	track := *track
+	heads := *heads
 	*force = true
-	onError, _, _ := formatDsk()
+	onError, _, _ := formatDsk(dskFilepath, sector, track, heads, 0, true, false)
 	return onError
 }
 
@@ -1222,9 +1225,11 @@ func formatDoubleHeadDataTest(dskFilepath string) bool {
 	resetArguments()
 	fmt.Printf("Format data format ")
 	*format = true
-	*heads = 2
-	*dskPath = dskFilepath
-	onError, _, _ := formatDsk()
+	sector := *sector
+	track := *track
+	heads := 2
+	dskType := *dskType
+	onError, _, _ := formatDsk(dskFilepath, sector, track, heads, dskType, false, true)
 	return onError
 }
 
@@ -1232,8 +1237,11 @@ func formatDataTest(dskFilepath string) bool {
 	resetArguments()
 	fmt.Printf("Format data format ")
 	*format = true
-	*dskPath = dskFilepath
-	onError, _, _ := formatDsk()
+	sector := *sector
+	track := *track
+	heads := *heads
+	dskType := *dskType
+	onError, _, _ := formatDsk(dskFilepath, sector, track, heads, dskType, false, true)
 	return onError
 }
 
@@ -1241,26 +1249,27 @@ func formatDataForceTest(dskFilepath string) bool {
 	resetArguments()
 	fmt.Printf("Format data format force option")
 	*format = true
-	*dskPath = dskFilepath
 	*force = true
-	onError, _, _ := formatDsk()
+	sector := *sector
+	track := *track
+	heads := *heads
+	dskType := *dskType
+	onError, _, _ := formatDsk(dskFilepath, sector, track, heads, dskType, false, true)
 	return onError
 }
 
 func formatSnaTest(snafilepath string) bool {
 	resetArguments()
 	fmt.Printf("Format sna image file ")
-	*snaPath = snafilepath
-	onError, _, _ := formatSna()
+	onError, _, _ := formatSna(snafilepath)
 	return onError
 }
 
 func infoSnaTest(snafilepath string) bool {
 	resetArguments()
 	fmt.Printf("Get information from sna image file ")
-	*snaPath = snafilepath
 	*info = true
-	onError, _, _ := infoSna()
+	onError, _, _ := infoSna(snafilepath)
 	return onError
 }
 
@@ -1269,12 +1278,11 @@ func listVendorTest(dskFilepath string) bool {
 	fmt.Printf("list vendor format ")
 	*vendorFormat = true
 	*format = true
-	*dskPath = dskFilepath
-	d, onError, _, _ := openDsk()
+	d, onError, _, _ := openDsk(dskFilepath)
 	if onError {
 		return onError
 	}
-	onError, _, _ = listDsk(d)
+	onError, _, _ = listDsk(d, dskFilepath)
 	return onError
 }
 
@@ -1282,12 +1290,11 @@ func listDataTest(dskFilepath string) bool {
 	resetArguments()
 	fmt.Printf("list vendor format ")
 	*format = true
-	*dskPath = dskFilepath
-	d, onError, _, _ := openDsk()
+	d, onError, _, _ := openDsk(dskFilepath)
 	if onError {
 		return onError
 	}
-	onError, _, _ = listDsk(d)
+	onError, _, _ = listDsk(d, dskFilepath)
 	return onError
 }
 
@@ -1295,12 +1302,11 @@ func analyseDataTest(dskFilepath string) bool {
 	resetArguments()
 	fmt.Printf("list vendor format ")
 	*analyse = true
-	*dskPath = dskFilepath
-	d, onError, _, _ := openDsk()
+	d, onError, _, _ := openDsk(dskFilepath)
 	if onError {
 		return onError
 	}
-	onError, _, _ = analyseDsk(d)
+	onError, _, _ = analyseDsk(d, dskFilepath)
 	return onError
 }
 
@@ -1342,103 +1348,86 @@ func parsing8bitsRasmAnnotation() bool {
 
 func putFileBinaryDataTest(filePath, dskFilepath string) bool {
 	*put = true
-	*fileInDsk = filePath
-	*dskPath = dskFilepath
-	*fileType = "binary"
-	d, onError, _, _ := openDsk()
+	fileType := "binary"
+	d, onError, _, _ := openDsk(dskFilepath)
 	if onError {
 		return onError
 	}
-	isError, _, _ := putFileDsk(d, 0x800, 0x800)
+	isError, _, _ := putFileDsk(d, filePath, dskFilepath, fileType, 0x800, 0x800)
 	return isError
 }
 
 func getFileBinaryDataTest(filePath, dskFilepath string) bool {
 	*get = true
-	*fileInDsk = filePath
-	*dskPath = dskFilepath
-	*fileType = "binary"
-	d, onError, _, _ := openDsk()
+	//fileType := "binary"
+	d, onError, _, _ := openDsk(dskFilepath)
 	if onError {
 		return onError
 	}
-	isError, _, _ := getFileDsk(d)
+	isError, _, _ := getFileDsk(d, filePath, dskFilepath)
 	return isError
 }
 
 func removeFileBinaryDataTest(filePath, dskFilepath string) bool {
 	*remove = true
-	*fileInDsk = filePath
-	*dskPath = dskFilepath
-	d, onError, _, _ := openDsk()
+	d, onError, _, _ := openDsk(dskFilepath)
 	if onError {
 		return onError
 	}
-	isError, _, _ := removeFileDsk(d)
+	isError, _, _ := removeFileDsk(d, dskFilepath, filePath)
 	return isError
 }
 
 func asciiFileBinaryDataTest(filePath, dskFilepath string) bool {
 	*ascii = true
-	*fileInDsk = filePath
-	*dskPath = dskFilepath
-	d, onError, _, _ := openDsk()
+	d, onError, _, _ := openDsk(dskFilepath)
 	if onError {
 		return onError
 	}
-	isError, _, _ := asciiFileDsk(d)
+	isError, _, _ := asciiFileDsk(d, filePath)
 	return isError
 }
 
 func desassembleFileBinaryDataTest(filePath, dskFilepath string) bool {
 	*desassemble = true
-	*fileInDsk = filePath
-	*dskPath = dskFilepath
-	d, onError, _, _ := openDsk()
+	d, onError, _, _ := openDsk(dskFilepath)
 	if onError {
 		return onError
 	}
-	isError, _, _ := desassembleFileDsk(d)
+	isError, _, _ := desassembleFileDsk(d, filePath)
 	return isError
 }
 
 func hexaFileBinaryDataTest(filePath, dskFilepath string) bool {
 	*hexa = true
-	*fileInDsk = filePath
-	*dskPath = dskFilepath
-	d, onError, _, _ := openDsk()
+	d, onError, _, _ := openDsk(dskFilepath)
 	if onError {
 		return onError
 	}
-	isError, _, _ := hexaFileDsk(d)
+	isError, _, _ := hexaFileDsk(d, filePath)
 	return isError
 }
 
 func rawImportFileBinaryDataTest(filePath, dskFilepath string) bool {
 	*rawimport = true
-	*fileInDsk = filePath
-	*dskPath = dskFilepath
-	*sector = 0
-	*track = 1
-	d, onError, _, _ := openDsk()
+	sector := 0
+	track := 1
+	d, onError, _, _ := openDsk(dskFilepath)
 	if onError {
 		return onError
 	}
-	isError, _, _ := rawImportDsk(d)
+	isError, _, _ := rawImportDsk(d, filePath, dskFilepath, track, sector)
 	return isError
 }
 
 func rawExportFileBinaryDataTest(filePath, dskFilepath string, length int) bool {
 	*rawexport = true
-	*fileInDsk = filePath
-	*dskPath = dskFilepath
-	*size = length
-	*sector = 0
-	*track = 1
-	d, onError, _, _ := openDsk()
+	sector := 0
+	track := 1
+	d, onError, _, _ := openDsk(dskFilepath)
 	if onError {
 		return onError
 	}
-	isError, _, _ := rawExportDsk(d)
+	isError, _, _ := rawExportDsk(d, filePath, dskFilepath, track, sector, length)
 	return isError
 }
