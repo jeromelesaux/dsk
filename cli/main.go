@@ -251,14 +251,19 @@ func main() {
 			if indice == dsk.NOT_FOUND {
 				fmt.Fprintf(os.Stderr, "File %s does not exist\n", *fileInDsk)
 			} else {
-				content, filesize, err := d.ViewFile(indice)
+				content, err := d.GetFileIn(*fileInDsk, indice)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 				}
-				fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", *fileInDsk, filesize)
-				if amsdosFile.User != 0 {
-					fmt.Fprintf(os.Stdout, "%s", dsk.Basic(content, uint16(filesize), true))
+
+				hasAmsdos, _ := dsk.CheckAmsdos(content)
+				if hasAmsdos {
+
+					body, filesize, _ := d.ViewFile(indice)
+					fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", *fileInDsk, filesize)
+					fmt.Fprintf(os.Stdout, "%s", dsk.Basic(body, uint16(filesize), true))
 				} else {
+					fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", *fileInDsk, len(content))
 					fmt.Fprintf(os.Stdout, "%s", content)
 				}
 			}
