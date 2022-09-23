@@ -7,7 +7,6 @@ import (
 )
 
 func GetNomDir(s string) StDirEntry {
-
 	entry := StDirEntry{}
 	for i := 0; i < 8; i++ {
 		entry.Nom[i] = 32

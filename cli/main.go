@@ -440,7 +440,6 @@ func resumeAction(dskFilepath, action, amsdosfile, informations string) {
 }
 
 func sampleUsage() {
-
 	fmt.Fprintf(os.Stderr, "\nHere sample usages :\n"+
 		"\t* Create empty simple dsk file : dsk -dsk output.dsk -format\n"+
 		"\t* Create empty simple dsk file with custom tracks and sectors: dsk -dsk output.dsk -format -sector 8 -track 42\n"+
@@ -456,7 +455,7 @@ func sampleUsage() {
 }
 
 func exitOnError(errorMessage, hint string) {
-	//sampleUsage()
+	// sampleUsage()
 	fmt.Fprintf(os.Stderr, "*************************************************************************\n")
 	fmt.Fprintf(os.Stderr, "[ERROR] :\t%s\n", errorMessage)
 	fmt.Fprintf(os.Stderr, "[HINT ] :\t%s\n", hint)
@@ -494,7 +493,6 @@ func formatDsk(dskPath string, sector, track, heads, extendedDskType int, vendor
 func formatSna(snaPath string) (onError bool, message, hint string) {
 	if _, err := dsk.CreateSna(snaPath); err != nil {
 		return true, fmt.Sprintf("Cannot create Sna file (%s) error : %v\n", snaPath, err), ""
-
 	}
 	fmt.Fprintf(os.Stderr, "Sna file (%s) created.\n", snaPath)
 	return false, "", ""
@@ -583,7 +581,6 @@ func fileinfoDsk(d dsk.DSK, fileInDsk string) (onError bool, message, hint strin
 }
 
 func parseHexadecimal16bits(address string) (value16 uint16) {
-
 	switch address[0] {
 	case '#':
 		value := strings.Replace(address, "#", "", -1)
@@ -926,7 +923,6 @@ func autotests() {
 	testsDone++
 	if parsing16bitsCAnnotation() {
 		fmt.Printf("OK\n")
-
 	} else {
 		fmt.Printf("OK\n")
 		testsOnError++
@@ -934,7 +930,6 @@ func autotests() {
 	testsDone++
 	if parsing16bitsRasmAnnotation() {
 		fmt.Printf("OK\n")
-
 	} else {
 		fmt.Printf("OK\n")
 		testsOnError++
@@ -942,7 +937,6 @@ func autotests() {
 	testsDone++
 	if parsing8bitsRasmAnnotation() {
 		fmt.Printf("OK\n")
-
 	} else {
 		fmt.Printf("OK\n")
 		testsOnError++
@@ -950,7 +944,6 @@ func autotests() {
 	testsDone++
 	if parsing16bitsIntegerAnnotation() {
 		fmt.Printf("OK\n")
-
 	} else {
 		fmt.Printf("OK\n")
 		testsOnError++
@@ -1187,10 +1180,7 @@ func saveToFile(b []byte, filePath string) bool {
 	}
 	defer fw.Close()
 	_, err = fw.Write(b)
-	if err == nil {
-		return false
-	}
-	return true
+	return err != nil
 }
 
 func generateSliceByte(size int) []byte {
@@ -1318,37 +1308,25 @@ func analyseDataTest(dskFilepath string) bool {
 func parsing16bitsRasmAnnotation() bool {
 	fmt.Printf("Parsing value rasm annotation #C000 ")
 	v := parseHexadecimal16bits("#C000")
-	if v == 0xC000 {
-		return true
-	}
-	return false
+	return v == 0xC000
 }
 
 func parsing16bitsCAnnotation() bool {
 	fmt.Printf("Parsing value c annotation 0xC000 ")
 	v := parseHexadecimal16bits("0xC000")
-	if v == 0xC000 {
-		return true
-	}
-	return false
+	return v == 0xC000
 }
 
 func parsing16bitsIntegerAnnotation() bool {
 	fmt.Printf("Parsing value integer annotation 49152 ")
 	v := parseHexadecimal16bits("49152")
-	if v == 0xC000 {
-		return true
-	}
-	return false
+	return v == 0xC000
 }
 
 func parsing8bitsRasmAnnotation() bool {
 	fmt.Printf("Parsing value c annotation #D0 ")
 	v := parseHexadecimal16bits("#D0")
-	if v == 0xD0 {
-		return true
-	}
-	return false
+	return v == 0xD0
 }
 
 func putFileBinaryDataTest(filePath, dskFilepath string) bool {
@@ -1364,7 +1342,7 @@ func putFileBinaryDataTest(filePath, dskFilepath string) bool {
 
 func getFileBinaryDataTest(filePath, dskFilepath string) bool {
 	*get = true
-	//fileType := "binary"
+	// fileType := "binary"
 	d, onError, _, _ := openDsk(dskFilepath)
 	if onError {
 		return onError
