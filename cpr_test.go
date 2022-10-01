@@ -55,11 +55,11 @@ func TestAddData(t *testing.T) {
 	cpr.FilePath = "ironman.cpr"
 	cpr.Save()
 }
+
 func TestRasmoutRead(t *testing.T) {
 	cpr := NewCpr("rasmoutput.cpr")
 	err := cpr.Open()
 	if err != nil {
 		t.Fatalf("Expected not error and gets %v\n", err)
 	}
-
 }

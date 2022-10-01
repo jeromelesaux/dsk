@@ -397,8 +397,8 @@ func Desass(Prg []byte, Longueur, StartAddress uint16) string {
 	var Instr, Inst2, Inst3, Inst4 uint8
 	var Inst string
 	var Adr, OldAdr uint16
-	//var Ad8 uint8
-	//var p int
+	// var Ad8 uint8
+	// var p int
 	Listing := ""
 	//	Adr = 0
 
@@ -499,21 +499,21 @@ func Desass(Prg []byte, Longueur, StartAddress uint16) string {
 		}
 		OldAdrHex := fmt.Sprintf("%.4X", (OldAdr + StartAddress))
 		Listing += OldAdrHex
-		//copy([]byte(Listing[PosD:4]), []byte(OldAdrHex))
+		// copy([]byte(Listing[PosD:4]), []byte(OldAdrHex))
 		Listing += " "
 
 		for i := OldAdr; i < Adr; i++ {
 			prgHex := fmt.Sprintf("%.2X", Prg[i])
 			Listing += prgHex
-			//copy([]byte(Listing[PosD:2]), []byte(prgHex))
-			//Listing[PosD] = Hex(&Listing[PosD], Prg[i], 2)
+			// copy([]byte(Listing[PosD:2]), []byte(prgHex))
+			// Listing[PosD] = Hex(&Listing[PosD], Prg[i], 2)
 			Listing += " "
 		}
 		for i := 0; i < 5-int(Adr+OldAdr); i++ {
 			Listing += "   "
 		}
 		Listing += Inst
-		//copy([]byte(Listing[PosD:]), []byte(Inst[:]))
+		// copy([]byte(Listing[PosD:]), []byte(Inst[:]))
 		Listing += "\n"
 	}
 	return Listing

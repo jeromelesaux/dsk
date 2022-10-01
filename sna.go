@@ -128,9 +128,7 @@ func (s *SNAHeader) String() string {
 	return out
 }
 
-var (
-	ErrorNoHeaderOrStartAddress = errors.New("no Amsdos header found and no startAddress. Quit")
-)
+var ErrorNoHeaderOrStartAddress = errors.New("no Amsdos header found and no startAddress. Quit")
 
 type CRTC uint8
 
@@ -268,7 +266,6 @@ func (s *SNA) Read(r io.Reader) error {
 		return err
 	}
 	if s.Header.Version == 3 {
-
 	} else {
 		s.Data = make([]byte, int(s.Header.MemoryDumpSize)*1000+int(s.Header.ExternalMemoryDumpSize)*1000)
 	}
@@ -325,7 +322,6 @@ func (s *SNA) Get(startAddress, lenght uint16) ([]byte, error) {
 
 func ExportFromSna(snaPath string) ([]byte, error) {
 	f, err := os.Open(snaPath)
-
 	if err != nil {
 		return []byte{}, err
 	}
@@ -373,7 +369,7 @@ func ImportInSna(filePath, snaPath string, execAddress uint16, screenMode uint8,
 
 	sna.Header.RegisterPCHigh = uint8(execAddress >> 8)
 	sna.Header.RegisterPCLow = uint8(execAddress & 0xff)
-	//sna.Header.GAMultiConfiguration = 0x88
+	// sna.Header.GAMultiConfiguration = 0x88
 	sna.Header.CPCType = CPCValue(cpcType)
 	sna.Header.CRTCType = CRTCValue(crtcType)
 
@@ -413,4 +409,8 @@ func CreateSna(snaPath string) (*SNA, error) {
 		return s, err
 	}
 	return s, nil
+}
+
+func (s *SNA) Hexadecimal() string {
+	return DisplayHex(s.Data, 16)
 }

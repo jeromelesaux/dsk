@@ -46,8 +46,8 @@ func NewCpr(filePath string) *Cpr {
 	cb := [2]byte{'c', 'b'}
 	for i := 0; i < 32; i++ {
 		copy(cpr.DataZone.BankZone[i].Cb[:], cb[:])
-		//second := i % 10
-		//first := (i - second) / 10
+		// second := i % 10
+		// first := (i - second) / 10
 		banknumber := fmt.Sprintf("%.2d", i)
 		cpr.DataZone.BankZone[i].BankNumber[0] = banknumber[0]
 		cpr.DataZone.BankZone[i].BankNumber[1] = banknumber[1]
