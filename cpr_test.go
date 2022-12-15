@@ -34,7 +34,10 @@ func TestCopyData(t *testing.T) {
 		t.Fatalf("Expected not error and gets %v\n", err)
 	}
 	cpr.FilePath = "test.cpr"
-	cpr.Save()
+	err = cpr.Save()
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestAddData(t *testing.T) {
@@ -53,7 +56,10 @@ func TestAddData(t *testing.T) {
 		t.Fatalf("Expected not error and gets %v\n", err)
 	}
 	cpr.FilePath = "ironman.cpr"
-	cpr.Save()
+	err := cpr.Save()
+	if err != nil {
+		t.Fatal(err)
+	}
 }
 
 func TestRasmoutRead(t *testing.T) {

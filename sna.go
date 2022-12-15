@@ -333,8 +333,8 @@ func ExportFromSna(snaPath string) ([]byte, error) {
 	var startingAddress uint16
 	startingAddress += uint16(s.Header.RegisterPCHigh) << 8
 	startingAddress += uint16(s.Header.RegisterPCLow) | 0xff
-	s.Get(startingAddress, uint16(len(s.Data))-startingAddress)
-	return s.Data, nil
+	_, err = s.Get(startingAddress, uint16(len(s.Data))-startingAddress)
+	return s.Data, err
 }
 
 func ImportInSna(filePath, snaPath string, execAddress uint16, screenMode uint8, cpcType CPC, crtcType CRTC) error {

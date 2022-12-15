@@ -429,8 +429,14 @@ func main() {
 			// Il faut recalculer le checksum en comptant es adresses !
 			header.Checksum = header.ComputedChecksum16()
 			var rbuff bytes.Buffer
-			binary.Write(&rbuff, binary.LittleEndian, header)
-			binary.Write(&rbuff, binary.LittleEndian, content)
+			err = binary.Write(&rbuff, binary.LittleEndian, header)
+			if err != nil {
+				exitOnError("error while writing header : "+err.Error(), "Check your file")
+			}
+			err = binary.Write(&rbuff, binary.LittleEndian, content)
+			if err != nil {
+				exitOnError("error while writing header : "+err.Error(), "Check your file")
+			}
 
 			f, err := os.Create(*fileInDsk)
 			if err != nil {
@@ -695,7 +701,10 @@ func getFileDsk(d dsk.DSK, fileInDsk, dskPath, directory string) (onError bool, 
 		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -get -amsdosfile hello.bin"
 	}
 	if fileInDsk == "*" {
-		d.GetCatalogue()
+		err := d.GetCatalogue()
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "Error while getting the catalogue in dsk error :%v\n", err)
+		}
 		var lastFilename string
 		for indice, v := range d.Catalogue {
 			if v.User != dsk.USER_DELETED && v.NbPages != 0 {

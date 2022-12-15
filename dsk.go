@@ -191,7 +191,10 @@ func (c *CPCEMUTrack) Read(r io.Reader) error {
 	}
 	for i = c.NbSect; i < 29; i++ {
 		sect := &CPCEMUSect{}
-		sect.Read(r)
+		err := sect.Read(r)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error while reading sector (%d), error :%v\n", i, err)
+		}
 	}
 	if int(sectorSize) > int(c.SectSize)*0x100*int(c.NbSect) {
 		fmt.Fprintf(os.Stderr, "Warning : Sector size [%d] differs from the amount of data found [%d], enlarge data part\n",
@@ -252,7 +255,10 @@ func (c *CPCEMUTrack) Write(w io.Writer) error {
 	}
 	for i = c.NbSect; i < 29; i++ {
 		sect := &CPCEMUSect{}
-		sect.Write(w)
+		err := sect.Write(w)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "error while writing sector (%d), error :%v\n", i, err)
+		}
 	}
 	if err := binary.Write(w, binary.LittleEndian, &c.Data); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading CPCEmuSect.Data error :%v\n", err)
@@ -611,7 +617,10 @@ func (d *DSK) GetFile(path string, indice int) error {
 	nomIndice := make([]byte, 16)
 	lMax := 0x1000000
 	cumul := 0
-	d.GetCatalogue()
+	err := d.GetCatalogue()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error while getting the catalogue, error :%v\n", err)
+	}
 	copy(nomIndice, d.Catalogue[i].Nom[:])
 	copy(nomIndice, d.Catalogue[i].Ext[:])
 	fw, err := os.Create(path)
@@ -656,7 +665,10 @@ func (d *DSK) GetFile(path string, indice int) error {
 }
 
 func (d *DSK) DskSize() uint16 {
-	d.GetCatalogue()
+	err := d.GetCatalogue()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error while getting the catalogue, error :%v\n", err)
+	}
 	// var size uint16
 	// size = len(d.Tracks) *
 	// for _, t := range d.Tracks {
@@ -690,7 +702,10 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 	cFileName := GetNomAmsdos(masque)
 	header := &StAmsdos{}
 	var addHeader bool
-	d.GetCatalogue()
+	err := d.GetCatalogue()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error while getting the catalogue, error :%v\n", err)
+	}
 	fr, err := os.Open(masque)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "Cannot read file (%s) error :%v\n", masque, err)
@@ -702,7 +717,10 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 		return err
 	}
 	fmt.Fprintf(os.Stderr, "file (%s) read (%d bytes).\n", masque, fileLength)
-	fr.Seek(0, io.SeekStart)
+	_, err = fr.Seek(0, io.SeekStart)
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error while seeking in file error :%v\n", err)
+	}
 	if err := binary.Read(fr, binary.LittleEndian, header); err != nil {
 		fmt.Fprintf(os.Stderr, "No header found for file :%s, error :%v\n", masque, err)
 	}
@@ -775,8 +793,14 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 		// Ajoute l'en-tete amsdos si necessaire
 
 		var rbuff bytes.Buffer
-		binary.Write(&rbuff, binary.LittleEndian, header)
-		binary.Write(&rbuff, binary.LittleEndian, buff)
+		err = binary.Write(&rbuff, binary.LittleEndian, header)
+		if err != nil {
+			fmt.Fprintf(os.Stdout, "error while writing in header %v\n", err)
+		}
+		err = binary.Write(&rbuff, binary.LittleEndian, buff)
+		if err != nil {
+			fmt.Fprintf(os.Stdout, "error while writing in content %v\n", err)
+		}
 		buff = rbuff.Bytes()
 		//	memmove( &Buff[ sizeof( StAmsdos ) ], Buff, Lg );
 		//         	memcpy( Buff, e, sizeof( StAmsdos ) );
@@ -827,7 +851,10 @@ func (d *DSK) CopyFile(bufFile []byte, fileName string, fileLength, maxBloc, use
 				//	fmt.Fprintf(os.Stdout,"Bloc:%d, MaxBloc:%d\n",bloc,maxBloc)
 				if bloc != 0 {
 					dirLoc.Blocks[j] = bloc
-					d.WriteBloc(int(bloc), bufFile, posFile)
+					err = d.WriteBloc(int(bloc), bufFile, posFile)
+					if err != nil {
+						fmt.Fprintf(os.Stdout, "error while writing bloc %v\n", err)
+					}
 					posFile += 1024 // Passe au bloc suivant
 
 				} else {
@@ -835,7 +862,10 @@ func (d *DSK) CopyFile(bufFile []byte, fileName string, fileLength, maxBloc, use
 				}
 			}
 			// fmt.Fprintf(os.Stdout, "posDir:%d dirloc:%v\n", posDir, dirLoc)
-			d.SetInfoDirEntry(posDir, dirLoc)
+			err = d.SetInfoDirEntry(posDir, dirLoc)
+			if err != nil {
+				fmt.Fprintf(os.Stdout, "error while set info in directory %v\n", err)
+			}
 		} else {
 			return ErrorNoDirEntry
 		}
@@ -1112,7 +1142,10 @@ func (d *DSK) RechercheDirLibre() (uint8, error) {
 }
 
 func (d *DSK) DisplayCatalogue() {
-	d.GetCatalogue()
+	err := d.GetCatalogue()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error while getting the catalogue error :%v\n", err)
+	}
 	for i := 0; i < 64; i++ {
 		entry := d.Catalogue[i]
 		if entry.User != USER_DELETED && entry.NumPage != 0 {
@@ -1122,7 +1155,10 @@ func (d *DSK) DisplayCatalogue() {
 }
 
 func (d *DSK) GetEntryyNameInCatalogue(num int) string {
-	d.GetCatalogue()
+	err := d.GetCatalogue()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error while getting the catalogue error :%v\n", err)
+	}
 	var nom string
 	for i := 0; i < 64; i++ {
 		entry := d.Catalogue[i]
@@ -1136,7 +1172,10 @@ func (d *DSK) GetEntryyNameInCatalogue(num int) string {
 }
 
 func (d *DSK) GetEntrySizeInCatalogue(num int) string {
-	d.GetCatalogue()
+	err := d.GetCatalogue()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error while getting the catalogue error :%v\n", err)
+	}
 	for i := 0; i < 64; i++ {
 		entry := d.Catalogue[i]
 		if entry.User != USER_DELETED && entry.NumPage != 0 && i == num {
@@ -1305,7 +1344,10 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 		for j := 0; j < 64; j++ {
 			tabDir[j], _ = d.GetInfoDirEntry(uint8(j))
 		}*/
-	d.GetCatalogue()
+	err := d.GetCatalogue()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error while getting the catalogue error :%v\n", err)
+	}
 	entryIndice := d.Catalogue[i]
 	var cumul, tailleFichier int
 	var isAmsdos bool
@@ -1368,7 +1410,10 @@ func (d *DSK) ViewFile(indice int) ([]byte, int, error) {
 	lMax := 0x1000000
 	b := make([]byte, 0)
 	firstBlock := true
-	d.GetCatalogue()
+	err := d.GetCatalogue()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error while getting the catalogue error :%v\n", err)
+	}
 	entryIndice := d.Catalogue[i]
 	var tailleFichier, cumul int
 	for {
@@ -1434,7 +1479,10 @@ func CheckAmsdos(buf []byte) (bool, *StAmsdos) {
 }
 
 func (d *DSK) RemoveFile(indice uint8) error {
-	d.GetCatalogue()
+	err := d.GetCatalogue()
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "error while getting the catalogue error :%v\n", err)
+	}
 	entryIndice := d.Catalogue[indice]
 
 	for {

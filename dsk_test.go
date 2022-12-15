@@ -13,7 +13,10 @@ func TestOpenDsk(t *testing.T) {
 	if err := formated.PutFile("ironman.scr", MODE_BINAIRE, 0, 0, 0, false, false); err != nil {
 		t.Fatalf("Error:%v", err)
 	}
-	WriteDsk("test.dsk", formated)
+	err := WriteDsk("test.dsk", formated)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	dsk, err := ReadDsk("ironman.dsk")
 	if err != nil {
