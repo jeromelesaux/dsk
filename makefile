@@ -3,11 +3,12 @@ RM=rm
 MV=mv
 
 
-SOURCEDIR=cli
+SOURCEDIR=./cli
 SOURCES := $(shell find $(SOURCEDIR) -name '*.go')
+BINARIES=binaries
 
-VERSION:=$(shell grep -m1 "version" cli/main.go | sed 's/[", ]//g' | cut -d= -f2)
-suffix=$(shell grep -m1 "version" cli/main.go | sed 's/[", ]//g' | cut -d= -f2 | sed 's/[0-9.]//g')
+VERSION:=$(shell grep -m1 "appVersion" cli/main.go | sed 's/[", ]//g' | cut -d= -f2)
+suffix=$(shell grep -m1 "appVersion" cli/main.go | sed 's/[", ]//g' | cut -d= -f2 | sed 's/[0-9.]//g')
 snapshot=$(shell date +%FT%T)
 
 ifeq ($(suffix),rc)
@@ -20,6 +21,8 @@ endif
 
 
 build: 
+	(make clean)
+	(make init)
 	@echo "Update packages"
 	go get -d ./...
 	@echo "Compilation for linux amd64"
@@ -35,10 +38,13 @@ build:
 	@echo "Compilation for older windows"
 	(make compile ARCH=386 OS=windows EXT=.exe)
 
+init: 
+	mkdir ${BINARIES}
+
 clean:
 	@echo "Cleaning project"
-	rm -f dsk-*
+	rm -fr ${BINARIES}/
 
 compile:
-	GOOS=${OS} GOARCH=${ARCH} go build ${LDFLAGS} -o dsk-${OS}-${ARCH}${EXT} $(SOURCEDIR)/main.go 
-	zip dsk-$(appversion)-${OS}-${ARCH}.zip dsk-${OS}-${ARCH}${EXT}
+	GOOS=${OS} GOARCH=${ARCH} go build ${LDFLAGS} -o ${BINARIES}/dsk-${OS}-${ARCH}${EXT} $(SOURCEDIR)/main.go 
+	zip ${BINARIES}/dsk-$(appversion)-${OS}-${ARCH}.zip ${BINARIES}/dsk-${OS}-${ARCH}${EXT}

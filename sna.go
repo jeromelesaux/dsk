@@ -106,6 +106,26 @@ func NewSnaHeader() SNAHeader {
 	return h
 }
 
+func NewSnaV2Header() SNAHeader {
+	h := SNAHeader{
+		Version:              2,
+		MemoryDumpSize:       128,
+		GAMultiConfiguration: 0x8D,
+		CPCType:              2,
+		CRTCType:             1,
+		InterruptMode:        1,
+		CRTCConfiguration:    [18]uint8{0x3f, 40, 46, 0x8e, 38, 0, 25, 30, 0, 7, 0, 0, 0x30},
+		PSGRegisters:         [16]uint8{0, 0, 0, 0, 0, 0, 0x3f, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		PPIControlPort:       0x82,
+		RegisterSPHigh:       0xC0,
+		RegisterPCLow:        0xec,
+		RegisterPCHigh:       0xbf,
+		GAPalette:            [17]uint8{0x04, 0x0A, 0x15, 0x1C, 0x18, 0x1D, 0x0C, 0x05, 0x0D, 0x16, 0x06, 0x17, 0x1E, 0x00, 0x1F, 0x0E, 0x04},
+	}
+	copy(h.Identifier[:], "MV - SNA")
+	return h
+}
+
 func (s *SNAHeader) String() string {
 	out := fmt.Sprintf("\tIdentifier:%s\n\tVersion:%d\n", s.Identifier, s.Version)
 	out += fmt.Sprintf("\tRegisterA:#%x\n\tRegisterA2:#%x\n", s.RegisterA, s.RegisterA2)
@@ -337,8 +357,17 @@ func ExportFromSna(snaPath string) ([]byte, error) {
 	return s.Data, err
 }
 
-func ImportInSna(filePath, snaPath string, execAddress uint16, screenMode uint8, cpcType CPC, crtcType CRTC) error {
-	sna := &SNA{Data: make([]byte, 0xFFFF), Header: NewSnaHeader()}
+func ImportInSna(filePath, snaPath string, execAddress uint16, screenMode uint8, cpcType CPC, crtcType CRTC, version int) error {
+	var sna *SNA
+	switch version {
+	case 1:
+		sna = &SNA{Data: make([]byte, 0xFFFF), Header: NewSnaHeader()}
+	case 2:
+		sna = &SNA{Data: make([]byte, 0xFFFF), Header: NewSnaV2Header()}
+	default:
+		return ErrorUnsupportedDskFormat
+	}
+
 	var filesize uint16
 	f, err := os.Open(filePath)
 	if err != nil {

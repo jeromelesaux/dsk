@@ -52,7 +52,8 @@ var (
 	size           = flag.Int("size", 0, "Size to extract in rawexport, see rawexport for more details.")
 	autotest       = flag.Bool("autotest", false, "Executs all tests.")
 	autoextract    = flag.String("autoextract", "", "Extract all DSK contained in the folder path")
-	version        = "0.16"
+	snaVersion     = flag.Int("snaversion", 1, "Set the sna version (1 or 2 available).")
+	appVersion     = "0.17"
 )
 
 func main() {
@@ -107,7 +108,7 @@ func main() {
 		loadAddress = parseHexadecimal16bits(*loadingAddress)
 	}
 
-	fmt.Fprintf(os.Stderr, "DSK cli version [%s]\nMade by Sid (ImpAct)\n", version)
+	fmt.Fprintf(os.Stderr, "DSK cli version [%s]\nMade by Sid (ImpAct)\n", appVersion)
 	if *snaPath != "" {
 		if *info {
 			cmdRunned = true
@@ -142,7 +143,7 @@ func main() {
 				if *cpcType > 3 {
 					crtc = dsk.ASIC_6845
 				}
-				if err := dsk.ImportInSna(*fileInDsk, *snaPath, execAddress, uint8(*screenMode), cpcTYPE, crtc); err != nil {
+				if err := dsk.ImportInSna(*fileInDsk, *snaPath, execAddress, uint8(*screenMode), cpcTYPE, crtc, *snaVersion); err != nil {
 					fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
 						*fileInDsk,
 						*snaPath,
