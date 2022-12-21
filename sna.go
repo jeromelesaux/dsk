@@ -106,6 +106,25 @@ func NewSnaHeader() SNAHeader {
 		RegisterSPHigh:       0xC0,
 		RegisterPCLow:        0xec,
 		RegisterPCHigh:       0xbf,
+		RegisterA:            0x2f,
+		RegisterA2:           0x8d,
+		RegisterB:            0xf5,
+		RegisterB2:           0x7f,
+		RegisterC:            0,
+		RegisterC2:           0x8d,
+		RegisterD:            0x3f,
+		RegisterD2:           0x30,
+		RegisterE:            0xe7,
+		RegisterE2:           0,
+		RegisterF:            0x3f,
+		RegisterF2:           0,
+		RegisterH:            0x3f,
+		RegisterH2:           0xae,
+		RegisterL:            0xe8,
+		RegisterL2:           0x57,
+		RegisterR:            0x44,
+		RegisterI:            0x8,
+		GAIndex:              0xf,
 		GAPalette:            [17]uint8{0x04, 0x0A, 0x15, 0x1C, 0x18, 0x1D, 0x0C, 0x05, 0x0D, 0x16, 0x06, 0x17, 0x1E, 0x00, 0x1F, 0x0E, 0x04},
 	}
 	copy(h.Identifier[:], "MV - SNA")
@@ -126,6 +145,25 @@ func NewSnaV2Header() SNAHeader {
 		RegisterSPHigh:       0xC0,
 		RegisterPCLow:        0xec,
 		RegisterPCHigh:       0xbf,
+		RegisterA:            0x2f,
+		RegisterA2:           0x8d,
+		RegisterB:            0xf5,
+		RegisterB2:           0x7f,
+		RegisterC:            0,
+		RegisterC2:           0x8d,
+		RegisterD:            0x3f,
+		RegisterD2:           0x30,
+		RegisterE:            0xe7,
+		RegisterE2:           0,
+		RegisterF:            0x3f,
+		RegisterF2:           0,
+		RegisterH:            0x3f,
+		RegisterH2:           0xae,
+		RegisterL:            0xe8,
+		RegisterL2:           0x57,
+		RegisterR:            0x44,
+		RegisterI:            0x8,
+		GAIndex:              0xf,
 		GAPalette:            [17]uint8{0x04, 0x0A, 0x15, 0x1C, 0x18, 0x1D, 0x0C, 0x05, 0x0D, 0x16, 0x06, 0x17, 0x1E, 0x00, 0x1F, 0x0E, 0x04},
 	}
 	copy(h.Identifier[:], "MV - SNA")
@@ -401,8 +439,6 @@ func ImportInSna(filePath, snaPath string, execAddress uint16, screenMode uint8,
 	if execAddress == 0 {
 		if header.Exec != 0 {
 			execAddress = header.Exec
-		} else {
-			execAddress = header.Address
 		}
 	}
 
