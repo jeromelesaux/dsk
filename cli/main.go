@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io"
 	"io/ioutil"
 	"math/rand"
 	"os"
@@ -120,7 +121,7 @@ func main() {
 		}
 		if *format {
 			cmdRunned = true
-			isError, msg, hint := formatSna(*snaPath)
+			isError, msg, hint := formatSna(*snaPath, *snaVersion)
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -353,7 +354,7 @@ func main() {
 		if err != nil {
 			exitOnError(fmt.Sprintf("Cannot open file %s error :%v\n", *fileInDsk, err), "Check your dsk file path")
 		}
-		content, err := ioutil.ReadAll(f)
+		content, err := io.ReadAll(f)
 		if err != nil {
 			exitOnError(fmt.Sprintf("Cannot read file %s error :%v\n", *fileInDsk, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze")
 		}
@@ -530,8 +531,8 @@ func formatDsk(dskPath string, sector, track, heads, extendedDskType int, vendor
 	return false, "", ""
 }
 
-func formatSna(snaPath string) (onError bool, message, hint string) {
-	if _, err := dsk.CreateSna(snaPath); err != nil {
+func formatSna(snaPath string, snaVersion int) (onError bool, message, hint string) {
+	if _, err := dsk.CreateSna(snaPath, snaVersion); err != nil {
 		return true, fmt.Sprintf("Cannot create Sna file (%s) error : %v\n", snaPath, err), ""
 	}
 	fmt.Fprintf(os.Stderr, "Sna file (%s) created.\n", snaPath)
@@ -1299,7 +1300,7 @@ func formatDataForceTest(dskFilepath string) bool {
 func formatSnaTest(snafilepath string) bool {
 	resetArguments()
 	fmt.Printf("Format sna image file ")
-	onError, _, _ := formatSna(snafilepath)
+	onError, _, _ := formatSna(snafilepath, 2)
 	return onError
 }
 

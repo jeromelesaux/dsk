@@ -15,6 +15,12 @@ type SNA struct {
 	Data   []byte
 }
 
+func NewSna(header SNAHeader) *SNA {
+	s := &SNA{Header: header}
+	s.Data = make([]byte, (int(s.Header.MemoryDumpSize)*1000)+(int(s.Header.ExternalMemoryDumpSize)*1000))
+	return s
+}
+
 type SNAHeader struct {
 	Identifier                      [8]uint8  // 0x0
 	Unused                          [8]uint8  // 0x08
@@ -361,9 +367,9 @@ func ImportInSna(filePath, snaPath string, execAddress uint16, screenMode uint8,
 	var sna *SNA
 	switch version {
 	case 1:
-		sna = &SNA{Data: make([]byte, 0xFFFF), Header: NewSnaHeader()}
+		sna = NewSna(NewSnaHeader())
 	case 2:
-		sna = &SNA{Data: make([]byte, 0xFFFF), Header: NewSnaV2Header()}
+		sna = NewSna(NewSnaV2Header())
 	default:
 		return ErrorUnsupportedDskFormat
 	}
@@ -385,15 +391,19 @@ func ImportInSna(filePath, snaPath string, execAddress uint16, screenMode uint8,
 	//	f.Seek(0, 0)
 	fmt.Fprintf(os.Stderr, "Import file %s at address:#%4x size:%4x\n", filePath, header.Address, filesize)
 	buff := make([]byte, 0xFFFF)
-	_, err = f.Read(buff)
+	nb, err := f.Read(buff)
 	if err != nil {
 		return err
 	}
-	if err := sna.Put(buff, header.Address, filesize); err != nil {
+	if err := sna.Put(buff[0:nb], header.Address, filesize); err != nil {
 		return err
 	}
 	if execAddress == 0 {
-		execAddress = header.Exec
+		if header.Exec != 0 {
+			execAddress = header.Exec
+		} else {
+			execAddress = header.Address
+		}
 	}
 
 	sna.Header.RegisterPCHigh = uint8(execAddress >> 8)
@@ -424,8 +434,17 @@ func ImportInSna(filePath, snaPath string, execAddress uint16, screenMode uint8,
 	return nil
 }
 
-func CreateSna(snaPath string) (*SNA, error) {
-	s := &SNA{Data: make([]byte, 0xFFFF), Header: NewSnaHeader()}
+func CreateSna(snaPath string, snaVersion int) (*SNA, error) {
+	var s *SNA
+	switch snaVersion {
+	case 1:
+		s = NewSna(NewSnaHeader())
+	case 2:
+		s = NewSna(NewSnaV2Header())
+	default:
+		return nil, ErrorUnsupportedDskFormat
+	}
+
 	w, err := os.Create(snaPath)
 	if err != nil {
 		return s, err
