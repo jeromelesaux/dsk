@@ -23,7 +23,7 @@ var (
 	track          = flag.Int("track", 39, "Track number (format).")
 	heads          = flag.Int("head", 1, "Number of heads in the DSK (format)")
 	sector         = flag.Int("sector", 9, "Sector number (format).")
-	format         = flag.Bool("format", false, "Format the followed dsk.")
+	format         = flag.Bool("format", false, "Format the followed dsk or sna.")
 	dskType        = flag.Int("dsktype", 0, "DSK Type :\n\t0 : DSK\n\t1 : EDSK\n\t3 : SNA\n")
 	dskPath        = flag.String("dsk", "", "Dsk path to handle.")
 	fileInDsk      = flag.String("amsdosfile", "", "File to handle in (or to insert in) the dsk.")
@@ -152,7 +152,7 @@ func main() {
 				}
 				os.Exit(0)
 			} else {
-				fmt.Fprintf(os.Stderr, "Missing input file to import in sna file (%s)\n", *snaPath)
+				fmt.Fprintf(os.Stderr, "Missing input (argument -amsdosfile) file to import in sna file (%s)\n", *snaPath)
 			}
 		}
 		if *get {
