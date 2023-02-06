@@ -1,7 +1,7 @@
 package dsk
 
 import (
-	"io/ioutil"
+	"io"
 	"os"
 	"testing"
 )
@@ -25,7 +25,7 @@ func TestCopyData(t *testing.T) {
 		t.Fatalf("Expected not error and gets %v\n", err)
 	}
 	defer f.Close()
-	b, err := ioutil.ReadAll(f)
+	b, err := io.ReadAll(f)
 	if err != nil {
 		t.Fatal()
 	}

@@ -390,12 +390,10 @@ func Hex(input string, position int, valeur, digit int) string {
 	return input
 }
 
-//
 // Convertir le buffer en listing desassemble
-//
 func Desass(Prg []byte, Longueur, StartAddress uint16) string {
 	var Instr, Inst2, Inst3, Inst4 uint8
-	var Inst string
+	var inst *string
 	var Adr, OldAdr uint16
 	// var Ad8 uint8
 	// var p int
@@ -421,13 +419,13 @@ func Desass(Prg []byte, Longueur, StartAddress uint16) string {
 					Inst4 = Prg[Adr]
 					Adr++
 					Chaine = TabInstrDDCB[Inst4]
-					Inst = Chaine
-					p := strings.Index(Inst, "nn")
+					*inst = Chaine
+					p := strings.Index(*inst, "nn")
 					if p != -1 {
 						if Inst3 < 0x80 {
-							Inst = Hex(Inst, p, int(Inst3), 2)
+							*inst = Hex(*inst, p, int(Inst3), 2)
 						} else {
-							Inst = Hex(Inst, p, int(-Inst3), 2)
+							*inst = Hex(*inst, p, int(-Inst3), 2)
 						}
 					}
 					Chaine = TabInstrDD[Inst2]
@@ -448,10 +446,10 @@ func Desass(Prg []byte, Longueur, StartAddress uint16) string {
 							Adr++
 							Chaine = TabInstrFDCB[Inst3]
 							if Chaine != "" {
-								Inst = Chaine
-								p := strings.Index(Inst, "nn")
+								*inst = Chaine
+								p := strings.Index(*inst, "nn")
 								if p != -1 {
-									Inst = Hex(Inst, p, int(Ad8), 2)
+									*inst = Hex(*inst, p, int(Ad8), 2)
 								}
 							}
 						} else {
@@ -463,8 +461,8 @@ func Desass(Prg []byte, Longueur, StartAddress uint16) string {
 		}
 
 		if Chaine != "" {
-			Inst = Chaine
-			p := strings.Index(Inst, "nnnn")
+			inst = &Chaine
+			p := strings.Index(*inst, "nnnn")
 
 			if Adr+1 < Longueur {
 				Ad16 := uint16(Prg[Adr])
@@ -473,20 +471,20 @@ func Desass(Prg []byte, Longueur, StartAddress uint16) string {
 				Ad8 := uint8(Ad16)
 
 				if p != -1 {
-					Inst = Hex(Inst, p, int(Ad16), 4)
+					*inst = Hex(*inst, p, int(Ad16), 4)
 					Adr++
 				} else {
-					p := strings.Index(Inst, "nn")
+					p := strings.Index(*inst, "nn")
 					if p != -1 {
-						Inst = Hex(Inst, p, int(Ad16), 2)
-						p = strings.Index(Inst, "nn")
+						*inst = Hex(*inst, p, int(Ad16), 2)
+						p = strings.Index(*inst, "nn")
 						if p != -1 {
-							Inst = Hex(Inst, p, int(Ad16>>8), 2)
+							*inst = Hex(*inst, p, int(Ad16>>8), 2)
 						}
 					} else {
-						p := strings.Index(Inst, "eeee")
+						p := strings.Index(*inst, "eeee")
 						if p != -1 {
-							Inst = Hex(Inst, p, int(Adr+uint16(Ad8)), 4)
+							*inst = Hex(*inst, p, int(Adr+uint16(Ad8)), 4)
 						} else {
 							Adr--
 						}
@@ -495,7 +493,7 @@ func Desass(Prg []byte, Longueur, StartAddress uint16) string {
 				}
 			}
 		} else {
-			Inst = fmt.Sprintf("%.2X %.2X %2.X ????", Instr, Inst2, Inst3)
+			*inst = fmt.Sprintf("%.2X %.2X %2.X ????", Instr, Inst2, Inst3)
 		}
 		OldAdrHex := fmt.Sprintf("%.4X", (OldAdr + StartAddress))
 		Listing += OldAdrHex
@@ -512,7 +510,7 @@ func Desass(Prg []byte, Longueur, StartAddress uint16) string {
 		for i := 0; i < 5-int(Adr+OldAdr); i++ {
 			Listing += "   "
 		}
-		Listing += Inst
+		Listing += *inst
 		// copy([]byte(Listing[PosD:]), []byte(Inst[:]))
 		Listing += "\n"
 	}
