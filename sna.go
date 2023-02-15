@@ -121,6 +121,64 @@ type MemChunck struct {
 	Data [0xffff]byte
 }
 
+func (m MemChunck) Export() []byte {
+	buf := make([]byte, 0)
+	var index int
+	for index < len(m.Data) {
+		if m.Data[index] == m.Data[index+1] {
+			var i int
+			for m.Data[index] == m.Data[i] && index < len(m.Data) && i < len(m.Data) {
+				i++
+			}
+			buf = append(buf, 0xe5, byte(i+1), m.Data[index])
+			index += i
+		} else {
+			buf = append(buf, m.Data[index])
+			index++
+		}
+	}
+	return buf
+}
+
+func (m MemChunck) Feed(buf []byte) {
+	var chunckIndex int
+	var bufferIndex int
+	for {
+		if bufferIndex >= len(buf) {
+			break
+		}
+		v := buf[bufferIndex]
+		switch v {
+		case 0xe5:
+			occ := buf[bufferIndex+1]
+			value := buf[bufferIndex+2]
+			if occ == 0 {
+				m.Data[chunckIndex] = v
+				m.Data[chunckIndex+1] = occ
+				m.Data[chunckIndex+2] = value
+				bufferIndex += 3
+				chunckIndex += 3
+			} else {
+				if value == 0 {
+					chunckIndex += int(occ) - 1
+					bufferIndex += 3
+					continue
+				} else {
+					for i := 0; i < int(occ); i++ {
+						m.Data[chunckIndex+i] = value
+					}
+					chunckIndex += int(occ) - 1
+					bufferIndex += 3
+				}
+			}
+		default:
+			m.Data[chunckIndex] = v
+			chunckIndex++
+			bufferIndex++
+		}
+	}
+}
+
 func NewSnaHeader() SNAHeader {
 	h := SNAHeader{
 		Version:              1,
@@ -435,7 +493,7 @@ func (s *SNA) Read(r io.Reader) error {
 			}
 
 			mem := MemChunck{}
-			copy(mem.Data[:], memBuf[:])
+			mem.Feed(memBuf)
 
 			s.MemoryChuncks = append(s.MemoryChuncks, mem)
 		}
