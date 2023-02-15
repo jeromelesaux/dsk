@@ -13,14 +13,14 @@ snapshot=$(shell date +%FT%T)
 
 ifeq ($(suffix),rc)
 	appversion=$(VERSION)$(snapshot)
-else 
+else
 	appversion=$(VERSION)
-endif 
+endif
 
 .DEFAULT_GOAL:=build
 
 
-build: 
+build:
 	(make clean)
 	(make init)
 	@echo "Update packages"
@@ -38,7 +38,7 @@ build:
 	@echo "Compilation for older windows"
 	(make compile ARCH=386 OS=windows EXT=.exe)
 
-init: 
+init:
 	mkdir ${BINARIES}
 
 clean:
@@ -46,5 +46,9 @@ clean:
 	rm -fr ${BINARIES}/
 
 compile:
-	GOOS=${OS} GOARCH=${ARCH} go build ${LDFLAGS} -o ${BINARIES}/dsk-${OS}-${ARCH}${EXT} $(SOURCEDIR)/main.go 
+	GOOS=${OS} GOARCH=${ARCH} go build ${LDFLAGS} -o ${BINARIES}/dsk-${OS}-${ARCH}${EXT} $(SOURCEDIR)/main.go
 	zip ${BINARIES}/dsk-$(appversion)-${OS}-${ARCH}.zip ${BINARIES}/dsk-${OS}-${ARCH}${EXT}
+
+
+lint:
+	golangci-lint run ./...

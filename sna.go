@@ -6,13 +6,16 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 
 	m "github.com/jeromelesaux/m4client/cpc"
 )
 
 type SNA struct {
-	Header SNAHeader
-	Data   []byte
+	Header        SNAHeader
+	Data          []byte
+	CPCPlusChunck CPCPlusChunck
+	MemoryChuncks []MemChunck
 }
 
 func NewSna(header SNAHeader) *SNA {
@@ -75,22 +78,47 @@ type SNAHeader struct {
 	Unused2                         [41]uint8 // 0x73
 	FDDState                        [4]uint8  // 0x9d version 3
 	FDDTrack                        uint8     // 0x9d
-	PrinterRegister                 uint8
-	CRTCType                        uint8 // 0xa4
+	PrinterRegister                 uint8     // 0xa3
+	CRTCType                        uint8     // 0xa4
 	Unused3                         [4]uint8
-	CRTCHorizontalCharacterRegister uint8 // version 3
+	CRTCHorizontalCharacterRegister uint8 // 0xa9 version 3
 	Unused5                         uint8
-	CRTCCharacterLineRegister       uint8
-	CRTCRasterRegister              uint8     // version 3
-	CRTCVerticalRegister            uint8     // version 3
-	CRTCHorizontalCounter           uint8     // version 3
-	CRTCVerticalCounter             uint8     // version 3
+	CRTCCharacterLineRegister       uint8     // 0xab
+	CRTCRasterRegister              uint8     // 0xac version 3
+	CRTCVerticalRegister            uint8     // 0xad version 3
+	CRTCHorizontalCounter           uint8     // 0xae version 3
+	CRTCVerticalCounter             uint8     // 0xaf version 3
 	CRTCVsyncFlag                   uint8     // version 3
 	CRTCHsyncFlag                   uint8     // version 3
-	GADelayCounter                  uint8     // version 3
-	GAInterruptScanlineCounter      uint8     // version 3
-	InterruptFlag                   uint8     // version 3
-	Unused4                         [75]uint8 // version 3
+	GADelayCounter                  uint8     // 0xb2 version 3
+	GAInterruptScanlineCounter      uint8     // 0xb3 version 3
+	InterruptFlag                   uint8     // 0xb4 version 3
+	Unused4                         [75]uint8 // version 3 ended at 0xff
+}
+
+type CPCPlusChunck struct {
+	ChunckLength                      [4]uint8
+	SpritesBimaps                     [0x800]uint8
+	SpritesAttributes                 [8 * 16]uint8
+	Palette                           [32 * 2]uint8
+	ProgrammableRasterInterrupt       uint8
+	ScreenSplitScanLine               uint8
+	ScreenSplitSecondaryScreenAddress [2]uint8
+	SoftScrollControlRegister         uint8
+	InterruptVector                   uint8
+	Unused0                           [2]uint8
+	AnalogueInputChannel              [8]uint8
+	SoundDmaChannelAttributes         [3 * 4]uint8
+	Unused1                           [3]uint8
+	DMAControlStatus                  uint8
+	DMAChannel02InternalRegisters     [3 * 7]uint8
+	GateArrayA0RegisterValue          uint8
+	GateArrayA0Lock                   uint8
+	AsicUnlockSequenceState           uint8
+}
+
+type MemChunck struct {
+	Data [0xffff]byte
 }
 
 func NewSnaHeader() SNAHeader {
@@ -98,7 +126,7 @@ func NewSnaHeader() SNAHeader {
 		Version:              1,
 		MemoryDumpSize:       64,
 		GAMultiConfiguration: 0x8D,
-		CPCType:              2,
+		CPCType:              uint8(CPC464),
 		InterruptMode:        1,
 		CRTCConfiguration:    [18]uint8{0x3f, 40, 46, 0x8e, 38, 0, 25, 30, 0, 7, 0, 0, 0x30},
 		PSGRegisters:         [16]uint8{0, 0, 0, 0, 0, 0, 0x3f, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -136,8 +164,47 @@ func NewSnaV2Header() SNAHeader {
 		Version:              2,
 		MemoryDumpSize:       128,
 		GAMultiConfiguration: 0x8D,
-		CPCType:              2,
-		CRTCType:             1,
+		CPCType:              uint8(UM6845R),
+		CRTCType:             uint8(CPC464),
+		InterruptMode:        1,
+		CRTCConfiguration:    [18]uint8{0x3f, 40, 46, 0x8e, 38, 0, 25, 30, 0, 7, 0, 0, 0x30},
+		PSGRegisters:         [16]uint8{0, 0, 0, 0, 0, 0, 0x3f, 0, 0, 0, 0, 0, 0, 0, 0, 0},
+		PPIControlPort:       0x82,
+		RegisterSPHigh:       0xC0,
+		RegisterPCLow:        0xec,
+		RegisterPCHigh:       0xbf,
+		RegisterA:            0x2f,
+		RegisterA2:           0x8d,
+		RegisterB:            0xf5,
+		RegisterB2:           0x7f,
+		RegisterC:            0,
+		RegisterC2:           0x8d,
+		RegisterD:            0x3f,
+		RegisterD2:           0x30,
+		RegisterE:            0xe7,
+		RegisterE2:           0,
+		RegisterF:            0x3f,
+		RegisterF2:           0,
+		RegisterH:            0x3f,
+		RegisterH2:           0xae,
+		RegisterL:            0xe8,
+		RegisterL2:           0x57,
+		RegisterR:            0x44,
+		RegisterI:            0x8,
+		GAIndex:              0xf,
+		GAPalette:            [17]uint8{0x04, 0x0A, 0x15, 0x1C, 0x18, 0x1D, 0x0C, 0x05, 0x0D, 0x16, 0x06, 0x17, 0x1E, 0x00, 0x1F, 0x0E, 0x04},
+	}
+	copy(h.Identifier[:], "MV - SNA")
+	return h
+}
+
+func NewSnaV3Header() SNAHeader {
+	h := SNAHeader{
+		Version:              3,
+		MemoryDumpSize:       128,
+		GAMultiConfiguration: 0x8D,
+		CPCType:              uint8(UM6845R),
+		CRTCType:             uint8(CPC464),
 		InterruptMode:        1,
 		CRTCConfiguration:    [18]uint8{0x3f, 40, 46, 0x8e, 38, 0, 25, 30, 0, 7, 0, 0, 0x30},
 		PSGRegisters:         [16]uint8{0, 0, 0, 0, 0, 0, 0x3f, 0, 0, 0, 0, 0, 0, 0, 0, 0},
@@ -330,12 +397,54 @@ func (s *SNA) Read(r io.Reader) error {
 		return err
 	}
 	if s.Header.Version == 3 {
+		var buf [4]byte
+		if err := binary.Read(r, binary.LittleEndian, &buf); err != nil {
+			fmt.Fprintf(os.Stderr, "Cannot read SNA header error :%v\n", err)
+			return err
+		}
+		if string(buf[:]) == "CPC+" {
+			if err := binary.Read(r, binary.LittleEndian, &s.CPCPlusChunck); err != nil {
+				fmt.Fprintf(os.Stderr, "Cannot read SNA CPC Chunck error :%v\n", err)
+				return err
+			}
+		}
+
+		for {
+			if err := binary.Read(r, binary.LittleEndian, &buf); err != nil {
+				if errors.Is(err, io.EOF) {
+					break
+				}
+			}
+			bank, err := strconv.Atoi(string(buf[3]))
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Cannot parse memory bank number in chunck error :%v\n", err)
+				return err
+			}
+			for i := 0; i < bank; i++ {
+				s.MemoryChuncks = append(s.MemoryChuncks, MemChunck{})
+			}
+			var size uint32
+			if err := binary.Read(r, binary.LittleEndian, &size); err != nil {
+				fmt.Fprintf(os.Stderr, "Cannot read SNA Memory Chunck error :%v\n", err)
+				return err
+			}
+			memBuf := make([]byte, size)
+			if err := binary.Read(r, binary.LittleEndian, &memBuf); err != nil {
+				fmt.Fprintf(os.Stderr, "Cannot read SNA Memory Chunck error :%v\n", err)
+				return err
+			}
+
+			mem := MemChunck{}
+			copy(mem.Data[:], memBuf[:])
+
+			s.MemoryChuncks = append(s.MemoryChuncks, mem)
+		}
 	} else {
 		s.Data = make([]byte, int(s.Header.MemoryDumpSize)*1000+int(s.Header.ExternalMemoryDumpSize)*1000)
-	}
-	if err := binary.Read(r, binary.LittleEndian, &s.Data); err != nil {
-		fmt.Fprintf(os.Stderr, "Cannot read SNA data error :%v\n", err)
-		return err
+		if err := binary.Read(r, binary.LittleEndian, &s.Data); err != nil {
+			fmt.Fprintf(os.Stderr, "Cannot read SNA data error :%v\n", err)
+			return err
+		}
 	}
 
 	return nil
