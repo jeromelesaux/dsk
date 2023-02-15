@@ -15,7 +15,7 @@ type SNA struct {
 	Header        SNAHeader
 	Data          []byte
 	CPCPlusChunck CPCPlusChunck
-	MemoryChuncks []MemChunck
+	MemoryChuncks []*MemChunck
 }
 
 func NewSna(header SNAHeader) *SNA {
@@ -121,16 +121,19 @@ type MemChunck struct {
 	Data [0xffff]byte
 }
 
-func (m MemChunck) Export() []byte {
+func (m *MemChunck) Export() []byte {
 	buf := make([]byte, 0)
 	var index int
 	for index < len(m.Data) {
 		if m.Data[index] == m.Data[index+1] {
 			var i int
-			for m.Data[index] == m.Data[i] && index < len(m.Data) && i < len(m.Data) {
+			for m.Data[index] == m.Data[index+i] {
 				i++
+				if i == 0xff || i >= len(m.Data) {
+					break
+				}
 			}
-			buf = append(buf, 0xe5, byte(i+1), m.Data[index])
+			buf = append(buf, 0xe5, byte(i), m.Data[index])
 			index += i
 		} else {
 			buf = append(buf, m.Data[index])
@@ -140,7 +143,7 @@ func (m MemChunck) Export() []byte {
 	return buf
 }
 
-func (m MemChunck) Feed(buf []byte) {
+func (m *MemChunck) Feed(buf []byte) {
 	var chunckIndex int
 	var bufferIndex int
 	for {
@@ -479,7 +482,7 @@ func (s *SNA) Read(r io.Reader) error {
 				return err
 			}
 			for i := 0; i < bank; i++ {
-				s.MemoryChuncks = append(s.MemoryChuncks, MemChunck{})
+				s.MemoryChuncks = append(s.MemoryChuncks, &MemChunck{})
 			}
 			var size uint32
 			if err := binary.Read(r, binary.LittleEndian, &size); err != nil {
@@ -492,7 +495,7 @@ func (s *SNA) Read(r io.Reader) error {
 				return err
 			}
 
-			mem := MemChunck{}
+			mem := &MemChunck{}
 			mem.Feed(memBuf)
 
 			s.MemoryChuncks = append(s.MemoryChuncks, mem)
