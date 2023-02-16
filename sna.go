@@ -14,7 +14,7 @@ import (
 type SNA struct {
 	Header        SNAHeader
 	Data          []byte
-	CPCPlusChunck CPCPlusChunck
+	CPCPlusChunck *CPCPlusChunck
 	MemoryChuncks []*MemChunck
 }
 
@@ -464,7 +464,8 @@ func (s *SNA) Read(r io.Reader) error {
 			return err
 		}
 		if string(buf[:]) == "CPC+" {
-			if err := binary.Read(r, binary.LittleEndian, &s.CPCPlusChunck); err != nil {
+			s.CPCPlusChunck = &CPCPlusChunck{}
+			if err := binary.Read(r, binary.LittleEndian, s.CPCPlusChunck); err != nil {
 				fmt.Fprintf(os.Stderr, "Cannot read SNA CPC Chunck error :%v\n", err)
 				return err
 			}
@@ -516,9 +517,35 @@ func (s *SNA) Write(w io.Writer) error {
 		fmt.Fprintf(os.Stderr, "Cannot write SNA header error :%v\n", err)
 		return err
 	}
-	if err := binary.Write(w, binary.LittleEndian, &s.Data); err != nil {
-		fmt.Fprintf(os.Stderr, "Cannot write SNA data error :%v\n", err)
-		return err
+	if s.Header.Version == 3 {
+		if s.CPCPlusChunck != nil {
+			name := []byte("CPC+")
+			if err := binary.Write(w, binary.LittleEndian, &name); err != nil {
+				fmt.Fprintf(os.Stderr, "Cannot write CPCPlusChunck name SNA data error :%v\n", err)
+				return err
+			}
+			if err := binary.Write(w, binary.LittleEndian, s.CPCPlusChunck); err != nil {
+				fmt.Fprintf(os.Stderr, "Cannot write CPCPlusChunck SNA data error :%v\n", err)
+				return err
+			}
+		}
+		for i := 0; i < len(s.MemoryChuncks); i++ {
+			name := []byte("MEM" + fmt.Sprintf("%d", i))
+			if err := binary.Write(w, binary.LittleEndian, &name); err != nil {
+				fmt.Fprintf(os.Stderr, "Cannot write CPCPlusChunck name SNA data error :%v\n", err)
+				return err
+			}
+			data := s.MemoryChuncks[i].Export()
+			if err := binary.Write(w, binary.LittleEndian, &data); err != nil {
+				fmt.Fprintf(os.Stderr, "Cannot write CPCPlusChunck SNA data error :%v\n", err)
+				return err
+			}
+		}
+	} else {
+		if err := binary.Write(w, binary.LittleEndian, &s.Data); err != nil {
+			fmt.Fprintf(os.Stderr, "Cannot write SNA data error :%v\n", err)
+			return err
+		}
 	}
 
 	return nil
