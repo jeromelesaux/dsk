@@ -541,6 +541,11 @@ func (s *SNA) Write(w io.Writer) error {
 				return err
 			}
 			data := s.MemoryChuncks[i].Export()
+			size := uint32(len(data))
+			if err := binary.Write(w, binary.LittleEndian, &size); err != nil {
+				fmt.Fprintf(os.Stderr, "Cannot write CPCPlusChunck SNA data error :%v\n", err)
+				return err
+			}
 			if err := binary.Write(w, binary.LittleEndian, &data); err != nil {
 				fmt.Fprintf(os.Stderr, "Cannot write CPCPlusChunck SNA data error :%v\n", err)
 				return err
