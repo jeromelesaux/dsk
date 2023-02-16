@@ -11,6 +11,8 @@ import (
 	m "github.com/jeromelesaux/m4client/cpc"
 )
 
+const SNATag = "DSK SID IMPACT"
+
 type SNA struct {
 	Header        SNAHeader
 	Data          []byte
@@ -217,6 +219,7 @@ func NewSnaHeader() SNAHeader {
 		GAPalette:            [17]uint8{0x04, 0x0A, 0x15, 0x1C, 0x18, 0x1D, 0x0C, 0x05, 0x0D, 0x16, 0x06, 0x17, 0x1E, 0x00, 0x1F, 0x0E, 0x04},
 	}
 	copy(h.Identifier[:], "MV - SNA")
+	copy(h.Unused4[:], []byte(SNATag))
 	return h
 }
 
@@ -256,6 +259,7 @@ func NewSnaV2Header() SNAHeader {
 		GAPalette:            [17]uint8{0x04, 0x0A, 0x15, 0x1C, 0x18, 0x1D, 0x0C, 0x05, 0x0D, 0x16, 0x06, 0x17, 0x1E, 0x00, 0x1F, 0x0E, 0x04},
 	}
 	copy(h.Identifier[:], "MV - SNA")
+	copy(h.Unused4[:], []byte(SNATag))
 	return h
 }
 
@@ -295,6 +299,7 @@ func NewSnaV3Header() SNAHeader {
 		GAPalette:            [17]uint8{0x04, 0x0A, 0x15, 0x1C, 0x18, 0x1D, 0x0C, 0x05, 0x0D, 0x16, 0x06, 0x17, 0x1E, 0x00, 0x1F, 0x0E, 0x04},
 	}
 	copy(h.Identifier[:], "MV - SNA")
+	copy(h.Unused4[:], []byte(SNATag))
 	return h
 }
 
