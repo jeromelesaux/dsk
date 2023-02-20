@@ -102,7 +102,7 @@ func (c *Cpr) Open() error {
 	if err := binary.Read(f, binary.LittleEndian, &c.Riff); err != nil {
 		return err
 	}
-	if err := binary.Read(f, binary.LittleEndian, c.TotalSize); err != nil {
+	if err := binary.Read(f, binary.LittleEndian, &c.TotalSize); err != nil {
 		return err
 	}
 
@@ -117,7 +117,7 @@ func (c *Cpr) Open() error {
 		if err := binary.Read(f, binary.LittleEndian, &c.DataZone.BankZone[i].BankNumber); err != nil {
 			return err
 		}
-		if err := binary.Read(f, binary.LittleEndian, c.DataZone.BankZone[i].BankSize); err != nil {
+		if err := binary.Read(f, binary.LittleEndian, &c.DataZone.BankZone[i].BankSize); err != nil {
 			return err
 		}
 		if err := binary.Read(f, binary.LittleEndian, &c.DataZone.BankZone[i].BankData); err != nil {

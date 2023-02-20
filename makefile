@@ -46,9 +46,13 @@ clean:
 	rm -fr ${BINARIES}/
 
 compile:
-	GOOS=${OS} GOARCH=${ARCH} go build ${LDFLAGS} -o ${BINARIES}/dsk-${OS}-${ARCH}${EXT} $(SOURCEDIR)/main.go
+	GOOS=${OS} GOARCH=${ARCH} ${CC} build ${LDFLAGS} -o ${BINARIES}/dsk-${OS}-${ARCH}${EXT} $(SOURCEDIR)/main.go
 	zip ${BINARIES}/dsk-$(appversion)-${OS}-${ARCH}.zip ${BINARIES}/dsk-${OS}-${ARCH}${EXT}
 
 
 lint:
 	golangci-lint run ./...
+
+
+test:
+	${CC} test ./... -cover
