@@ -20,9 +20,7 @@ endif
 .DEFAULT_GOAL:=build
 
 
-build:
-	(make clean)
-	(make init)
+build: clean init
 	@echo "Update packages"
 	go get -d ./...
 	@echo "Compilation for linux amd64"
