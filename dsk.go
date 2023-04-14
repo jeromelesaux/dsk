@@ -564,9 +564,7 @@ func (d *DSK) CheckDsk() error {
 	//	return ErrorUnsupportedMultiHeadDsk
 }
 
-//
 // Recherche le plus petit secteur d'une piste
-//
 func (d *DSK) GetMinSect() uint8 {
 	var Sect uint8 = 0xFF
 	var s uint8
@@ -581,9 +579,7 @@ func (d *DSK) GetMinSect() uint8 {
 	return Sect
 }
 
-//
 // Retourne la position d'un secteur dans le fichier DSK, position dans la structure Data
-//
 func (d *DSK) GetPosData(track, sect uint8, SectPhysique bool) uint16 {
 	// Recherche position secteur
 	tr := d.Tracks[track]
@@ -813,7 +809,6 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 	return d.CopyFile(buff, cFileName, uint16(fileLength), 256, userNumber, isSystemFile, readOnly)
 }
 
-//
 // Copie un fichier sur le DSK
 //
 // la taille est determine par le nombre de NbPages
@@ -1486,19 +1481,21 @@ func (d *DSK) RemoveFile(indice uint8) error {
 	entryIndice := d.Catalogue[indice]
 
 	for {
-		d.Catalogue[indice].User = USER_DELETED
+
 		entry, err := d.GetInfoDirEntry(indice)
 		if err != nil {
 			return ErrorNoDirEntry
 		}
+		if entryIndice.Nom != d.Catalogue[indice].Nom || entryIndice.Ext != d.Catalogue[indice].Ext {
+			break
+		}
+		d.Catalogue[indice].User = USER_DELETED
 		entry.User = USER_DELETED
 		if err := d.SetInfoDirEntry(indice, entry); err != nil {
 			return ErrorNoDirEntry
 		}
 		indice++
-		if entryIndice.Nom != d.Catalogue[indice].Nom && entryIndice.Ext != d.Catalogue[indice].Ext {
-			break
-		}
+
 	}
 	return nil
 }

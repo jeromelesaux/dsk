@@ -669,6 +669,13 @@ func putFileDsk(d dsk.DSK, fileInDsk, dskPath string, fileType string, loadAddre
 	if indice != dsk.NOT_FOUND && !*force {
 		fmt.Fprintf(os.Stderr, "File %s already exists\n", fileInDsk)
 	} else {
+		if indice != dsk.NOT_FOUND && *force {
+			// suppress file
+			err := d.RemoveFile(uint8(indice))
+			if err != nil {
+				exitOnError(fmt.Sprintf("error while removing file %v", err), "check your dsk content")
+			}
+		}
 		switch fileType {
 		case "ascii":
 			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", execAddress, loadAddress)
