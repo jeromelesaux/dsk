@@ -693,7 +693,7 @@ func GetNomAmsdos(masque string) string {
 	return string(amsdosFile)
 }
 
-func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress, userNumber uint16, isSystemFile, readOnly bool) error {
+func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddress, userNumber uint16, isSystemFile, readOnly bool) error {
 	buff := make([]byte, 0x20000)
 	cFileName := GetNomAmsdos(masque)
 	header := &StAmsdos{}
@@ -735,19 +735,21 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAdress, exeAdress
 	if !isAmsdos {
 		// Creer une en-tete amsdos par defaut
 		fmt.Fprintf(os.Stderr, "Create header... (%s)\n", masque)
+		header = &StAmsdos{}
+		header.User = byte(userNumber)
 		header.Size = uint16(fileLength)
 		header.Size2 = uint16(fileLength)
-		// header = &StAmsdos{Size: uint16(fileLength), Size2: uint16(fileLength)}
+		header.LogicalSize = uint16(fileLength)
 		copy(header.Filename[:], []byte(cFileName[0:12]))
-		header.Address = loadAdress
-		if loadAdress != 0 {
+		header.Address = loadAddress
+		if loadAddress != 0 {
 			typeModeImport = MODE_BINAIRE
 		}
-		header.Exec = exeAdress
-		if exeAdress != 0 {
+		header.Exec = exeAddress
+		if exeAddress != 0 || loadAddress != 0 {
 			typeModeImport = MODE_BINAIRE
 		}
-		if typeModeImport == MODE_BINAIRE {
+		if typeModeImport == MODE_BINAIRE && exeAddress != 0 {
 			header.Type = 1
 		}
 

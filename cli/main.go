@@ -330,7 +330,7 @@ func main() {
 
 		if *put {
 			cmdRunned = true
-			isError, msg, hint := putFileDsk(d, *fileInDsk, *dskPath, *fileType, loadAddress, execAddress)
+			isError, msg, hint := putFileDsk(d, *fileInDsk, *dskPath, *fileType, loadAddress, execAddress, uint16(*user))
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -660,7 +660,7 @@ func analyseDsk(d dsk.DSK, dskPath string) (onError bool, message, hint string) 
 	return false, "", ""
 }
 
-func putFileDsk(d dsk.DSK, fileInDsk, dskPath string, fileType string, loadAddress, execAddress uint16) (onError bool, message, hint string) {
+func putFileDsk(d dsk.DSK, fileInDsk, dskPath string, fileType string, loadAddress, execAddress, user uint16) (onError bool, message, hint string) {
 	if fileInDsk == "" {
 		exitOnError("amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put -amsdosfile hello.bin -exec \"#1000\" -load 500")
 	}
@@ -679,13 +679,13 @@ func putFileDsk(d dsk.DSK, fileInDsk, dskPath string, fileType string, loadAddre
 		switch fileType {
 		case "ascii":
 			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", execAddress, loadAddress)
-			if err := d.PutFile(fileInDsk, dsk.MODE_ASCII, 0, 0, uint16(*user), false, false); err != nil {
+			if err := d.PutFile(fileInDsk, dsk.MODE_ASCII, 0, 0, user, false, false); err != nil {
 				return true, fmt.Sprintf("Error while inserted file (%s) in dsk (%s) error :%v\n", fileInDsk, dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
 			}
 			resumeAction(dskPath, "put ascii", fileInDsk, informations)
 		case "binary":
 			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", execAddress, loadAddress)
-			if err := d.PutFile(fileInDsk, dsk.MODE_BINAIRE, loadAddress, execAddress, uint16(*user), false, false); err != nil {
+			if err := d.PutFile(fileInDsk, dsk.MODE_BINAIRE, loadAddress, execAddress, user, false, false); err != nil {
 				return true, fmt.Sprintf("Error while inserted file (%s) in dsk (%s) error :%v\n", fileInDsk, dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
 			}
 			resumeAction(dskPath, "put binary", fileInDsk, informations)
@@ -699,7 +699,7 @@ func putFileDsk(d dsk.DSK, fileInDsk, dskPath string, fileType string, loadAddre
 		defer f.Close()
 
 		if err := d.Write(f); err != nil {
-			return true, fmt.Sprintf("Error while write file (%s) error %v\n", dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
+			return true, fmt.Sprintf("Error while write file (%s) error %v\n", dskPath, err), "Check your dsk with option -dsk yourdsk.dsk -analyze"
 		}
 	}
 	return false, "", ""
@@ -1387,7 +1387,7 @@ func putFileBinaryDataTest(filePath, dskFilepath string) bool {
 	if onError {
 		return onError
 	}
-	isError, _, _ := putFileDsk(d, filePath, dskFilepath, fileType, 0x800, 0x800)
+	isError, _, _ := putFileDsk(d, filePath, dskFilepath, fileType, 0x800, 0x800, uint16(*user))
 	return isError
 }
 
