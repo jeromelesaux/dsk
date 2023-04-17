@@ -698,7 +698,9 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddre
 	cFileName := GetNomAmsdos(masque)
 	header := &StAmsdos{}
 	var addHeader bool
-	err := d.GetCatalogue()
+	var err error
+
+	err = d.GetCatalogue()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error while getting the catalogue, error :%v\n", err)
 	}
@@ -717,7 +719,8 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddre
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error while seeking in file error :%v\n", err)
 	}
-	if err := binary.Read(fr, binary.LittleEndian, header); err != nil {
+
+	if err = binary.Read(fr, binary.LittleEndian, header); err != nil {
 		fmt.Fprintf(os.Stderr, "No header found for file :%s, error :%v\n", masque, err)
 	}
 
@@ -729,7 +732,7 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddre
 	//
 	// Regarde si le fichier contient une en-tete ou non
 	//
-	if header.Checksum == header.ComputedChecksum16() {
+	if err == nil && header.Checksum == header.ComputedChecksum16() {
 		isAmsdos = true
 	}
 	if !isAmsdos {
