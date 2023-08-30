@@ -1,7 +1,7 @@
 CC=go
 RM=rm
 MV=mv
-
+MODULE=$(awk '/^module / {print $2}' go.mod)
 
 SOURCEDIR=./cli
 SOURCES := $(shell find $(SOURCEDIR) -name '*.go')
@@ -61,7 +61,7 @@ lint:
 	golangci-lint run --timeout 5m ./...
 
 vulncheck:
-	govulncheck ./...
+	govulncheck $(MODULE)
 
 
 test:
