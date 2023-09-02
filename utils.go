@@ -9,7 +9,7 @@ import (
 func GetNomDir(s string) StDirEntry {
 	entry := StDirEntry{}
 	for i := 0; i < 8; i++ {
-		entry.Nom[i] = 32
+		entry.Name[i] = 32
 	}
 	for i := 0; i < 3; i++ {
 		entry.Ext[i] = 32
@@ -20,7 +20,7 @@ func GetNomDir(s string) StDirEntry {
 		if inputFile[i] == '.' {
 			break
 		}
-		entry.Nom[index] = inputFile[i]
+		entry.Name[index] = inputFile[i]
 		index++
 	}
 

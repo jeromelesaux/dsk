@@ -19,46 +19,50 @@ import (
 )
 
 var (
-	help           = flag.Bool("help", false, "display extended help.")
-	list           = flag.Bool("list", false, "List content of dsk.")
-	track          = flag.Int("track", 39, "Track number (format).")
-	heads          = flag.Int("head", 1, "Number of heads in the DSK (format)")
-	sector         = flag.Int("sector", 9, "Sector number (format).")
-	format         = flag.Bool("format", false, "Format the followed dsk or sna.")
-	dskType        = flag.Int("dsktype", 0, "DSK Type :\n\t0 : DSK\n\t1 : EDSK\n\t3 : SNA\n")
-	dskPath        = flag.String("dsk", "", "Dsk path to handle.")
-	fileInDsk      = flag.String("amsdosfile", "", "File to handle in (or to insert in) the dsk.")
-	hexa           = flag.Bool("hex", false, "List the amsdosfile in hexadecimal.")
-	info           = flag.Bool("info", false, "Get informations of the amsdosfile (size, execute and loading address). Or get sna informations.")
-	ascii          = flag.Bool("ascii", false, "list the amsdosfile in ascii mode.")
-	desassemble    = flag.Bool("desassemble", false, "list the amsdosfile desassembled.")
-	get            = flag.Bool("get", false, "Get the file in the dsk.")
-	remove         = flag.Bool("remove", false, "Remove the amsdosfile from the current dsk.")
-	basic          = flag.Bool("basic", false, "List a basic amsdosfile.")
-	put            = flag.Bool("put", false, "Put the amsdosfile in the current dsk.")
-	executeAddress = flag.String("exec", "", "Execute address of the inserted file. (hexadecimal #170 allowed.)")
-	loadingAddress = flag.String("load", "", "Loading address of the inserted file. (hexadecimal #170 allowed.)")
-	user           = flag.Int("user", 0, "User number of the inserted file.")
-	force          = flag.Bool("force", false, "Force overwriting of the inserted file.")
-	fileType       = flag.String("type", "", "Type of the inserted file \n\tascii : type ascii\n\tbinary : type binary\n")
-	snaPath        = flag.String("sna", "", "SNA file to handle")
-	analyse        = flag.Bool("analyze", false, "Returns the DSK header")
-	cpcType        = flag.Int("cpctype", 2, "CPC type (sna import feature): \n\tCPC464 : 0\n\tCPC664: 1\n\tCPC6128 : 2\n\tUnknown : 3\n\tCPCPlus6128 : 4\n\tCPCPlus464 : 5\n\tGX4000 : 6\n\t")
-	screenMode     = flag.Int("screenmode", 1, "screen mode parameter for the sna.")
-	addHeader      = flag.Bool("addheader", false, "Add header to the standalone file (must be set with exec, load and type options).")
-	vendorFormat   = flag.Bool("vendor", false, "Format in vendor format (sectors number #09, end track #27)")
-	dataFormat     = flag.Bool("data", true, "Format in vendor format (sectors number #09, end track #27)")
-	rawimport      = flag.Bool("rawimport", false, "raw imports the amsdosfile, this option is associated with -dsk, -track and -sector.\nThis option will do a raw copy of the file starting to track and sector values.\nfor instance : dsk -dsk mydskfile.dsk -amsdosfile file.bin -rawimport -track 1 -sector 0")
-	rawexport      = flag.Bool("rawexport", false, "raw exports the amsdosfile, this option is associated with -dsk, -track and -sector.\nThis option will do a raw extract of the content beginning to track and sector values and will stop when size is reached.\nfor instance : dsk -dsk mydskfile.dsk -amsdosfile file.bin -rawexport -track 1 -sector 0 -size 16384")
-	size           = flag.Int("size", 0, "Size to extract in rawexport, see rawexport for more details.")
-	autotest       = flag.Bool("autotest", false, "Executs all tests.")
-	autoextract    = flag.String("autoextract", "", "Extract all DSK contained in the folder path")
-	snaVersion     = flag.Int("snaversion", 1, "Set the sna version (1 or 2 available).")
-	appVersion     = "0.18"
+	// commands
+	help        = flag.Bool("help", false, "Display extended help")
+	list        = flag.Bool("list", false, "List content of DSK")
+	format      = flag.Bool("format", false, "Format the followed DSK or SNA")
+	hex         = flag.Bool("hex", false, "List the AMSDOS file in hexadecimal")
+	info        = flag.Bool("info", false, "Get informations of the AMSDOS file (size, execute and loading address) or get SNA information")
+	ascii       = flag.Bool("ascii", false, "List the AMSDOS file in ASCII mode")
+	disassemble = flag.Bool("disassemble", false, "List the AMSDOS file disassembled")
+	get         = flag.Bool("get", false, "Get the file in the DSK")
+	remove      = flag.Bool("remove", false, "Remove the AMSDOS file from the current DSK")
+	basic       = flag.Bool("basic", false, "List a basic AMSDOS file")
+	put         = flag.Bool("put", false, "Put the AMSDOS file in the current DSK")
+	autotest    = flag.Bool("autotest", false, "Executes all tests")
+	autoExtract = flag.String("autoExtract", "", "Extract all DSK contained in the folder path")
+
+	// options
+	track                           = flag.Int("track", 39, "Track number (format)")
+	heads                           = flag.Int("head", 1, "Number of heads in the DSK (format)")
+	sector                          = flag.Int("sector", 9, "Sector number (format)")
+	cliDskType                      = flag.Int("dsktype", 0, "DSK Type :\n\t0 : DSK\n\t1 : EDSK\n\t3 : SNA\n")
+	dskType        *dsk.DskFileType = nil
+	dskPath                         = flag.String("dsk", "", "Dsk path to handle")
+	fileInDsk                       = flag.String("amsdosfile", "", "File to handle in (or to insert in) the dsk")
+	executeAddress                  = flag.String("exec", "", "Execute address of the inserted file. (hexadecimal #170 allowed.)")
+	loadingAddress                  = flag.String("load", "", "Loading address of the inserted file. (hexadecimal #170 allowed.)")
+	user                            = flag.Int("user", 0, "User number of the inserted file")
+	force                           = flag.Bool("force", false, "Force overwriting of the inserted file")
+	fileType                        = flag.String("type", "", "Type of the inserted file \n\tascii : type ascii\n\tbinary : type binary\n")
+	snaPath                         = flag.String("sna", "", "SNA file to handle")
+	analyse                         = flag.Bool("analyze", false, "Returns the DSK header")
+	cpcType                         = flag.Int("cpctype", 2, "CPC type (sna import feature): \n\tCPC464 : 0\n\tCPC664: 1\n\tCPC6128 : 2\n\tUnknown : 3\n\tCPCPlus6128 : 4\n\tCPCPlus464 : 5\n\tGX4000 : 6\n\t")
+	screenMode                      = flag.Int("screenmode", 1, "screen mode parameter for the sna")
+	addHeader                       = flag.Bool("addheader", false, "Add header to the standalone file (must be set with exec, load and type options)")
+	vendorFormat                    = flag.Bool("vendor", false, "Format in vendor format (sectors number #09, end track #27)")
+	dataFormat                      = flag.Bool("data", true, "Format in vendor format (sectors number #09, end track #27)")
+	rawImport                       = flag.Bool("rawImport", false, "raw imports the amsdosfile, this option is associated with -dsk, -track and -sector.\nThis option will do a raw copy of the file starting to track and sector values.\nfor instance : dsk -dsk mydskfile.dsk -amsdosfile file.bin -rawImport -track 1 -sector 0")
+	rawExport                       = flag.Bool("rawExport", false, "raw exports the amsdosfile, this option is associated with -dsk, -track and -sector.\nThis option will do a raw extract of the content beginning to track and sector values and will stop when size is reached.\nfor instance : dsk -dsk mydskfile.dsk -amsdosfile file.bin -rawExport -track 1 -sector 0 -size 16384")
+	size                            = flag.Int("size", 0, "Size to extract in rawExport, see rawExport for more details")
+	snaVersion                      = flag.Int("snaversion", 1, "Set the sna version (1 or 2 available)")
+	appVersion                      = "0.18"
 )
 
 func main() {
-	var cmdRunned bool = false
+	var cmdRan bool = false
 
 	var execAddress, loadAddress uint16
 	flag.Parse()
@@ -73,16 +77,16 @@ func main() {
 		os.Exit(0)
 	}
 
-	if *autoextract != "" {
-		files, err := fs.ReadDir(os.DirFS("/"), *autoextract)
+	if *autoExtract != "" {
+		files, err := fs.ReadDir(os.DirFS("/"), *autoExtract)
 		if err != nil {
 			exitOnError(err.Error(), "Please check your folder path")
 		}
 		for _, file := range files {
 			if !file.IsDir() {
 				if strings.ToUpper(path.Ext(file.Name())) == ".DSK" {
-					dskfolderPath := *autoextract + string(filepath.Separator) + strings.Replace(file.Name(), path.Ext(file.Name()), "", -1)
-					dskFilepath := *autoextract + string(filepath.Separator) + file.Name()
+					dskfolderPath := *autoExtract + string(filepath.Separator) + strings.Replace(file.Name(), path.Ext(file.Name()), "", -1)
+					dskFilepath := *autoExtract + string(filepath.Separator) + file.Name()
 					err = os.Mkdir(dskfolderPath, os.ModePerm)
 					if err != nil && !errors.Is(err, os.ErrExist) {
 						exitOnError(err.Error(), "Please check your folder path")
@@ -112,7 +116,7 @@ func main() {
 	fmt.Fprintf(os.Stderr, "DSK cli version [%s]\nMade by Sid (ImpAct)\n", appVersion)
 	if *snaPath != "" {
 		if *info {
-			cmdRunned = true
+			cmdRan = true
 			isError, msg, hint := infoSna(*snaPath)
 			if isError {
 				exitOnError(msg, hint)
@@ -120,14 +124,14 @@ func main() {
 			os.Exit(0)
 		}
 		if *format {
-			cmdRunned = true
+			cmdRan = true
 			isError, msg, hint := formatSna(*snaPath, *snaVersion)
 			if isError {
 				exitOnError(msg, hint)
 			}
 		}
-		if *hexa {
-			cmdRunned = true
+		if *hex {
+			cmdRan = true
 			sna, err := dsk.ReadSna(*snaPath)
 			if err != nil {
 				exitOnError(err.Error(), "Check your sna path")
@@ -137,7 +141,7 @@ func main() {
 			os.Exit(0)
 		}
 		if *put {
-			cmdRunned = true
+			cmdRan = true
 			if *fileInDsk != "" {
 				cpcTYPE := dsk.CPCType(*cpcType)
 				crtc := dsk.UM6845R
@@ -157,7 +161,7 @@ func main() {
 			}
 		}
 		if *get {
-			cmdRunned = true
+			cmdRan = true
 			if *fileInDsk != "" {
 				content, err := dsk.ExportFromSna(*snaPath)
 				if err != nil {
@@ -215,7 +219,7 @@ func main() {
 		exitOnError("No dsk set.", "")
 	}
 	if *format {
-		cmdRunned = true
+		cmdRan = true
 		isError, msg, hint := formatDsk(*dskPath, *sector, *track, *heads, 0, *vendorFormat, *dataFormat)
 
 		if isError {
@@ -229,7 +233,7 @@ func main() {
 			exitOnError(msg, hint)
 		}
 		if *list {
-			cmdRunned = true
+			cmdRan = true
 			isError, msg, hint := listDsk(d, *dskPath)
 			if isError {
 				exitOnError(msg, hint)
@@ -237,7 +241,7 @@ func main() {
 		}
 
 		if *analyse {
-			cmdRunned = true
+			cmdRan = true
 			isError, msg, hint := analyseDsk(d, *dskPath)
 			if isError {
 				exitOnError(msg, hint)
@@ -245,23 +249,23 @@ func main() {
 		}
 
 		if *info {
-			cmdRunned = true
+			cmdRan = true
 			isError, msg, hint := fileinfoDsk(d, *fileInDsk)
 			if isError {
 				exitOnError(msg, hint)
 			}
 		}
 
-		if *hexa {
-			cmdRunned = true
+		if *hex {
+			cmdRan = true
 			isError, msg, hint := hexaFileDsk(d, *fileInDsk)
 			if isError {
 				exitOnError(msg, hint)
 			}
 		}
 
-		if *desassemble {
-			cmdRunned = true
+		if *disassemble {
+			cmdRan = true
 			isError, msg, hint := desassembleFileDsk(d, *fileInDsk)
 			if isError {
 				exitOnError(msg, hint)
@@ -269,7 +273,7 @@ func main() {
 		}
 
 		if *ascii {
-			cmdRunned = true
+			cmdRan = true
 			isError, msg, hint := asciiFileDsk(d, *fileInDsk)
 			if isError {
 				exitOnError(msg, hint)
@@ -277,7 +281,7 @@ func main() {
 		}
 
 		if *basic {
-			cmdRunned = true
+			cmdRan = true
 			if *fileInDsk == "" {
 				exitOnError("amsdosfile option is empty, set it.", "dsk -dsk output.dsk -basic -amsdosfile hello.bin")
 			}
@@ -305,23 +309,23 @@ func main() {
 		}
 
 		if *get {
-			cmdRunned = true
+			cmdRan = true
 			isError, msg, hint := getFileDsk(d, *fileInDsk, *dskPath, "")
 			if isError {
 				exitOnError(msg, hint)
 			}
 		}
 
-		if *rawimport {
-			cmdRunned = true
+		if *rawImport {
+			cmdRan = true
 			isError, msg, hint := rawImportDsk(d, *fileInDsk, *dskPath, *track, *sector)
 			if isError {
 				exitOnError(msg, hint)
 			}
 		}
 
-		if *rawexport {
-			cmdRunned = true
+		if *rawExport {
+			cmdRan = true
 			isError, msg, hint := rawExportDsk(d, *fileInDsk, *dskPath, *track, *sector, *size)
 			if isError {
 				exitOnError(msg, hint)
@@ -329,7 +333,7 @@ func main() {
 		}
 
 		if *put {
-			cmdRunned = true
+			cmdRan = true
 			isError, msg, hint := putFileDsk(d, *fileInDsk, *dskPath, *fileType, loadAddress, execAddress, uint16(*user))
 			if isError {
 				exitOnError(msg, hint)
@@ -337,7 +341,7 @@ func main() {
 		}
 
 		if *remove {
-			cmdRunned = true
+			cmdRan = true
 			isError, msg, hint := removeFileDsk(d, *dskPath, *fileInDsk)
 			if isError {
 				exitOnError(msg, hint)
@@ -360,7 +364,7 @@ func main() {
 		}
 
 		if *basic {
-			cmdRunned = true
+			cmdRan = true
 			isAmsdos, _ := dsk.CheckAmsdos(content)
 			// remove amsdos header
 			if isAmsdos {
@@ -370,8 +374,8 @@ func main() {
 			fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", *fileInDsk, len(content))
 			fmt.Fprintf(os.Stdout, "%s", dsk.Basic(content, uint16(len(content)), true))
 		}
-		if *desassemble {
-			cmdRunned = true
+		if *disassemble {
+			cmdRan = true
 			var address uint16
 			isAmsdos, header := dsk.CheckAmsdos(content)
 			if isAmsdos {
@@ -380,8 +384,8 @@ func main() {
 			}
 			fmt.Println(dsk.Desass(content, uint16(len(content)), address))
 		}
-		if *hexa {
-			cmdRunned = true
+		if *hex {
+			cmdRan = true
 			isAmsdos, _ := dsk.CheckAmsdos(content)
 			// remove amsdos header
 			if isAmsdos {
@@ -390,7 +394,7 @@ func main() {
 			fmt.Println(dsk.DisplayHex(content, 16))
 		}
 		if *info {
-			cmdRunned = true
+			cmdRan = true
 			isAmsdos, header := dsk.CheckAmsdos(content)
 			if !isAmsdos {
 				exitOnError(fmt.Sprintf("File (%s) does not contain amsdos header.\n", *fileInDsk), "may be a ascii file")
@@ -422,7 +426,7 @@ func main() {
 			if isAmsdos {
 				exitOnError("The file already contains an amsdos header", "Check your file")
 			}
-			filename := dsk.GetNomAmsdos(*fileInDsk)
+			filename := dsk.GetAmsDosName(*fileInDsk)
 			header.Size = uint16(len(content))
 			header.Size2 = uint16(len(content))
 			copy(header.Filename[:], []byte(filename[0:12]))
@@ -467,7 +471,7 @@ func main() {
 		}
 	}
 
-	if !cmdRunned {
+	if !cmdRan {
 		sampleUsage()
 	}
 
@@ -504,7 +508,7 @@ func exitOnError(errorMessage, hint string) {
 	os.Exit(-1)
 }
 
-func formatDsk(dskPath string, sector, track, heads, extendedDskType int, vendorFormat bool, dataFormat bool) (onError bool, message, hint string) {
+func formatDsk(dskPath string, sector, track, heads int, extendedDskType dsk.DskFileType, vendorFormat bool, dataFormat bool) (onError bool, message, hint string) {
 	_, err := os.Stat(dskPath)
 	if err == nil {
 		if !*force {
@@ -563,7 +567,7 @@ func listDsk(d dsk.DSK, dskPath string) (onError bool, message, hint string) {
 	for _, i := range d.GetFilesIndices() {
 		size := fmt.Sprintf("%.3d ko", d.GetFilesize(d.Catalogue[i]))
 		totalUsed += d.GetFilesize(d.Catalogue[i])
-		filename := fmt.Sprintf("%s.%s", d.Catalogue[i].Nom, d.Catalogue[i].Ext)
+		filename := fmt.Sprintf("%s.%s", d.Catalogue[i].Name, d.Catalogue[i].Ext)
 		fmt.Fprintf(os.Stderr, "[%.2d] : %s : %d %s\n", i, filename, int(d.Catalogue[i].User), size)
 	}
 	fmt.Fprintf(os.Stderr, "Dsk %.3d Ko used\n", totalUsed)
@@ -679,13 +683,13 @@ func putFileDsk(d dsk.DSK, fileInDsk, dskPath string, fileType string, loadAddre
 		switch fileType {
 		case "ascii":
 			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", execAddress, loadAddress)
-			if err := d.PutFile(fileInDsk, dsk.MODE_ASCII, 0, 0, user, false, false); err != nil {
+			if err := d.PutFile(fileInDsk, dsk.SaveModeAscii, 0, 0, user, false, false); err != nil {
 				return true, fmt.Sprintf("Error while inserted file (%s) in dsk (%s) error :%v\n", fileInDsk, dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
 			}
 			resumeAction(dskPath, "put ascii", fileInDsk, informations)
 		case "binary":
 			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", execAddress, loadAddress)
-			if err := d.PutFile(fileInDsk, dsk.MODE_BINAIRE, loadAddress, execAddress, user, false, false); err != nil {
+			if err := d.PutFile(fileInDsk, dsk.SaveModeBinary, loadAddress, execAddress, user, false, false); err != nil {
 				return true, fmt.Sprintf("Error while inserted file (%s) in dsk (%s) error :%v\n", fileInDsk, dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
 			}
 			resumeAction(dskPath, "put binary", fileInDsk, informations)
@@ -716,9 +720,9 @@ func getFileDsk(d dsk.DSK, fileInDsk, dskPath, directory string) (onError bool, 
 		}
 		var lastFilename string
 		for indice, v := range d.Catalogue {
-			if v.User != dsk.USER_DELETED && v.NbPages != 0 {
+			if v.User != dsk.USER_DELETED && v.PageCount != 0 {
 				var nom, ext string
-				nom = dsk.ToAscii(v.Nom[:])
+				nom = dsk.ToAscii(v.Name[:])
 				ext = dsk.ToAscii(v.Ext[:])
 				filename := fmt.Sprintf("%s.%s", nom, ext)
 				if lastFilename == filename {
@@ -784,7 +788,7 @@ func removeFileDsk(d dsk.DSK, dskPath, fileInDsk string) (onError bool, message,
 		fmt.Fprintf(os.Stderr, "Error while removing file %s (indice:%d) error :%v\n", fileInDsk, indice, err)
 	} else {
 		fmt.Fprintf(os.Stderr, "File (%.8s.%.3s) deleted in dsk (%s)\n",
-			amsdosFile.Nom,
+			amsdosFile.Name,
 			amsdosFile.Ext,
 			dskPath)
 		f, err := os.Create(dskPath)
@@ -819,7 +823,7 @@ func asciiFileDsk(d dsk.DSK, fileInDsk string) (onError bool, message, hint stri
 
 func desassembleFileDsk(d dsk.DSK, fileInDsk string) (onError bool, message, hint string) {
 	if fileInDsk == "" {
-		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -desassemble -amsdosfile hello.bin"
+		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -disassemble -amsdosfile hello.bin"
 	}
 	amsdosFile := dsk.GetNomDir(fileInDsk)
 	indice := d.FileExists(amsdosFile)
@@ -897,7 +901,7 @@ func rawImportDataInDsk(d dsk.DSK, fileInDsk, dskPath string, track, sector int,
 
 func rawImportDsk(d dsk.DSK, fileInDsk, dskPath string, track, sector int) (onError bool, message, hint string) {
 	if fileInDsk == "" {
-		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put -amsdosfile hello.bin -rawimport -track 1 -sector 0"
+		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put -amsdosfile hello.bin -rawImport -track 1 -sector 0"
 	}
 
 	fr, err := os.Open(fileInDsk)
@@ -922,7 +926,7 @@ func rawImportDsk(d dsk.DSK, fileInDsk, dskPath string, track, sector int) (onEr
 
 func rawExportDsk(d dsk.DSK, fileInDsk, dskPath string, track, sector, size int) (onError bool, message, hint string) {
 	if fileInDsk == "" {
-		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put -amsdosfile hello.bin -rawimport -track 1 -sector 0"
+		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put -amsdosfile hello.bin -rawImport -track 1 -sector 0"
 	}
 
 	if track == 39 {
@@ -1195,13 +1199,14 @@ func resetArguments() {
 	*heads = 1
 	*sector = 9
 	*format = false
-	*dskType = 0
+	*cliDskType = 0
+	*dskType = dsk.DskFileType(*cliDskType)
 	*dskPath = ""
 	*fileInDsk = ""
-	*hexa = false
+	*hex = false
 	*info = false
 	*ascii = false
-	*desassemble = false
+	*disassemble = false
 	*get = false
 	*remove = false
 	*basic = false
@@ -1218,8 +1223,8 @@ func resetArguments() {
 	*addHeader = false
 	*vendorFormat = false
 	*dataFormat = true
-	*rawimport = false
-	*rawexport = false
+	*rawImport = false
+	*rawExport = false
 	*size = 0
 	*autotest = false
 }
@@ -1423,7 +1428,7 @@ func asciiFileBinaryDataTest(filePath, dskFilepath string) bool {
 }
 
 func desassembleFileBinaryDataTest(filePath, dskFilepath string) bool {
-	*desassemble = true
+	*disassemble = true
 	d, onError, _, _ := openDsk(dskFilepath)
 	if onError {
 		return onError
@@ -1433,7 +1438,7 @@ func desassembleFileBinaryDataTest(filePath, dskFilepath string) bool {
 }
 
 func hexaFileBinaryDataTest(filePath, dskFilepath string) bool {
-	*hexa = true
+	*hex = true
 	d, onError, _, _ := openDsk(dskFilepath)
 	if onError {
 		return onError
@@ -1443,7 +1448,7 @@ func hexaFileBinaryDataTest(filePath, dskFilepath string) bool {
 }
 
 func rawImportFileBinaryDataTest(filePath, dskFilepath string) bool {
-	*rawimport = true
+	*rawImport = true
 	sector := 0
 	track := 1
 	d, onError, _, _ := openDsk(dskFilepath)
@@ -1455,7 +1460,7 @@ func rawImportFileBinaryDataTest(filePath, dskFilepath string) bool {
 }
 
 func rawExportFileBinaryDataTest(filePath, dskFilepath string, length int) bool {
-	*rawexport = true
+	*rawExport = true
 	sector := 0
 	track := 1
 	d, onError, _, _ := openDsk(dskFilepath)
