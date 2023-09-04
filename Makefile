@@ -1,7 +1,10 @@
-CC=go
+.DEFAULT_GOAL:=build
+.PHONY: build init clean compile deps get-linter get-vulncheck lint vulncheck test
+
+GO=go
 RM=rm
 MV=mv
-
+MODULE=$(awk '/^module / {print $2}' go.mod)
 
 SOURCEDIR=./cli
 SOURCES := $(shell find $(SOURCEDIR) -name '*.go')
@@ -16,9 +19,6 @@ ifeq ($(suffix),rc)
 else
 	appversion=$(VERSION)
 endif
-
-.DEFAULT_GOAL:=build
-
 
 build: clean init
 	@echo "Update packages"
@@ -44,7 +44,7 @@ clean:
 	rm -fr ${BINARIES}/
 
 compile:
-	GOOS=${OS} GOARCH=${ARCH} ${CC} build ${LDFLAGS} -o ${BINARIES}/dsk-${OS}-${ARCH}${EXT} $(SOURCEDIR)/main.go
+	GOOS=${OS} GOARCH=${ARCH} ${GO} build ${LDFLAGS} -o ${BINARIES}/dsk-${OS}-${ARCH}${EXT} $(SOURCEDIR)/main.go
 	zip ${BINARIES}/dsk-$(appversion)-${OS}-${ARCH}.zip ${BINARIES}/dsk-${OS}-${ARCH}${EXT}
 
 deps: get-linter get-vulncheck
@@ -61,8 +61,7 @@ lint:
 	golangci-lint run --timeout 5m ./...
 
 vulncheck:
-	govulncheck ./...
-
+	govulncheck $(MODULE)
 
 test:
-	${CC} test ./... -cover
+	${GO} test ./... -cover

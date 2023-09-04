@@ -7,7 +7,7 @@ import (
 	"flag"
 	"fmt"
 	"io"
-	"io/ioutil"
+	"io/fs"
 	"math/rand"
 	"os"
 	"path"
@@ -74,7 +74,7 @@ func main() {
 	}
 
 	if *autoextract != "" {
-		files, err := ioutil.ReadDir(*autoextract)
+		files, err := fs.ReadDir(os.DirFS("/"), *autoextract)
 		if err != nil {
 			exitOnError(err.Error(), "Please check your folder path")
 		}
@@ -905,7 +905,7 @@ func rawImportDsk(d dsk.DSK, fileInDsk, dskPath string, track, sector int) (onEr
 		return true, fmt.Sprintf("Cannot open file %s error :%v\n", fileInDsk, err), "Check your file path"
 	}
 	defer fr.Close()
-	buf, err := ioutil.ReadAll(fr)
+	buf, err := io.ReadAll(fr)
 	if err != nil {
 		if err != nil {
 			return true, fmt.Sprintf("Cannot read file %s error :%v\n", fileInDsk, err), "Check your file path"
