@@ -309,7 +309,7 @@ func (d *DSK) Read(r io.Reader) error {
 	if string(mv) != "MV -" && string(extended) != "EXTENDED CPC DSK" {
 		return ErrorUnsupportedDskFormat
 	}
-	if string(extended) == "EXTENDED CPC DSK" {
+	if strings.Contains(string(extended), "EXTENDED CPC DSK") {
 		d.Extended = true
 		d.TrackSizeTable = make([]byte, d.Entry.NbHeads*(d.Entry.NbTracks))
 	} else {
@@ -554,8 +554,10 @@ func (d *DSK) CheckDsk() error {
 				fmt.Fprintf(os.Stderr, "Warning : strange sector numbering in track %d! (maxSect:%X,minSect:%X)\n", track, maxSect, minSect)
 			}
 		}
-		if minSect != minSectFirst {
-			fmt.Fprintf(os.Stderr, "Warning : track %d start at sector %d while track 0 starts at %d\n", track, minSect, minSectFirst)
+		if !d.Extended {
+			if minSect != minSectFirst {
+				fmt.Fprintf(os.Stderr, "Warning : track %d start at sector %d while track 0 starts at %d\n", track, minSect, minSectFirst)
+			}
 		}
 	}
 	return nil
