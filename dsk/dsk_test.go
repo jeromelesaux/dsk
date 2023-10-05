@@ -6,19 +6,19 @@ import (
 
 func TestOpenDsk(t *testing.T) {
 	formated := FormatDsk(9, 40, 1, DataFormat, 0)
-	if err := WriteDsk("test.dsk", formated); err != nil {
+	if err := WriteDsk("../testdata/test.dsk", formated); err != nil {
 		t.Fatalf("error :%v", err)
 	}
-	t.Logf("(%s)=(%s)\n", "/opt/data/sonic-pa.bas", GetNomAmsdos("/opt/data/sonic-pa.bas"))
-	if err := formated.PutFile("ironman.scr", MODE_BINAIRE, 0, 0, 0, false, false); err != nil {
+	t.Logf("(%s)=(%s)\n", "../testdata/sonic-pa.bas", GetNomAmsdos("../testdata/sonic-pa.bas"))
+	if err := formated.PutFile("../testdata/ironman.scr", MODE_BINAIRE, 0, 0, 0, false, false); err != nil {
 		t.Fatalf("Error:%v", err)
 	}
-	err := WriteDsk("test.dsk", formated)
+	err := WriteDsk("../testdata/test.dsk", formated)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	dsk, err := ReadDsk("ironman.dsk")
+	dsk, err := ReadDsk("../testdata/ironman.dsk")
 	if err != nil {
 		t.Fatalf("error %v", err)
 	}

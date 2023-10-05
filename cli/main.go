@@ -15,7 +15,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jeromelesaux/dsk"
+	"github.com/jeromelesaux/dsk/amsdos"
+	"github.com/jeromelesaux/dsk/dsk"
+	"github.com/jeromelesaux/dsk/sna"
+	"github.com/jeromelesaux/dsk/utils"
 )
 
 var (
@@ -128,7 +131,7 @@ func main() {
 		}
 		if *hexa {
 			cmdRunned = true
-			sna, err := dsk.ReadSna(*snaPath)
+			sna, err := sna.ReadSna(*snaPath)
 			if err != nil {
 				exitOnError(err.Error(), "Check your sna path")
 			}
@@ -139,12 +142,12 @@ func main() {
 		if *put {
 			cmdRunned = true
 			if *fileInDsk != "" {
-				cpcTYPE := dsk.CPCType(*cpcType)
-				crtc := dsk.UM6845R
+				cpcTYPE := sna.CPCType(*cpcType)
+				crtc := sna.UM6845R
 				if *cpcType > 3 {
-					crtc = dsk.ASIC_6845
+					crtc = sna.ASIC_6845
 				}
-				if err := dsk.ImportInSna(*fileInDsk, *snaPath, execAddress, uint8(*screenMode), cpcTYPE, crtc, *snaVersion); err != nil {
+				if err := sna.ImportInSna(*fileInDsk, *snaPath, execAddress, uint8(*screenMode), cpcTYPE, crtc, *snaVersion); err != nil {
 					fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
 						*fileInDsk,
 						*snaPath,
@@ -159,7 +162,7 @@ func main() {
 		if *get {
 			cmdRunned = true
 			if *fileInDsk != "" {
-				content, err := dsk.ExportFromSna(*snaPath)
+				content, err := sna.ExportFromSna(*snaPath)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
 						*fileInDsk,
@@ -187,7 +190,7 @@ func main() {
 				os.Exit(0)
 			} else {
 				if *dskPath != "" {
-					content, err := dsk.ExportFromSna(*snaPath)
+					content, err := sna.ExportFromSna(*snaPath)
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
 							*fileInDsk,
@@ -291,12 +294,12 @@ func main() {
 					fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 				}
 
-				hasAmsdos, _ := dsk.CheckAmsdos(content)
+				hasAmsdos, _ := amsdos.CheckAmsdos(content)
 				if hasAmsdos {
 
 					body, filesize, _ := d.ViewFile(indice)
 					fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", *fileInDsk, filesize)
-					fmt.Fprintf(os.Stdout, "%s", dsk.Basic(body, uint16(filesize), true))
+					fmt.Fprintf(os.Stdout, "%s", utils.Basic(body, uint16(filesize), true))
 				} else {
 					fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", *fileInDsk, len(content))
 					fmt.Fprintf(os.Stdout, "%s", content)
@@ -361,28 +364,28 @@ func main() {
 
 		if *basic {
 			cmdRunned = true
-			isAmsdos, _ := dsk.CheckAmsdos(content)
+			isAmsdos, _ := amsdos.CheckAmsdos(content)
 			// remove amsdos header
 			if isAmsdos {
 				content = content[dsk.HeaderSize:]
 			}
 
 			fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", *fileInDsk, len(content))
-			fmt.Fprintf(os.Stdout, "%s", dsk.Basic(content, uint16(len(content)), true))
+			fmt.Fprintf(os.Stdout, "%s", utils.Basic(content, uint16(len(content)), true))
 		}
 		if *desassemble {
 			cmdRunned = true
 			var address uint16
-			isAmsdos, header := dsk.CheckAmsdos(content)
+			isAmsdos, header := amsdos.CheckAmsdos(content)
 			if isAmsdos {
 				address = header.Address
 				content = content[dsk.HeaderSize:]
 			}
-			fmt.Println(dsk.Desass(content, uint16(len(content)), address))
+			fmt.Println(utils.Desass(content, uint16(len(content)), address))
 		}
 		if *hexa {
 			cmdRunned = true
-			isAmsdos, _ := dsk.CheckAmsdos(content)
+			isAmsdos, _ := amsdos.CheckAmsdos(content)
 			// remove amsdos header
 			if isAmsdos {
 				content = content[dsk.HeaderSize:]
@@ -391,7 +394,7 @@ func main() {
 		}
 		if *info {
 			cmdRunned = true
-			isAmsdos, header := dsk.CheckAmsdos(content)
+			isAmsdos, header := amsdos.CheckAmsdos(content)
 			if !isAmsdos {
 				exitOnError(fmt.Sprintf("File (%s) does not contain amsdos header.\n", *fileInDsk), "may be a ascii file")
 			}
@@ -418,7 +421,7 @@ func main() {
 			}
 
 			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", execAddress, loadAddress)
-			isAmsdos, header := dsk.CheckAmsdos(content)
+			isAmsdos, header := amsdos.CheckAmsdos(content)
 			if isAmsdos {
 				exitOnError("The file already contains an amsdos header", "Check your file")
 			}
@@ -532,7 +535,7 @@ func formatDsk(dskPath string, sector, track, heads, extendedDskType int, vendor
 }
 
 func formatSna(snaPath string, snaVersion int) (onError bool, message, hint string) {
-	if _, err := dsk.CreateSna(snaPath, snaVersion); err != nil {
+	if _, err := sna.CreateSna(snaPath, snaVersion); err != nil {
 		return true, fmt.Sprintf("Cannot create Sna file (%s) error : %v\n", snaPath, err), ""
 	}
 	fmt.Fprintf(os.Stderr, "Sna file (%s) created.\n", snaPath)
@@ -545,7 +548,7 @@ func infoSna(snaPath string) (onError bool, message, hint string) {
 		exitOnError(fmt.Sprintf("Error while read sna file (%s) error %v", snaPath, err), "Check your sna file")
 	}
 	defer f.Close()
-	sna := &dsk.SNA{}
+	sna := &sna.SNA{}
 	if err := sna.Read(f); err != nil {
 		return true, fmt.Sprintf("Error while reading sna file (%s) error %v", snaPath, err), "Check your sna file"
 	}
@@ -600,7 +603,7 @@ func fileinfoDsk(d dsk.DSK, fileInDsk string) (onError bool, message, hint strin
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 		}
-		isAmsdos, header := dsk.CheckAmsdos(content)
+		isAmsdos, header := amsdos.CheckAmsdos(content)
 		if !isAmsdos {
 			return true, fmt.Sprintf("File (%s) does not contain amsdos header.\n", fileInDsk), "add address of execution and loading like : dsk -dsk output.dsk -put -amsdosfile hello.bin -exec \"#1000\" -load 500"
 		}
@@ -835,13 +838,13 @@ func desassembleFileDsk(d dsk.DSK, fileInDsk string) (onError bool, message, hin
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 		} else {
-			isAmsdos, header := dsk.CheckAmsdos(raw)
+			isAmsdos, header := amsdos.CheckAmsdos(raw)
 			if isAmsdos {
 				address = header.Exec
 			}
 		}
 
-		fmt.Println(dsk.Desass(content[0:filesize], uint16(filesize), address))
+		fmt.Println(utils.Desass(content[0:filesize], uint16(filesize), address))
 	}
 	return false, "", ""
 }

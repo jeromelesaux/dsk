@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/jeromelesaux/dsk/amsdos"
 	"github.com/jeromelesaux/m4client/cpc"
 )
 
@@ -41,8 +42,6 @@ var (
 const HeaderSize = 0x80
 
 type DskFormat = int
-
-type StAmsdos = cpc.CpcHead
 
 type CPCEMUEnt struct {
 	Debut    [0x22]byte // "MV - CPCEMU Disk-File\r\nDisk-Info\r\n"
@@ -696,7 +695,7 @@ func GetNomAmsdos(masque string) string {
 func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddress, userNumber uint16, isSystemFile, readOnly bool) error {
 	buff := make([]byte, 0x20000)
 	cFileName := GetNomAmsdos(masque)
-	header := &StAmsdos{}
+	header := &amsdos.StAmsdos{}
 	var addHeader bool
 	var err error
 
@@ -738,7 +737,7 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddre
 	if !isAmsdos {
 		// Creer une en-tete amsdos par defaut
 		fmt.Fprintf(os.Stderr, "Create header... (%s)\n", masque)
-		header = &StAmsdos{}
+		header = &amsdos.StAmsdos{}
 		header.User = byte(userNumber)
 		header.Size = uint16(fileLength)
 		header.Size2 = uint16(fileLength)
@@ -773,7 +772,7 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddre
 		if isAmsdos {
 			// Supprmier en-tete si elle existe
 			fmt.Fprintf(os.Stderr, "Removing header...(%s)\n", masque)
-			copy(buff[0:], buff[binary.Size(StAmsdos{}):])
+			copy(buff[0:], buff[binary.Size(amsdos.StAmsdos{}):])
 		}
 	case MODE_BINAIRE:
 		//
@@ -1295,7 +1294,7 @@ func (d *DSK) GetInfoDirEntry(numDir uint8) (StDirEntry, error) {
 	return dir, nil
 }
 
-func (d *DSK) GetType(langue int, ams *StAmsdos) string {
+func (d *DSK) GetType(langue int, ams *amsdos.StAmsdos) string {
 	if ams.Checksum == ams.ComputedChecksum16() {
 		switch ams.Type {
 		case 0:
@@ -1358,7 +1357,7 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 			bloc := d.ReadBloc(int(d.Catalogue[i].Blocks[j]))
 			if firstBlock {
 				var header *cpc.CpcHead
-				isAmsdos, header = CheckAmsdos(bloc)
+				isAmsdos, header = amsdos.CheckAmsdos(bloc)
 				if isAmsdos {
 					tailleFichier = int(header.Size) + 0x80
 				}
@@ -1423,7 +1422,7 @@ func (d *DSK) ViewFile(indice int) ([]byte, int, error) {
 			tailleBloc := 1024
 			bloc := d.ReadBloc(int(d.Catalogue[i].Blocks[j]))
 			if firstBlock {
-				isAmsdos, header := CheckAmsdos(bloc)
+				isAmsdos, header := amsdos.CheckAmsdos(bloc)
 				if isAmsdos {
 					t := make([]byte, len(bloc))
 					copy(t, bloc[HeaderSize:])
@@ -1464,18 +1463,6 @@ func (d *DSK) ViewFile(indice int) ([]byte, int, error) {
 		}
 	}
 	return b, tailleFichier, nil
-}
-
-func CheckAmsdos(buf []byte) (bool, *StAmsdos) {
-	header := &StAmsdos{}
-	rbuff := bytes.NewReader(buf)
-	if err := binary.Read(rbuff, binary.LittleEndian, header); err != nil {
-		return false, &StAmsdos{}
-	}
-	if header.Checksum == header.ComputedChecksum16() {
-		return true, header
-	}
-	return false, &StAmsdos{}
 }
 
 func (d *DSK) RemoveFile(indice uint8) error {
