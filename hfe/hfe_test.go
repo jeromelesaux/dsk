@@ -1,6 +1,7 @@
 package hfe_test
 
 import (
+	"fmt"
 	"os"
 	"testing"
 
@@ -26,6 +27,8 @@ func TestReadHfe(t *testing.T) {
 		h, err := hfe.Read(f)
 		assert.NoError(t, err)
 		assert.NotEmpty(t, h)
+		assert.Equal(t, hfe.CPC_DD_FLOPPYMODE, h.Header.FloppyInterfaceMode)
+		fmt.Printf("format:%v\n", hfe.String(h.Header.FloppyInterfaceMode))
 	})
 
 }

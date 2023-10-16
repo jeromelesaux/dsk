@@ -7,7 +7,8 @@ import (
 )
 
 var (
-	NoHFEFormatFound = errors.New("no hfe format found")
+	NoHFEFormatFound       = errors.New("no hfe format found")
+	HFERevisionUnsupported = errors.New("hfe revision format no supported")
 )
 
 type PicFileFormatHeader struct {
@@ -50,6 +51,26 @@ const (
 	S950_HD_FLOPPYMODE             FloppyInterfaceMode = 0x0D
 	DISABLE_FLOPPYMODE             FloppyInterfaceMode = 0xFE
 )
+
+var floppyInterfaceModes map[FloppyInterfaceMode]string = map[FloppyInterfaceMode]string{
+	IBMPC_DD_FLOPPYMODE:            "IBMPC_DD_FLOPPYMODE",
+	IBMPC_HD_FLOPPYMODE:            "IBMPC_HD_FLOPPYMODE",
+	ATARIST_DD_FLOPPYMODE:          "ATARIST_DD_FLOPPYMODE",
+	ATARIST_HD_FLOPPYMODE:          "ATARIST_HD_FLOPPYMODE",
+	CPC_DD_FLOPPYMODE:              "CPC_DD_FLOPPYMODE",
+	GENERIC_SHUGGART_DD_FLOPPYMODE: "GENERIC_SHUGGART_DD_FLOPPYMODE",
+	IBMPC_ED_FLOPPYMODE:            "IBMPC_ED_FLOPPYMODE",
+	MSX2_DD_FLOPPYMODE:             "MSX2_DD_FLOPPYMODE",
+	C64_DD_FLOPPYMODE:              "C64_DD_FLOPPYMODE",
+	EMU_SHUGART_FLOPPYMODE:         "EMU_SHUGART_FLOPPYMODE",
+	S950_DD_FLOPPYMODE:             "S950_DD_FLOPPYMODE",
+	S950_HD_FLOPPYMODE:             "S950_HD_FLOPPYMODE",
+	DISABLE_FLOPPYMODE:             "DISABLE_FLOPPYMODE",
+}
+
+func String(f FloppyInterfaceMode) string {
+	return floppyInterfaceModes[f]
+}
 
 type TrackEncoding = uint8
 
@@ -99,6 +120,13 @@ func ReadHeader(r io.Reader) (PicFileFormatHeader, error) {
 		return PicFileFormatHeader{}, NoHFEFormatFound
 	}
 
+	if h.FormatRevision > 3 {
+		return PicFileFormatHeader{}, HFERevisionUnsupported
+	}
+
+	if h.NbSide < 1 || h.NbSide > 2 || h.NbTracks == 0 || h.BitRate == 0 {
+		return PicFileFormatHeader{}, HFERevisionUnsupported
+	}
 	return h, nil
 }
 
