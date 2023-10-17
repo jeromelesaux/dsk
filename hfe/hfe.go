@@ -1,6 +1,7 @@
 package hfe
 
 import (
+	"bytes"
 	"encoding/binary"
 	"errors"
 	"io"
@@ -12,22 +13,22 @@ var (
 )
 
 type PicFileFormatHeader struct {
-	HeaderSignature     [8]uint8
-	FormatRevision      uint8
-	NbTracks            uint8
-	NbSide              uint8
-	TrackEncoding       uint8
-	BitRate             uint16
-	FloppyRPM           uint16
-	FloppyInterfaceMode FloppyInterfaceMode
-	DNU                 uint8
-	TrackListOffset     uint16
-	WriteAllowed        uint8
-	SingleStep          uint8
-	Track0s0Altencoding TrackEncoding
-	Track0s0Encoding    TrackEncoding
-	Track0s1Altencoding TrackEncoding
-	Track0s1Encoding    TrackEncoding
+	HeaderSignature     [8]uint8            // 8
+	FormatRevision      uint8               // 9
+	NbTracks            uint8               // 10
+	NbSide              uint8               // 11
+	TrackEncoding       uint8               // 12
+	BitRate             uint16              // 14
+	FloppyRPM           uint16              // 16
+	FloppyInterfaceMode FloppyInterfaceMode // 17
+	DNU                 uint8               // 18
+	TrackListOffset     uint16              // 20
+	WriteAllowed        uint8               // 21
+	SingleStep          uint8               // 22
+	Track0s0Altencoding TrackEncoding       // 23
+	Track0s0Encoding    TrackEncoding       // 24
+	Track0s1Altencoding TrackEncoding       // 25
+	Track0s1Encoding    TrackEncoding       // 26
 }
 
 const Signature = "HXCPICFE"
@@ -109,9 +110,18 @@ type FloppyBit struct {
 	next     *FloppyBit
 }
 
-func ReadHeader(r io.Reader) (PicFileFormatHeader, error) {
+type Reader interface {
+	Seek(offset int64, whence int) (int64, error)
+	Read(p []byte) (n int, err error)
+}
+
+func ReadHeader(r Reader) (PicFileFormatHeader, error) {
+	_, err := r.Seek(0, io.SeekStart)
+	if err != nil {
+		return PicFileFormatHeader{}, err
+	}
 	h := PicFileFormatHeader{}
-	err := binary.Read(r, binary.LittleEndian, &h)
+	err = binary.Read(r, binary.LittleEndian, &h)
 	if err != nil {
 		return PicFileFormatHeader{}, err
 	}
@@ -132,17 +142,36 @@ func ReadHeader(r io.Reader) (PicFileFormatHeader, error) {
 
 func Read(r io.Reader) (HFE, error) {
 	h := HFE{}
-	var err error
-	h.Header, err = ReadHeader(r)
+
+	content, err := io.ReadAll(r)
 	if err != nil {
 		return HFE{}, err
 	}
+
+	h.Size = uint(len(content))
+
+	rb := bytes.NewReader(content)
+	h.Header, err = ReadHeader(rb)
+	if err != nil {
+		return HFE{}, err
+	}
+
+	_, err = rb.Seek(512, io.SeekStart)
+	if err != nil {
+		return HFE{}, err
+	}
+
 	h.Tracks = make([]PicTrack, h.Header.NbTracks)
 	for i := 0; i < int(h.Header.NbTracks); i++ {
-		err := binary.Read(r, binary.LittleEndian, &h.Tracks[i])
+		err := binary.Read(rb, binary.LittleEndian, &h.Tracks[i])
 		if err != nil {
 			return HFE{}, err
 		}
+		h.Tracks[i].Offset *= 512
 	}
 	return h, nil
+}
+
+func (h HFE) ReadTrack(tr int, r io.Reader) {
+
 }
