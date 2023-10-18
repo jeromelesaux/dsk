@@ -91,6 +91,7 @@ type PicTrack struct {
 type HFE struct {
 	Header PicFileFormatHeader
 	Tracks []PicTrack
+	Data   [][]byte
 	Size   uint
 }
 
@@ -162,6 +163,7 @@ func Read(r io.Reader) (HFE, error) {
 	}
 
 	h.Tracks = make([]PicTrack, h.Header.NbTracks)
+	h.Data = make([][]byte, h.Header.NbTracks)
 	for i := 0; i < int(h.Header.NbTracks); i++ {
 		err := binary.Read(rb, binary.LittleEndian, &h.Tracks[i])
 		if err != nil {
@@ -169,9 +171,24 @@ func Read(r io.Reader) (HFE, error) {
 		}
 		h.Tracks[i].Offset *= 512
 	}
+	for i := 0; i < int(h.Header.NbTracks); i++ {
+		h.Data[i], err = h.ReadTrack(h.Tracks[i], rb)
+		if err != nil {
+			return HFE{}, err
+		}
+	}
 	return h, nil
 }
 
-func (h HFE) ReadTrack(tr int, r io.Reader) {
-
+func (h HFE) ReadTrack(pt PicTrack, r Reader) ([]byte, error) {
+	_, err := r.Seek(int64(pt.Offset), io.SeekStart)
+	if err != nil {
+		return []byte{}, err
+	}
+	data := make([]byte, pt.TrackLen)
+	err = binary.Read(r, binary.LittleEndian, &data)
+	if err != nil {
+		return []byte{}, err
+	}
+	return data, nil
 }
