@@ -758,9 +758,7 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddre
 		if exeAddress != 0 || loadAddress != 0 {
 			typeModeImport = MODE_BINAIRE
 		}
-		if typeModeImport == MODE_BINAIRE && exeAddress != 0 {
-			header.Type = 1
-		}
+		header.Type = typeModeImport
 
 		// Il faut recalculer le checksum en comptant es adresses !
 		header.Checksum = header.ComputedChecksum16()
