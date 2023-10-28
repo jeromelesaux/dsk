@@ -32,7 +32,8 @@ var (
 
 var (
 	MODE_ASCII        uint8     = 0
-	MODE_BINAIRE      uint8     = 1
+	MODE_PROTECTED    uint8     = 1
+	MODE_BINAIRE      uint8     = 2
 	EXTENDED_DSK_TYPE           = 1
 	DSK_TYPE                    = 0
 	DataFormat        DskFormat = 0
@@ -726,6 +727,10 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddre
 	}
 
 	if typeModeImport == MODE_ASCII && fileLength%128 != 0 {
+		buff[fileLength] = 0x1A
+	}
+
+	if typeModeImport == MODE_PROTECTED && fileLength%128 != 0 {
 		buff[fileLength] = 0x1A
 	}
 

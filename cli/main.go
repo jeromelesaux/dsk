@@ -43,7 +43,7 @@ var (
 	loadingAddress = flag.String("load", "", "Loading address of the inserted file. (hexadecimal #170 allowed.)")
 	user           = flag.Int("user", 0, "User number of the inserted file.")
 	force          = flag.Bool("force", false, "Force overwriting of the inserted file.")
-	fileType       = flag.String("type", "", "Type of the inserted file \n\tascii : type ascii\n\tbinary : type binary\n")
+	fileType       = flag.String("type", "", "Type of the inserted file \n\tascii : type ascii\n\tprotected : type ascii protected\n\tbinary : type binary\n")
 	snaPath        = flag.String("sna", "", "SNA file to handle")
 	analyse        = flag.Bool("analyze", false, "Returns the DSK header")
 	cpcType        = flag.Int("cpctype", 2, "CPC type (sna import feature): \n\tCPC464 : 0\n\tCPC664: 1\n\tCPC6128 : 2\n\tUnknown : 3\n\tCPCPlus6128 : 4\n\tCPCPlus464 : 5\n\tGX4000 : 6\n\t")
@@ -57,7 +57,7 @@ var (
 	autotest       = flag.Bool("autotest", false, "Executs all tests.")
 	autoextract    = flag.String("autoextract", "", "Extract all DSK contained in the folder path")
 	snaVersion     = flag.Int("snaversion", 1, "Set the sna version (1 or 2 available).")
-	appVersion     = "0.18"
+	appVersion     = "0.19"
 )
 
 func main() {
