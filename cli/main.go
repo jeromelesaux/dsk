@@ -309,7 +309,8 @@ func main() {
 
 		if *get {
 			cmdRunned = true
-			isError, msg, hint := getFileDsk(d, *fileInDsk, *dskPath, "")
+			directory := filepath.Dir(*dskPath)
+			isError, msg, hint := getFileDsk(d, *fileInDsk, *dskPath, directory)
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -734,16 +735,25 @@ func getFileDsk(d dsk.DSK, fileInDsk, dskPath, directory string) (onError bool, 
 					fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 				}
 				filename = strings.ReplaceAll(filename, " ", "")
-				af, err := os.Create(directory + string(filepath.Separator) + filename)
+				var af *os.File
+				filename = strings.ReplaceAll(filename, " ", "")
+				var fPath string
+				if directory == "" {
+					fPath = filename
+					af, err = os.Create(filename)
+				} else {
+					fPath = directory + string(filepath.Separator) + filename
+					af, err = os.Create(fPath)
+				}
 				if err != nil {
 					return true, fmt.Sprintf("Error while creating file (%s) error %v\n", filename, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
 				}
-				defer af.Close()
 				_, err = af.Write(content)
 				if err != nil {
 					return true, fmt.Sprintf("Error while copying content in file (%s) error %v\n", filename, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
 				}
-				informations := fmt.Sprintf("Extract file [%s] Indice in DSK [%d] is saved\n", filename, indice)
+				af.Close()
+				informations := fmt.Sprintf("Extract file [%s] Indice in DSK [%d] is saved\n", fPath, indice)
 				resumeAction(dskPath, "get amsdosfile", fileInDsk, informations)
 			}
 		}
