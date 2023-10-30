@@ -57,7 +57,7 @@ var (
 	autotest       = flag.Bool("autotest", false, "Executs all tests.")
 	autoextract    = flag.String("autoextract", "", "Extract all DSK contained in the folder path")
 	snaVersion     = flag.Int("snaversion", 1, "Set the sna version (1 or 2 available).")
-	appVersion     = "0.20"
+	appVersion     = "0.21"
 )
 
 func main() {
