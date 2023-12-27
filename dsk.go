@@ -13,20 +13,20 @@ import (
 	"github.com/jeromelesaux/m4client/cpc"
 )
 
-var (
+const (
 	USER_DELETED uint8  = 0xE5
 	SECTSIZE     uint16 = 512
 	NOT_FOUND    int    = -1
 )
 
+// 0xE5 in binary is 11100101, which on MFM encoding is 0101010101010101 (0x5555)
 var (
-	ErrorUnsupportedDskFormat    = errors.New("unsupported DSK Format")
-	ErrorUnsupportedMultiHeadDsk = errors.New("multi-side dsk ! Expected 1 head")
-	ErrorBadSectorNumber         = errors.New("dsk has wrong sector number")
-	ErrorCatalogueExceed         = errors.New("catalogue indice exceed")
-	ErrDiskFull                  = errors.New("error no more free blocks available")
-	ErrorNoDirEntry              = errors.New("error no more dir entry available")
-	ErrorFileSizeExceed          = errors.New("filesize exceed")
+	ErrorUnsupportedDskFormat = errors.New("unsupported DSK Format")
+	ErrorBadSectorNumber      = errors.New("dsk has wrong sector number")
+	ErrorCatalogueExceed      = errors.New("catalogue indices exceed")
+	ErrDiskFull               = errors.New("error no more free blocks available")
+	ErrorNoDirEntry           = errors.New("error no more dir entry available")
+	ErrorFileSizeExceed       = errors.New("filesize exceed")
 )
 
 type SaveMode uint8
@@ -55,7 +55,7 @@ const HeaderSize = 0x80
 
 type DskFormat = int
 
-type StAmsdos = cpc.CpcHead
+type AmsDosHeader = cpc.CpcHead
 
 type CPCEMUEnt struct {
 	Header   [0x22]byte // "MV - CPCEMU Disk-File\r\nDisk-Info\r\n"
@@ -294,13 +294,12 @@ type StDirEntry struct {
 }
 
 type DSK struct {
-	Entry           CPCEMUEnt
-	TrackSizeTable  []byte // dsk format  [0xCC]byte
-	Tracks          []CPCEMUTrack
-	BitMap          [256]byte
-	Catalogue       [64]StDirEntry // 64 entries in directory (64*32=2048 bytes)
-	catalogueLoaded bool
-	Extended        bool // extended dsk format flag
+	Entry          CPCEMUEnt
+	TrackSizeTable []byte // dsk format  [0xCC]byte
+	Tracks         []CPCEMUTrack
+	BitMap         [256]byte
+	Catalogue      [64]StDirEntry // 64 entries in directory (64*32=2048 bytes)
+	Extended       bool           // extended dsk format flag
 }
 
 func (d *DSK) CleanBitmap() {
@@ -529,7 +528,7 @@ func ReadDsk(filePath string) (*DSK, error) {
 
 func (d *DSK) CheckDsk() error {
 	// if d.Entry.Heads == 1 {
-	minSectFirst := d.GetMinSect()
+	minSectFirst := d.FirstSectorId()
 	if minSectFirst != 0x41 && minSectFirst != 0xc1 && minSectFirst != 0x01 {
 		fmt.Fprintf(os.Stderr, "Bad sector %.2x\n", minSectFirst)
 		return ErrorBadSectorNumber
@@ -574,8 +573,8 @@ func (d *DSK) CheckDsk() error {
 	//	return ErrorUnsupportedMultiHeadDsk
 }
 
-// GetMinSect finds the lowest sector number of a track
-func (d *DSK) GetMinSect() uint8 {
+// FirstSectorId finds the lowest sector number of a track
+func (d *DSK) FirstSectorId() uint8 {
 	var Sect uint8 = 0xFF
 	var s uint8
 	tr := d.Tracks[0]
@@ -622,7 +621,7 @@ func (d *DSK) GetFile(path string, indice int) error {
 	nomIndice := make([]byte, 16)
 	lMax := 0x1000000
 	cumul := 0
-	err := d.GetCatalogue()
+	err := d.RefreshCatalogue()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error while getting the catalogue, error :%v\n", err)
 	}
@@ -670,7 +669,7 @@ func (d *DSK) GetFile(path string, indice int) error {
 }
 
 func (d *DSK) DskSize() uint16 {
-	err := d.GetCatalogue()
+	err := d.RefreshCatalogue()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error while getting the catalogue, error :%v\n", err)
 	}
@@ -705,11 +704,11 @@ func GetAmsDosName(mask string) string {
 func (d *DSK) PutFile(masque string, typeModeImport SaveMode, loadAddress, exeAddress, userNumber uint16, isSystemFile, readOnly bool) error {
 	buff := make([]byte, 0x20000)
 	cFileName := GetAmsDosName(masque)
-	header := &StAmsdos{}
+	header := &AmsDosHeader{}
 	var addHeader bool
 	var err error
 
-	err = d.GetCatalogue()
+	err = d.RefreshCatalogue()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error while getting the catalogue, error :%v\n", err)
 	}
@@ -747,7 +746,7 @@ func (d *DSK) PutFile(masque string, typeModeImport SaveMode, loadAddress, exeAd
 	if !isAmsdos {
 		// Create a default amsdos header
 		fmt.Fprintf(os.Stderr, "Create header... (%s)\n", masque)
-		header = &StAmsdos{}
+		header = &AmsDosHeader{}
 		header.User = byte(userNumber)
 		header.Size = uint16(fileLength)
 		header.Size2 = uint16(fileLength)
@@ -782,7 +781,7 @@ func (d *DSK) PutFile(masque string, typeModeImport SaveMode, loadAddress, exeAd
 		if isAmsdos {
 			// Remove header if it exists
 			fmt.Fprintf(os.Stderr, "Removing header...(%s)\n", masque)
-			copy(buff[0:], buff[binary.Size(StAmsdos{}):])
+			copy(buff[0:], buff[binary.Size(AmsDosHeader{}):])
 		}
 	case SaveModeBinary:
 		//
@@ -812,9 +811,9 @@ func (d *DSK) PutFile(masque string, typeModeImport SaveMode, loadAddress, exeAd
 			fmt.Fprintf(os.Stdout, "error while writing in content %v\n", err)
 		}
 		buff = rbuff.Bytes()
-		//	memmove( &Buff[ sizeof( StAmsdos ) ], Buff, Lg );
-		//         	memcpy( Buff, e, sizeof( StAmsdos ) );
-		//       	Lg += sizeof( StAmsdos );
+		//	memmove( &Buff[ sizeof( AmsDosHeader ) ], Buff, Lg );
+		//         	memcpy( Buff, e, sizeof( AmsDosHeader ) );
+		//       	Lg += sizeof( AmsDosHeader );
 	}
 	if fileLength > 65536 {
 		return ErrorFileSizeExceed
@@ -829,8 +828,8 @@ func (d *DSK) PutFile(masque string, typeModeImport SaveMode, loadAddress, exeAd
 // check why different from another DSK
 func (d *DSK) CopyFile(bufFile []byte, fileName string, fileLength, maxBloc, userNumber uint16, isSystemFile, readOnly bool) error {
 	var nbPages int
-	d.FillBitmap()
-	dirLoc := d.GetDirEntry(fileName)
+	d.MapDisk()
+	dirLoc := d.NewDirEntry(fileName)
 	var posFile uint16                       // Build the entry to put in the catalog
 	for posFile = 0; posFile < fileLength; { // For each block of the file
 		posDir, err := d.FindFreeDirEntry() // Find first free entry in the catalog
@@ -884,13 +883,14 @@ func (d *DSK) CopyFile(bufFile []byte, fileName string, fileLength, maxBloc, use
 	return nil
 }
 
-func (d *DSK) FillBitmap() int {
+// MapDisk updates the disk bitmap, based on the catalog - returns the number of blocks used
+func (d *DSK) MapDisk() int {
 	for i := 0; i < len(d.BitMap); i++ {
 		d.BitMap[i] = 0
 	}
 	d.BitMap[0] = 1 // The first two blocks are reserved for the catalog
 	d.BitMap[1] = 1
-	var nbKo int
+	var blocksUsed int
 	for i := 0; i < 64; i++ {
 		dir, _ := d.GetInfoDirEntry(uint8(i))
 		if dir.User != USER_DELETED {
@@ -898,15 +898,15 @@ func (d *DSK) FillBitmap() int {
 				b := dir.Blocks[j]
 				if b > 1 && d.BitMap[b] != 1 {
 					d.BitMap[b] = 1
-					nbKo++
+					blocksUsed++
 				}
 			}
 		}
 	}
-	return nbKo
+	return blocksUsed
 }
 
-func (d *DSK) GetDirEntry(fileName string) StDirEntry {
+func (d *DSK) NewDirEntry(fileName string) StDirEntry {
 	e := StDirEntry{}
 	for i := 0; i < 8; i++ {
 		e.Name[i] = ' '
@@ -921,7 +921,7 @@ func (d *DSK) GetDirEntry(fileName string) StDirEntry {
 }
 
 func (d *DSK) CopyRawFile(bufFile []byte, fileLength uint16, track, sector int) (int, int, error) {
-	d.FillBitmap()
+	d.MapDisk()
 
 	var posFile uint16 // Build the entry to put in the catalog
 	var err error
@@ -938,7 +938,7 @@ func (d *DSK) CopyRawFile(bufFile []byte, fileLength uint16, track, sector int) 
 
 func (d *DSK) WriteAtTrackSector(track int, sect int, bufBloc []byte, offset uint16) (int, int, int, error) {
 	var dataWritten int
-	minSect := d.GetMinSect()
+	minSect := d.FirstSectorId()
 	//
 	// Adjusts the number of tracks if capacity is exceeded
 	//
@@ -999,7 +999,7 @@ func (d *DSK) WriteAtTrackSector(track int, sect int, bufBloc []byte, offset uin
 func (d *DSK) WriteBloc(bloc int, bufBloc []byte, offset uint16) error {
 	track := (bloc << 1) / 9
 	sect := (bloc << 1) % 9
-	minSect := d.GetMinSect()
+	minSect := d.FirstSectorId()
 	if minSect == 0x41 {
 		track += 2
 	} else {
@@ -1051,7 +1051,7 @@ func (d *DSK) WriteBloc(bloc int, bufBloc []byte, offset uint16) error {
 }
 
 func (d *DSK) ExtractRawFile(fileLength uint16, track, sector int) (int, int, []byte) {
-	d.FillBitmap()
+	d.MapDisk()
 	content := make([]byte, 0)
 	var posFile uint16 // Build the entry to put in the catalog
 	var buf []byte
@@ -1065,7 +1065,7 @@ func (d *DSK) ExtractRawFile(fileLength uint16, track, sector int) (int, int, []
 }
 
 func (d *DSK) ReadAtTrackSector(track, sect int) (int, int, []byte) {
-	minSect := d.GetMinSect()
+	minSect := d.FirstSectorId()
 	if minSect == 0x41 {
 		track += 2
 	} else {
@@ -1100,7 +1100,7 @@ func (d *DSK) ReadBloc(bloc int) []byte {
 	bufBloc := make([]byte, SECTSIZE*2)
 	track := (bloc << 1) / 9
 	sect := (bloc << 1) % 9
-	minSect := d.GetMinSect()
+	minSect := d.FirstSectorId()
 	if minSect == 0x41 {
 		track += 2
 	} else {
@@ -1147,7 +1147,7 @@ func (d *DSK) FindFreeDirEntry() (uint8, error) {
 }
 
 func (d *DSK) DisplayCatalogue() {
-	err := d.GetCatalogue()
+	err := d.RefreshCatalogue()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error while getting the catalogue error :%v\n", err)
 	}
@@ -1159,15 +1159,15 @@ func (d *DSK) DisplayCatalogue() {
 	}
 }
 
-func (d *DSK) GetEntryyNameInCatalogue(num int) string {
-	err := d.GetCatalogue()
+func (d *DSK) GetCatEntryName(num int) string {
+	err := d.RefreshCatalogue()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error while getting the catalogue error :%v\n", err)
 	}
 	var nom string
 	for i := 0; i < 64; i++ {
 		entry := d.Catalogue[i]
-		if entry.User != USER_DELETED && entry.NumPage != 0 && i == num {
+		if entry.User != USER_DELETED && entry.NumPage == 0 && i == num {
 			nom = fmt.Sprintf("%.8s.%.3s", entry.Name, entry.Ext)
 			//	fmt.Fprintf(os.Stdout,"%s.%s : %d\n",entry.Name,entry.Ext,entry.User )
 			return nom
@@ -1176,14 +1176,14 @@ func (d *DSK) GetEntryyNameInCatalogue(num int) string {
 	return nom
 }
 
-func (d *DSK) GetEntrySizeInCatalogue(num int) string {
-	err := d.GetCatalogue()
+func (d *DSK) GetCatEntrySizeStr(num int) string {
+	err := d.RefreshCatalogue()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error while getting the catalogue error :%v\n", err)
 	}
 	for i := 0; i < 64; i++ {
 		entry := d.Catalogue[i]
-		if entry.User != USER_DELETED && entry.NumPage != 0 && i == num {
+		if entry.User != USER_DELETED && entry.NumPage == 0 && i == num {
 			var p, t int
 			for {
 				if d.Catalogue[p+i].User == entry.User {
@@ -1194,7 +1194,7 @@ func (d *DSK) GetEntrySizeInCatalogue(num int) string {
 					break
 				}
 			}
-			return fmt.Sprintf("%d KiB", (t+7)>>3)
+			return fmt.Sprintf("%d KiB", (t+7)>>3) // (t+7)/8 to round up
 		}
 	}
 	return ""
@@ -1213,7 +1213,7 @@ func (d *DSK) GetFilesize(s StDirEntry) int {
 	return (t + 7) >> 3
 }
 
-func (d *DSK) GetFilesIndices() []int {
+func (d *DSK) GetFileIndices() []int {
 	indices := make([]int, 0)
 	cache := make(map[string]bool)
 	for i := 0; i < 64; i++ {
@@ -1229,10 +1229,7 @@ func (d *DSK) GetFilesIndices() []int {
 	return indices
 }
 
-func (d *DSK) GetCatalogue() error {
-	if d.catalogueLoaded {
-		return nil
-	}
+func (d *DSK) RefreshCatalogue() error {
 	for i := 0; i < 64; i++ {
 		dirEntry, err := d.GetInfoDirEntry(uint8(i))
 		if err != nil {
@@ -1240,12 +1237,11 @@ func (d *DSK) GetCatalogue() error {
 		}
 		d.Catalogue[i] = dirEntry
 	}
-	d.catalogueLoaded = true
 	return nil
 }
 
 func (d *DSK) SetInfoDirEntry(numDir uint8, e StDirEntry) error {
-	minSect := d.GetMinSect()
+	minSect := d.FirstSectorId()
 	s := (numDir >> 4) + minSect
 	var t uint8
 	if minSect == 0x41 {
@@ -1264,8 +1260,6 @@ func (d *DSK) SetInfoDirEntry(numDir uint8, e StDirEntry) error {
 	entry := data.Bytes()
 	for i := 0; i < 16; i++ {
 		pos := d.GetPosData(t, s, true)
-		//	fmt.Fprintf(os.Stdout, "t:%d,s:%d,pos:%d\n", t, s, pos)
-		//	fmt.Fprintf(os.Stdout,"offset:%d\n",((uint16(numDir)&15)<<5) + d.GetPosData(t, s, true))
 		copy(d.Tracks[t].Data[((uint16(numDir)&15)<<5)+pos:((uint16(numDir)&15)<<5)+pos+uint16(binary.Size(entry))], entry[:])
 	}
 	return nil
@@ -1273,7 +1267,7 @@ func (d *DSK) SetInfoDirEntry(numDir uint8, e StDirEntry) error {
 
 func (d *DSK) GetInfoDirEntry(numDir uint8) (StDirEntry, error) {
 	dir := StDirEntry{}
-	minSect := d.GetMinSect()
+	minSect := d.FirstSectorId()
 	s := (numDir >> 4) + minSect
 	var t uint8
 	if minSect == 0x41 {
@@ -1300,7 +1294,7 @@ func (d *DSK) GetInfoDirEntry(numDir uint8) (StDirEntry, error) {
 	return dir, nil
 }
 
-func (d *DSK) GetType(langue int, ams *StAmsdos) string {
+func (d *DSK) FileTypeStr(ams *AmsDosHeader) string {
 	if ams.Checksum == ams.ComputedChecksum16() {
 		switch ams.Type {
 		case 0:
@@ -1308,11 +1302,11 @@ func (d *DSK) GetType(langue int, ams *StAmsdos) string {
 		case 1:
 			return "BASIC(P)"
 		case 2:
-			return "BINAIRE"
+			return "BINARY"
 		case 3:
-			return "BINAIRE(P)"
+			return "BINARY(P)"
 		default:
-			return "INCONNU"
+			return "UNKNOWN"
 
 		}
 	}
@@ -1350,7 +1344,7 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 		for j := 0; j < 64; j++ {
 			tabDir[j], _ = d.GetInfoDirEntry(uint8(j))
 		}*/
-	err := d.GetCatalogue()
+	err := d.RefreshCatalogue()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error while getting the catalogue error :%v\n", err)
 	}
@@ -1412,7 +1406,7 @@ func (d *DSK) ViewFile(indice int) ([]byte, int, error) {
 	bytesLeft := 0x1000000
 	b := make([]byte, 0)
 	firstBlock := true
-	err := d.GetCatalogue()
+	err := d.RefreshCatalogue()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error while getting the catalogue error :%v\n", err)
 	}
@@ -1464,20 +1458,20 @@ func (d *DSK) ViewFile(indice int) ([]byte, int, error) {
 	return b, fileSize, nil
 }
 
-func CheckAmsdos(buf []byte) (bool, *StAmsdos) {
-	header := &StAmsdos{}
+func CheckAmsdos(buf []byte) (bool, *AmsDosHeader) {
+	header := &AmsDosHeader{}
 	rbuff := bytes.NewReader(buf)
 	if err := binary.Read(rbuff, binary.LittleEndian, header); err != nil {
-		return false, &StAmsdos{}
+		return false, &AmsDosHeader{}
 	}
 	if header.Checksum == header.ComputedChecksum16() {
 		return true, header
 	}
-	return false, &StAmsdos{}
+	return false, &AmsDosHeader{}
 }
 
 func (d *DSK) RemoveFile(index uint8) error {
-	err := d.GetCatalogue()
+	err := d.RefreshCatalogue()
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error while getting the catalogue error :%v\n", err)
 	}

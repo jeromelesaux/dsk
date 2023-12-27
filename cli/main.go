@@ -560,11 +560,11 @@ func infoSna(snaPath string) (onError bool, message, hint string) {
 }
 
 func listDsk(d dsk.DSK, dskPath string) (onError bool, message, hint string) {
-	if err := d.GetCatalogue(); err != nil {
+	if err := d.RefreshCatalogue(); err != nil {
 		return true, fmt.Sprintf("Error while getting catalogue in dsk file (%s) error %v\n", dskPath, err), "Check your dsk file with option -dsk yourdsk.dsk -analyze"
 	}
 	totalUsed := 0
-	for _, i := range d.GetFilesIndices() {
+	for _, i := range d.GetFileIndices() {
 		size := fmt.Sprintf("%.3d ko", d.GetFilesize(d.Catalogue[i]))
 		totalUsed += d.GetFilesize(d.Catalogue[i])
 		filename := fmt.Sprintf("%s.%s", d.Catalogue[i].Name, d.Catalogue[i].Ext)
@@ -714,7 +714,7 @@ func getFileDsk(d dsk.DSK, fileInDsk, dskPath, directory string) (onError bool, 
 		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -get -amsdosfile hello.bin"
 	}
 	if fileInDsk == "*" {
-		err := d.GetCatalogue()
+		err := d.RefreshCatalogue()
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error while getting the catalogue in dsk error :%v\n", err)
 		}
