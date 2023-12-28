@@ -7,16 +7,16 @@ import (
 	"github.com/jeromelesaux/m4client/cpc"
 )
 
-type StAmsdos = cpc.CpcHead
+type AmsDosHeader = cpc.CpcHead
 
-func CheckAmsdos(buf []byte) (bool, *StAmsdos) {
-	header := &StAmsdos{}
+func CheckAmsdos(buf []byte) (bool, *AmsDosHeader) {
+	header := &AmsDosHeader{}
 	rbuff := bytes.NewReader(buf)
 	if err := binary.Read(rbuff, binary.LittleEndian, header); err != nil {
-		return false, &StAmsdos{}
+		return false, &AmsDosHeader{}
 	}
 	if header.Checksum == header.ComputedChecksum16() {
 		return true, header
 	}
-	return false, &StAmsdos{}
+	return false, &AmsDosHeader{}
 }

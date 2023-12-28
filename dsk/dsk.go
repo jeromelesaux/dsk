@@ -703,10 +703,10 @@ func GetAmsDosName(mask string) string {
 	return string(amsdosFile)
 }
 
-func (d *DSK) PutFile(masque string, typeModeImport SaveMode, loadAddress, exeAddress, userNumber uint16, isSystemFile, readOnly bool) error {
+func (d *DSK) PutFile(path string, typeModeImport SaveMode, loadAddress, exeAddress, userNumber uint16, isSystemFile, readOnly bool) error {
 	buff := make([]byte, 0x20000)
-	cFileName := GetAmsDosName(masque)
-	header := &amsdos.StAmsdos{}
+	cFileName := GetAmsDosName(path)
+	header := &amsdos.AmsDosHeader{}
 	var addHeader bool
 	var err error
 
@@ -714,31 +714,31 @@ func (d *DSK) PutFile(masque string, typeModeImport SaveMode, loadAddress, exeAd
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error while getting the catalogue, error :%v\n", err)
 	}
-	fr, err := os.Open(masque)
+	fr, err := os.Open(path)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Cannot read file (%s) error :%v\n", masque, err)
+		fmt.Fprintf(os.Stderr, "Cannot read file (%s) error :%v\n", path, err)
 		return err
 	}
 	fileLength, err := fr.Read(buff)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "Cannot read the content of the file (%s) with error %v\n", masque, err)
+		fmt.Fprintf(os.Stderr, "Cannot read the content of the file (%s) with error %v\n", path, err)
 		return err
 	}
-	fmt.Fprintf(os.Stderr, "file (%s) read (%d bytes).\n", masque, fileLength)
+	fmt.Fprintf(os.Stderr, "file (%s) read (%d bytes).\n", path, fileLength)
 	_, err = fr.Seek(0, io.SeekStart)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error while seeking in file error :%v\n", err)
 	}
 
 	if err = binary.Read(fr, binary.LittleEndian, header); err != nil {
-		fmt.Fprintf(os.Stderr, "No header found for file :%s, error :%v\n", masque, err)
+		fmt.Fprintf(os.Stderr, "No header found for file :%s, error :%v\n", path, err)
 	}
 
 	if typeModeImport == SaveModeAscii && fileLength%128 != 0 {
 		buff[fileLength] = 0x1A
 	}
 
-	if typeModeImport == MODE_PROTECTED && fileLength%128 != 0 {
+	if typeModeImport == SaveModeProtected && fileLength%128 != 0 {
 		buff[fileLength] = 0x1A
 	}
 
@@ -751,8 +751,8 @@ func (d *DSK) PutFile(masque string, typeModeImport SaveMode, loadAddress, exeAd
 	}
 	if !isAmsdos {
 		// Create a default amsdos header
-		fmt.Fprintf(os.Stderr, "Create header... (%s)\n", masque)
-		header = &amsdos.StAmsdos{}
+		fmt.Fprintf(os.Stderr, "Create header... (%s)\n", path)
+		header = &amsdos.AmsDosHeader{}
 		header.User = byte(userNumber)
 		header.Size = uint16(fileLength)
 		header.Size2 = uint16(fileLength)
@@ -766,13 +766,13 @@ func (d *DSK) PutFile(masque string, typeModeImport SaveMode, loadAddress, exeAd
 		if exeAddress != 0 || loadAddress != 0 {
 			typeModeImport = SaveModeBinary
 		}
-		header.Type = typeModeImport
+		header.Type = byte(typeModeImport)
 
 		// We must recalculate the checksum by counting addresses!
 		header.Checksum = header.ComputedChecksum16()
 
 	} else {
-		fmt.Fprintf(os.Stderr, "File has already header...(%s)\n", masque)
+		fmt.Fprintf(os.Stderr, "File has already header...(%s)\n", path)
 	}
 	//
 	// Depending on the import mode...
@@ -784,8 +784,8 @@ func (d *DSK) PutFile(masque string, typeModeImport SaveMode, loadAddress, exeAd
 		//
 		if isAmsdos {
 			// Remove header if it exists
-			fmt.Fprintf(os.Stderr, "Removing header...(%s)\n", masque)
-			copy(buff[0:], buff[binary.Size(amsdos.StAmsdos{}):])
+			fmt.Fprintf(os.Stderr, "Removing header...(%s)\n", path)
+			copy(buff[0:], buff[binary.Size(amsdos.AmsDosHeader{}):])
 		}
 	case SaveModeBinary:
 		//
@@ -1298,7 +1298,7 @@ func (d *DSK) GetInfoDirEntry(numDir uint8) (StDirEntry, error) {
 	return dir, nil
 }
 
-func (d *DSK) FileTypeStr(ams *amsdos.StAmsdos) string {
+func (d *DSK) FileTypeStr(ams *amsdos.AmsDosHeader) string {
 	if ams.Checksum == ams.ComputedChecksum16() {
 		switch ams.Type {
 		case 0:

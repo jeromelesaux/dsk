@@ -66,7 +66,12 @@ func TestFormatDsk(t *testing.T) {
 
 func TestFileContentDsk(t *testing.T) {
 	disk := FormatDsk(9, 40, 1, DataFormat, 0)
-	if err := disk.PutFile("ironman.scr", SaveModeBinary, 0, 0, 0, false, false); err != nil {
+	currentWorkingDirectory, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	ironmanPath := currentWorkingDirectory + "/../testdata/ironman.scr"
+	if err := disk.PutFile(ironmanPath, SaveModeBinary, 0, 0, 0, false, false); err != nil {
 		t.Fatal(err)
 	}
 	assert.Equal(t, "IRONMAN .SCR", disk.GetCatEntryName(0))
@@ -76,7 +81,7 @@ func TestFileContentDsk(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	original, err := os.ReadFile("ironman.scr")
+	original, err := os.ReadFile(ironmanPath)
 	if err != nil {
 		t.Fatal(err)
 	}
