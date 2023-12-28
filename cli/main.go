@@ -15,7 +15,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/jeromelesaux/dsk"
+	"github.com/jeromelesaux/dsk/amsdos"
+	"github.com/jeromelesaux/dsk/dsk"
+	"github.com/jeromelesaux/dsk/sna"
+	"github.com/jeromelesaux/dsk/utils"
 )
 
 var (
@@ -46,7 +49,7 @@ var (
 	loadingAddress                  = flag.String("load", "", "Loading address of the inserted file. (hexadecimal #170 allowed.)")
 	user                            = flag.Int("user", 0, "User number of the inserted file")
 	force                           = flag.Bool("force", false, "Force overwriting of the inserted file")
-	fileType                        = flag.String("type", "", "Type of the inserted file \n\tascii : type ascii\n\tbinary : type binary\n")
+	fileType                        = flag.String("type", "", "Type of the inserted file \n\tascii : type ascii\n\tprotected : type ascii protected\n\tbinary : type binary\n")
 	snaPath                         = flag.String("sna", "", "SNA file to handle")
 	analyse                         = flag.Bool("analyze", false, "Returns the DSK header")
 	cpcType                         = flag.Int("cpctype", 2, "CPC type (sna import feature): \n\tCPC464 : 0\n\tCPC664: 1\n\tCPC6128 : 2\n\tUnknown : 3\n\tCPCPlus6128 : 4\n\tCPCPlus464 : 5\n\tGX4000 : 6\n\t")
@@ -58,7 +61,7 @@ var (
 	rawExport                       = flag.Bool("rawExport", false, "raw exports the amsdosfile, this option is associated with -dsk, -track and -sector.\nThis option will do a raw extract of the content beginning to track and sector values and will stop when size is reached.\nfor instance : dsk -dsk mydskfile.dsk -amsdosfile file.bin -rawExport -track 1 -sector 0 -size 16384")
 	size                            = flag.Int("size", 0, "Size to extract in rawExport, see rawExport for more details")
 	snaVersion                      = flag.Int("snaversion", 1, "Set the sna version (1 or 2 available)")
-	appVersion                      = "0.18"
+	appVersion                      = "0.21"
 )
 
 func main() {
@@ -132,7 +135,7 @@ func main() {
 		}
 		if *hex {
 			cmdRan = true
-			sna, err := dsk.ReadSna(*snaPath)
+			sna, err := sna.ReadSna(*snaPath)
 			if err != nil {
 				exitOnError(err.Error(), "Check your sna path")
 			}
@@ -143,12 +146,12 @@ func main() {
 		if *put {
 			cmdRan = true
 			if *fileInDsk != "" {
-				cpcTYPE := dsk.CPCType(*cpcType)
-				crtc := dsk.UM6845R
+				cpcTYPE := sna.CPCType(*cpcType)
+				crtc := sna.UM6845R
 				if *cpcType > 3 {
-					crtc = dsk.ASIC_6845
+					crtc = sna.ASIC_6845
 				}
-				if err := dsk.ImportInSna(*fileInDsk, *snaPath, execAddress, uint8(*screenMode), cpcTYPE, crtc, *snaVersion); err != nil {
+				if err := sna.ImportInSna(*fileInDsk, *snaPath, execAddress, uint8(*screenMode), cpcTYPE, crtc, *snaVersion); err != nil {
 					fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
 						*fileInDsk,
 						*snaPath,
@@ -163,7 +166,7 @@ func main() {
 		if *get {
 			cmdRan = true
 			if *fileInDsk != "" {
-				content, err := dsk.ExportFromSna(*snaPath)
+				content, err := sna.ExportFromSna(*snaPath)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
 						*fileInDsk,
@@ -191,7 +194,7 @@ func main() {
 				os.Exit(0)
 			} else {
 				if *dskPath != "" {
-					content, err := dsk.ExportFromSna(*snaPath)
+					content, err := sna.ExportFromSna(*snaPath)
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
 							*fileInDsk,
@@ -295,12 +298,12 @@ func main() {
 					fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 				}
 
-				hasAmsdos, _ := dsk.CheckAmsdos(content)
+				hasAmsdos, _ := amsdos.CheckAmsdos(content)
 				if hasAmsdos {
 
 					body, filesize, _ := d.ViewFile(indice)
 					fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", *fileInDsk, filesize)
-					fmt.Fprintf(os.Stdout, "%s", dsk.Basic(body, uint16(filesize), true))
+					fmt.Fprintf(os.Stdout, "%s", utils.Basic(body, uint16(filesize), true))
 				} else {
 					fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", *fileInDsk, len(content))
 					fmt.Fprintf(os.Stdout, "%s", content)
@@ -310,7 +313,8 @@ func main() {
 
 		if *get {
 			cmdRan = true
-			isError, msg, hint := getFileDsk(d, *fileInDsk, *dskPath, "")
+			directory := filepath.Dir(*dskPath)
+			isError, msg, hint := getFileDsk(d, *fileInDsk, *dskPath, directory)
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -365,28 +369,28 @@ func main() {
 
 		if *basic {
 			cmdRan = true
-			isAmsdos, _ := dsk.CheckAmsdos(content)
+			isAmsdos, _ := amsdos.CheckAmsdos(content)
 			// remove amsdos header
 			if isAmsdos {
 				content = content[dsk.HeaderSize:]
 			}
 
 			fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", *fileInDsk, len(content))
-			fmt.Fprintf(os.Stdout, "%s", dsk.Basic(content, uint16(len(content)), true))
+			fmt.Fprintf(os.Stdout, "%s", utils.Basic(content, uint16(len(content)), true))
 		}
 		if *disassemble {
 			cmdRan = true
 			var address uint16
-			isAmsdos, header := dsk.CheckAmsdos(content)
+			isAmsdos, header := amsdos.CheckAmsdos(content)
 			if isAmsdos {
 				address = header.Address
 				content = content[dsk.HeaderSize:]
 			}
-			fmt.Println(dsk.Desass(content, uint16(len(content)), address))
+			fmt.Println(utils.Desass(content, uint16(len(content)), address))
 		}
 		if *hex {
 			cmdRan = true
-			isAmsdos, _ := dsk.CheckAmsdos(content)
+			isAmsdos, _ := amsdos.CheckAmsdos(content)
 			// remove amsdos header
 			if isAmsdos {
 				content = content[dsk.HeaderSize:]
@@ -395,7 +399,7 @@ func main() {
 		}
 		if *info {
 			cmdRan = true
-			isAmsdos, header := dsk.CheckAmsdos(content)
+			isAmsdos, header := amsdos.CheckAmsdos(content)
 			if !isAmsdos {
 				exitOnError(fmt.Sprintf("File (%s) does not contain amsdos header.\n", *fileInDsk), "may be a ascii file")
 			}
@@ -422,7 +426,7 @@ func main() {
 			}
 
 			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", execAddress, loadAddress)
-			isAmsdos, header := dsk.CheckAmsdos(content)
+			isAmsdos, header := amsdos.CheckAmsdos(content)
 			if isAmsdos {
 				exitOnError("The file already contains an amsdos header", "Check your file")
 			}
@@ -536,7 +540,7 @@ func formatDsk(dskPath string, sector, track, heads int, extendedDskType dsk.Dsk
 }
 
 func formatSna(snaPath string, snaVersion int) (onError bool, message, hint string) {
-	if _, err := dsk.CreateSna(snaPath, snaVersion); err != nil {
+	if _, err := sna.CreateSna(snaPath, snaVersion); err != nil {
 		return true, fmt.Sprintf("Cannot create Sna file (%s) error : %v\n", snaPath, err), ""
 	}
 	fmt.Fprintf(os.Stderr, "Sna file (%s) created.\n", snaPath)
@@ -549,7 +553,7 @@ func infoSna(snaPath string) (onError bool, message, hint string) {
 		exitOnError(fmt.Sprintf("Error while read sna file (%s) error %v", snaPath, err), "Check your sna file")
 	}
 	defer f.Close()
-	sna := &dsk.SNA{}
+	sna := &sna.SNA{}
 	if err := sna.Read(f); err != nil {
 		return true, fmt.Sprintf("Error while reading sna file (%s) error %v", snaPath, err), "Check your sna file"
 	}
@@ -604,7 +608,7 @@ func fileinfoDsk(d dsk.DSK, fileInDsk string) (onError bool, message, hint strin
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 		}
-		isAmsdos, header := dsk.CheckAmsdos(content)
+		isAmsdos, header := amsdos.CheckAmsdos(content)
 		if !isAmsdos {
 			return true, fmt.Sprintf("File (%s) does not contain amsdos header.\n", fileInDsk), "add address of execution and loading like : dsk -dsk output.dsk -put -amsdosfile hello.bin -exec \"#1000\" -load 500"
 		}
@@ -735,16 +739,25 @@ func getFileDsk(d dsk.DSK, fileInDsk, dskPath, directory string) (onError bool, 
 					fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 				}
 				filename = strings.ReplaceAll(filename, " ", "")
-				af, err := os.Create(directory + string(filepath.Separator) + filename)
+				var af *os.File
+				filename = strings.ReplaceAll(filename, " ", "")
+				var fPath string
+				if directory == "" {
+					fPath = filename
+					af, err = os.Create(filename)
+				} else {
+					fPath = directory + string(filepath.Separator) + filename
+					af, err = os.Create(fPath)
+				}
 				if err != nil {
 					return true, fmt.Sprintf("Error while creating file (%s) error %v\n", filename, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
 				}
-				defer af.Close()
 				_, err = af.Write(content)
 				if err != nil {
 					return true, fmt.Sprintf("Error while copying content in file (%s) error %v\n", filename, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
 				}
-				informations := fmt.Sprintf("Extract file [%s] Indice in DSK [%d] is saved\n", filename, indice)
+				af.Close()
+				informations := fmt.Sprintf("Extract file [%s] Indice in DSK [%d] is saved\n", fPath, indice)
 				resumeAction(dskPath, "get amsdosfile", fileInDsk, informations)
 			}
 		}
@@ -839,13 +852,13 @@ func desassembleFileDsk(d dsk.DSK, fileInDsk string) (onError bool, message, hin
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 		} else {
-			isAmsdos, header := dsk.CheckAmsdos(raw)
+			isAmsdos, header := amsdos.CheckAmsdos(raw)
 			if isAmsdos {
 				address = header.Exec
 			}
 		}
 
-		fmt.Println(dsk.Desass(content[0:filesize], uint16(filesize), address))
+		fmt.Println(utils.Desass(content[0:filesize], uint16(filesize), address))
 	}
 	return false, "", ""
 }

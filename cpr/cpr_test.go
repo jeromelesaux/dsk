@@ -1,15 +1,17 @@
-package dsk
+package cpr_test
 
 import (
 	"io"
 	"os"
 	"testing"
+
+	"github.com/jeromelesaux/dsk/cpr"
 )
 
 func TestCPR(t *testing.T) {
 	cartridge := "empty.cpr"
 	t.Run("emptyCPR", func(t *testing.T) {
-		cpr := NewCpr(cartridge)
+		cpr := cpr.NewCpr(cartridge)
 		err := cpr.Save()
 		if err != nil {
 			t.Fatalf("Expected not error and gets %v\n", err)
@@ -17,11 +19,11 @@ func TestCPR(t *testing.T) {
 	})
 
 	t.Run("copyCPR", func(t *testing.T) {
-		cpr := NewCpr(cartridge)
+		cpr := cpr.NewCpr(cartridge)
 		if err := cpr.Open(); err != nil {
 			t.Fatalf("Expected not error and gets %v\n", err)
 		}
-		f, err := os.Open("sonic-pa.BAS")
+		f, err := os.Open("../testdata/sonic-pa.BAS")
 		if err != nil {
 			t.Fatalf("Expected not error and gets %v\n", err)
 		}
@@ -43,8 +45,8 @@ func TestCPR(t *testing.T) {
 
 	t.Run("addData", func(t *testing.T) {
 		//	TestEmptyCprSave(t)
-		cpr := NewCpr(cartridge)
-		if err := cpr.AddFile("ironman.scr", 3); err != nil {
+		cpr := cpr.NewCpr(cartridge)
+		if err := cpr.AddFile("../testdata/ironman.scr", 3); err != nil {
 			t.Fatalf("Expected not error and gets %v\n", err)
 		}
 		cpr.FilePath = "ironman.cpr"

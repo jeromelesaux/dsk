@@ -1,4 +1,4 @@
-package dsk
+package sna
 
 import (
 	"encoding/binary"
@@ -8,6 +8,8 @@ import (
 	"os"
 	"strconv"
 
+	"github.com/jeromelesaux/dsk/amsdos"
+	"github.com/jeromelesaux/dsk/dsk"
 	m "github.com/jeromelesaux/m4client/cpc"
 )
 
@@ -562,7 +564,7 @@ func (s *SNA) Write(w io.Writer) error {
 }
 
 func (s *SNA) Put(content []byte, startAddress, length uint16) error {
-	isAmsdos, header := CheckAmsdos(content)
+	isAmsdos, header := amsdos.CheckAmsdos(content)
 	if isAmsdos && startAddress == 0 {
 		copy(s.Data[header.Exec:], content[128:])
 		return nil
@@ -585,7 +587,7 @@ func (s *SNA) Put(content []byte, startAddress, length uint16) error {
 func (s *SNA) Get(startAddress, lenght uint16) ([]byte, error) {
 	content := make([]byte, lenght)
 	if int(startAddress)+int(lenght) > len(s.Data) {
-		return content, ErrorFileSizeExceed
+		return content, dsk.ErrorFileSizeExceed
 	}
 	copy(content[:], s.Data[startAddress:])
 	return content, nil
@@ -616,7 +618,7 @@ func ImportInSna(filePath, snaPath string, execAddress uint16, screenMode uint8,
 	case 2:
 		sna = NewSna(NewSnaV2Header())
 	default:
-		return ErrorUnsupportedDskFormat
+		return dsk.ErrorUnsupportedDskFormat
 	}
 
 	var filesize uint16
@@ -685,7 +687,7 @@ func CreateSna(snaPath string, snaVersion int) (*SNA, error) {
 	case 2:
 		s = NewSna(NewSnaV2Header())
 	default:
-		return nil, ErrorUnsupportedDskFormat
+		return nil, dsk.ErrorUnsupportedDskFormat
 	}
 
 	w, err := os.Create(snaPath)
@@ -703,5 +705,5 @@ func CreateSna(snaPath string, snaVersion int) (*SNA, error) {
 }
 
 func (s *SNA) Hexadecimal() string {
-	return DisplayHex(s.Data, 16)
+	return dsk.DisplayHex(s.Data, 16)
 }

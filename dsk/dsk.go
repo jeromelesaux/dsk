@@ -10,6 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/jeromelesaux/dsk/amsdos"
 	"github.com/jeromelesaux/m4client/cpc"
 )
 
@@ -33,6 +34,7 @@ type SaveMode uint8
 
 const (
 	SaveModeAscii SaveMode = iota
+	SaveModeProtected
 	SaveModeBinary
 )
 
@@ -54,8 +56,6 @@ var (
 const HeaderSize = 0x80
 
 type DskFormat = int
-
-type AmsDosHeader = cpc.CpcHead
 
 type CPCEMUEnt struct {
 	Header   [0x22]byte // "MV - CPCEMU Disk-File\r\nDisk-Info\r\n"
@@ -320,7 +320,7 @@ func (d *DSK) Read(r io.Reader) error {
 	if string(mv) != "MV -" && string(extended) != "EXTENDED CPC DSK" {
 		return ErrorUnsupportedDskFormat
 	}
-	if string(extended) == "EXTENDED CPC DSK" {
+	if strings.Contains(string(extended), "EXTENDED CPC DSK") {
 		d.Extended = true
 		d.TrackSizeTable = make([]byte, d.Entry.Heads*(d.Entry.Tracks))
 	} else {
@@ -564,8 +564,10 @@ func (d *DSK) CheckDsk() error {
 				fmt.Fprintf(os.Stderr, "Warning : strange sector numbering in track %d! (maxSect:%X,minSect:%X)\n", track, maxSect, minSect)
 			}
 		}
-		if minSect != minSectFirst {
-			fmt.Fprintf(os.Stderr, "Warning : track %d start at sector %d while track 0 starts at %d\n", track, minSect, minSectFirst)
+		if !d.Extended {
+			if minSect != minSectFirst {
+				fmt.Fprintf(os.Stderr, "Warning : track %d start at sector %d while track 0 starts at %d\n", track, minSect, minSectFirst)
+			}
 		}
 	}
 	return nil
@@ -704,7 +706,7 @@ func GetAmsDosName(mask string) string {
 func (d *DSK) PutFile(masque string, typeModeImport SaveMode, loadAddress, exeAddress, userNumber uint16, isSystemFile, readOnly bool) error {
 	buff := make([]byte, 0x20000)
 	cFileName := GetAmsDosName(masque)
-	header := &AmsDosHeader{}
+	header := &amsdos.StAmsdos{}
 	var addHeader bool
 	var err error
 
@@ -736,6 +738,10 @@ func (d *DSK) PutFile(masque string, typeModeImport SaveMode, loadAddress, exeAd
 		buff[fileLength] = 0x1A
 	}
 
+	if typeModeImport == MODE_PROTECTED && fileLength%128 != 0 {
+		buff[fileLength] = 0x1A
+	}
+
 	var isAmsdos bool
 	//
 	// Check if the file contains a header or not
@@ -746,7 +752,7 @@ func (d *DSK) PutFile(masque string, typeModeImport SaveMode, loadAddress, exeAd
 	if !isAmsdos {
 		// Create a default amsdos header
 		fmt.Fprintf(os.Stderr, "Create header... (%s)\n", masque)
-		header = &AmsDosHeader{}
+		header = &amsdos.StAmsdos{}
 		header.User = byte(userNumber)
 		header.Size = uint16(fileLength)
 		header.Size2 = uint16(fileLength)
@@ -760,9 +766,7 @@ func (d *DSK) PutFile(masque string, typeModeImport SaveMode, loadAddress, exeAd
 		if exeAddress != 0 || loadAddress != 0 {
 			typeModeImport = SaveModeBinary
 		}
-		if typeModeImport == SaveModeBinary && exeAddress != 0 {
-			header.Type = 1
-		}
+		header.Type = typeModeImport
 
 		// We must recalculate the checksum by counting addresses!
 		header.Checksum = header.ComputedChecksum16()
@@ -781,7 +785,7 @@ func (d *DSK) PutFile(masque string, typeModeImport SaveMode, loadAddress, exeAd
 		if isAmsdos {
 			// Remove header if it exists
 			fmt.Fprintf(os.Stderr, "Removing header...(%s)\n", masque)
-			copy(buff[0:], buff[binary.Size(AmsDosHeader{}):])
+			copy(buff[0:], buff[binary.Size(amsdos.StAmsdos{}):])
 		}
 	case SaveModeBinary:
 		//
@@ -1294,7 +1298,7 @@ func (d *DSK) GetInfoDirEntry(numDir uint8) (StDirEntry, error) {
 	return dir, nil
 }
 
-func (d *DSK) FileTypeStr(ams *AmsDosHeader) string {
+func (d *DSK) FileTypeStr(ams *amsdos.StAmsdos) string {
 	if ams.Checksum == ams.ComputedChecksum16() {
 		switch ams.Type {
 		case 0:
@@ -1358,7 +1362,7 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 			bloc := d.ReadBloc(int(d.Catalogue[i].Blocks[j]))
 			if firstBlock {
 				var header *cpc.CpcHead
-				isAmsdos, header = CheckAmsdos(bloc)
+				isAmsdos, header = amsdos.CheckAmsdos(bloc)
 				if isAmsdos {
 					totalSize = int(header.Size) + 0x80
 				}
@@ -1419,7 +1423,7 @@ func (d *DSK) ViewFile(indice int) ([]byte, int, error) {
 			blockSize := 1024
 			block := d.ReadBloc(int(d.Catalogue[i].Blocks[j]))
 			if firstBlock {
-				isAmsdos, header := CheckAmsdos(block)
+				isAmsdos, header := amsdos.CheckAmsdos(block)
 				if isAmsdos {
 					t := make([]byte, len(block))
 					copy(t, block[HeaderSize:])
@@ -1456,18 +1460,6 @@ func (d *DSK) ViewFile(indice int) ([]byte, int, error) {
 		}
 	}
 	return b, fileSize, nil
-}
-
-func CheckAmsdos(buf []byte) (bool, *AmsDosHeader) {
-	header := &AmsDosHeader{}
-	rbuff := bytes.NewReader(buf)
-	if err := binary.Read(rbuff, binary.LittleEndian, header); err != nil {
-		return false, &AmsDosHeader{}
-	}
-	if header.Checksum == header.ComputedChecksum16() {
-		return true, header
-	}
-	return false, &AmsDosHeader{}
 }
 
 func (d *DSK) RemoveFile(index uint8) error {

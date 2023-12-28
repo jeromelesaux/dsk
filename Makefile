@@ -29,6 +29,7 @@ build: clean init
 	(make compile ARCH=amd64 OS=windows EXT=.exe)
 	@echo "Compilation for macos"
 	(make compile ARCH=amd64 OS=darwin)
+	(make compile ARCH=arm64 OS=darwin)
 	@echo "Compilation for raspberry pi Raspbian 64bits"
 	(make compile ARCH=arm64 OS=linux)
 	@echo "Compilation for raspberry pi Raspbian 32bits"

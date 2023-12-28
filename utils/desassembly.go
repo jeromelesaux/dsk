@@ -1,4 +1,4 @@
-package dsk
+package utils
 
 import (
 	"fmt"

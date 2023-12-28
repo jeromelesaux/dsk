@@ -1,4 +1,4 @@
-package dsk
+package cpr
 
 import (
 	"encoding/binary"
@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+
+	"github.com/jeromelesaux/dsk/amsdos"
 )
 
 var (
@@ -208,7 +210,7 @@ func (c *Cpr) AddFile(filePath string, startBanknumber int) error {
 		return err
 	}
 	startOffset := 0
-	isAmsdos, _ := CheckAmsdos(b)
+	isAmsdos, _ := amsdos.CheckAmsdos(b)
 	if isAmsdos {
 		startOffset = 128
 	}

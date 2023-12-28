@@ -1,15 +1,15 @@
-package dsk_test
+package sna_test
 
 import (
 	"testing"
 
-	"github.com/jeromelesaux/dsk"
+	"github.com/jeromelesaux/dsk/sna"
 	"github.com/stretchr/testify/assert"
 )
 
 func TestMemoryChunck(t *testing.T) {
 	t.Run("uncompress", func(t *testing.T) {
-		m := &dsk.MemChunck{}
+		m := &sna.MemChunck{}
 		buf := []byte{0xe5, 0xff, 0x2}
 		m.Feed(buf)
 		got := m.Data[0:0xff]
@@ -19,7 +19,7 @@ func TestMemoryChunck(t *testing.T) {
 	})
 
 	t.Run("compress", func(t *testing.T) {
-		m := &dsk.MemChunck{}
+		m := &sna.MemChunck{}
 		for i := 0; i < 0xff; i++ {
 			m.Data[i] = 0x2
 		}
