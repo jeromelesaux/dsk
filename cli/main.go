@@ -309,7 +309,11 @@ func main() {
 
 		if *get {
 			cmdRunned = true
-			directory := filepath.Dir(*dskPath)
+			directory, err := os.Getwd()
+			if err != nil {
+				exitOnError(err.Error(), "Please use autoextract option")
+			}
+
 			isError, msg, hint := getFileDsk(d, *fileInDsk, *dskPath, directory)
 			if isError {
 				exitOnError(msg, hint)
