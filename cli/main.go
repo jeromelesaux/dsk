@@ -58,6 +58,7 @@ var (
 	autoextract    = flag.String("autoextract", "", "Extract all DSK contained in the folder path")
 	snaVersion     = flag.Int("snaversion", 1, "Set the sna version (1 or 2 available).")
 	appVersion     = "0.21"
+	version        = flag.Bool("version", false, "Display the app's version and quit.")
 )
 
 func main() {
@@ -68,6 +69,11 @@ func main() {
 
 	if *help {
 		sampleUsage()
+		os.Exit(0)
+	}
+
+	if *version {
+		fmt.Printf("%s", appVersion)
 		os.Exit(0)
 	}
 
