@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"io"
 	"os"
-	"strconv"
 
 	"github.com/jeromelesaux/dsk/amsdos"
 	"github.com/jeromelesaux/dsk/dsk"
@@ -464,32 +463,28 @@ func (s *SNA) Read(r io.Reader) error {
 		fmt.Fprintf(os.Stderr, "Cannot read SNA header error :%v\n", err)
 		return err
 	}
-	if s.Header.Version == 3 {
+	if s.Header.Version == 3 && s.Header.MemoryDumpSize == 0 {
 		var buf [4]byte
-		if err := binary.Read(r, binary.LittleEndian, &buf); err != nil {
-			fmt.Fprintf(os.Stderr, "Cannot read SNA header error :%v\n", err)
-			return err
-		}
-		if string(buf[:]) == "CPC+" {
-			s.CPCPlusChunck = &CPCPlusChunck{}
-			if err := binary.Read(r, binary.LittleEndian, s.CPCPlusChunck); err != nil {
-				fmt.Fprintf(os.Stderr, "Cannot read SNA CPC Chunck error :%v\n", err)
-				return err
-			}
-		}
 
 		for {
 			if err := binary.Read(r, binary.LittleEndian, &buf); err != nil {
 				if errors.Is(err, io.EOF) {
 					break
+				} else {
+					fmt.Fprintf(os.Stderr, "Cannot read SNA header error :%v\n", err)
+					return err
 				}
 			}
-			bank, err := strconv.Atoi(string(buf[3]))
-			if err != nil {
-				fmt.Fprintf(os.Stderr, "Cannot parse memory bank number in chunck error :%v\n", err)
-				return err
+			if string(buf[:]) == "CPC+" {
+				s.CPCPlusChunck = &CPCPlusChunck{}
+				if err := binary.Read(r, binary.LittleEndian, s.CPCPlusChunck); err != nil {
+					fmt.Fprintf(os.Stderr, "Cannot read SNA CPC Chunck error :%v\n", err)
+					return err
+				}
+				continue
 			}
-			for i := 0; i < bank; i++ {
+			var nbBank int
+			for i := 0; i < nbBank; i++ {
 				s.MemoryChuncks = append(s.MemoryChuncks, &MemChunck{})
 			}
 			var size uint32
@@ -507,6 +502,7 @@ func (s *SNA) Read(r io.Reader) error {
 			mem.Feed(memBuf)
 
 			s.MemoryChuncks = append(s.MemoryChuncks, mem)
+			nbBank++
 		}
 	} else {
 		s.Data = make([]byte, int(s.Header.MemoryDumpSize)*1000+int(s.Header.ExternalMemoryDumpSize)*1000)
