@@ -831,10 +831,7 @@ func (d *DSK) CopyFile(bufFile []byte, fileName string, fileLength, maxBloc, use
 		posDir, err := d.RechercheDirLibre() // Trouve une entree libre dans le CAT
 		if err == nil {
 			dirLoc.User = uint8(userNumber) // Remplit l'entree : User 0
-			if isSystemFile {
-				dirLoc.Ext[0] |= 0x80
-			}
-			if readOnly {
+			if isSystemFile || readOnly {
 				dirLoc.Ext[0] |= 0x80
 			}
 			dirLoc.NumPage = uint8(nbPages) // Numero de l'entree dans le fichier
