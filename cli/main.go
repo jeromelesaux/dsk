@@ -581,7 +581,13 @@ func listDsk(d dsk.DSK, dskPath string) (onError bool, message, hint string) {
 	for _, i := range d.GetFilesIndices() {
 		size := fmt.Sprintf("%.3d ko", d.GetFilesize(d.Catalogue[i]))
 		totalUsed += d.GetFilesize(d.Catalogue[i])
-		filename := fmt.Sprintf("%s.%s", d.Catalogue[i].Nom, d.Catalogue[i].Ext)
+		ext := d.Catalogue[i].Ext
+		for i := range ext {
+			if ext[i] == 0xA0 {
+				ext[i] = ' '
+			}
+		}
+		filename := fmt.Sprintf("%s.%s", d.Catalogue[i].Nom, ext)
 		fmt.Fprintf(os.Stdout, "[%.2d] : %s : %d %s\n", i, filename, int(d.Catalogue[i].User), size)
 	}
 	fmt.Fprintf(os.Stdout, "Dsk %.3d Ko used\n", totalUsed)
