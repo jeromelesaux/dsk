@@ -70,7 +70,9 @@ func ToAscii(b []byte) string {
 	var out string
 	for _, v := range b {
 		v &= 127
-		out += string(v)
+		if v != 0x20 {
+			out += string(v)
+		}
 	}
-	return out
+	return strings.TrimLeft(out, " ")
 }

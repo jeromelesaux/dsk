@@ -15,12 +15,12 @@ import (
 )
 
 const (
+	// 0xE5 in binary is 11100101, which on MFM encoding is 0101010101010101 (0x5555)
 	USER_DELETED uint8  = 0xE5
 	SECTSIZE     uint16 = 512
 	NOT_FOUND    int    = -1
 )
 
-// 0xE5 in binary is 11100101, which on MFM encoding is 0101010101010101 (0x5555)
 var (
 	ErrorUnsupportedDskFormat = errors.New("unsupported DSK Format")
 	ErrorBadSectorNumber      = errors.New("dsk has wrong sector number")
@@ -839,10 +839,7 @@ func (d *DSK) CopyFile(bufFile []byte, fileName string, fileLength, maxBloc, use
 		posDir, err := d.FindFreeDirEntry() // Find first free entry in the catalog
 		if err == nil {
 			dirLoc.User = uint8(userNumber) // User number
-			if isSystemFile {
-				dirLoc.Ext[0] |= 0x80
-			}
-			if readOnly {
+			if isSystemFile || readOnly {
 				dirLoc.Ext[0] |= 0x80
 			}
 			dirLoc.NumPage = uint8(nbPages) // entry number in the file
