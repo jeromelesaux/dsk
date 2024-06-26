@@ -58,7 +58,7 @@ var (
 	autoextract    = flag.String("autoextract", "", "Extract all DSK contained in the folder path")
 	snaVersion     = flag.Int("snaversion", 1, "Set the sna version (1 or 2 available).")
 	quiet          = flag.Bool("quiet", false, "remove useless display (for scripting for instance)")
-	appVersion     = "0.23"
+	appVersion     = "0.24"
 	version        = flag.Bool("version", false, "Display the app's version and quit.")
 )
 

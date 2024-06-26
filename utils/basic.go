@@ -67,21 +67,26 @@ func getByte(buf []byte, pos uint16, deprotect uint8) byte {
 func getWord(buf []byte, pos uint16, deprotect uint8) int {
 	ret := int(buf[pos] ^ (DproBasic[pos&0x7F] * deprotect))
 	pos++
-	ret += int(int(buf[pos])^int((DproBasic[pos&0x7F]*deprotect))) << 8
+	ret += int(buf[pos]^(DproBasic[pos&0x7F]*byte(deprotect))) << 8
 	return ret
 }
 
 func addWord(buf []byte, pos uint16, listing []byte, deprotect uint8) ([]byte, uint16) {
 	var lenVar int
+	l := len(listing)
 	for {
 		b := getByte(buf, pos, deprotect)
 		pos++
-		listing = append(listing, (b & 0x7f))
-		if b&0x80 != 0 || lenVar >= 0xff {
+		listing = append(listing, b&0x7f)
+		l++
+		lenVar++
+		if b&0x80 == 0 && lenVar < 0xff {
+			continue
+		} else {
 			break
 		}
-		lenVar++
 	}
+	listing = append(listing, 0)
 	return listing, pos
 }
 
@@ -99,8 +104,8 @@ func Basic(buf []byte, fileSize uint16, isBasic bool) []byte {
 			}
 			numLigne := getWord(buf, pos, deprotect)
 			pos += 2
-			tmp := fmt.Sprintf("%d ", numLigne)
-			listing = append(listing, tmp...)
+
+			listing = append(listing, fmt.Sprintf("%d ", numLigne)...)
 		} else {
 			if token != 0 || token == 0x1a {
 				break
@@ -119,7 +124,7 @@ func Basic(buf []byte, fileSize uint16, isBasic bool) []byte {
 					dansChaine ^= 1
 				}
 			} else {
-				if token > 0x7F && token < 0xFF {
+				if token > 0x7F && token < 0xFF { // mot clefs
 					if listing[len(listing)-1] == ':' && token == 0x97 {
 						listing[len(listing)-1] = 0
 					}
@@ -136,7 +141,7 @@ func Basic(buf []byte, fileSize uint16, isBasic bool) []byte {
 								dansChaine ^= 1
 							}
 						} else {
-							tmp := make([]byte, 2)
+
 							switch token {
 							case 0x01:
 								listing = append(listing, ':')
@@ -149,16 +154,13 @@ func Basic(buf []byte, fileSize uint16, isBasic bool) []byte {
 							case 0x04: // Variable float (type !)
 								listing, pos = addWord(buf, 2+pos, listing, deprotect)
 								listing = append(listing, '!')
-							case 0x0B:
-							case 0x0C:
-							case 0x0D: // Variable "standard"
+							case 0x0B, 0x0C, 0x0D: // Variable "standard"
 								listing, pos = addWord(buf, 2+pos, listing, deprotect)
 							case 0x19: // Constante entière 8 bits
 								val := fmt.Sprintf("%d", getByte(buf, pos, deprotect))
 								listing = append(listing, val...)
 								pos++
-							case 0x1A:
-							case 0x1E: // Constante entière 16 bits
+							case 0x1A, 0x1E: // Constante entière 16 bits
 								w := getWord(buf, pos, deprotect)
 								val := fmt.Sprintf("%d", w)
 								listing = append(listing, val...)
@@ -168,10 +170,9 @@ func Basic(buf []byte, fileSize uint16, isBasic bool) []byte {
 								val := fmt.Sprintf("&X%X", w)
 								listing = append(listing, val...)
 								pos += 2
-							case 0x1C:
+							case 0x1C: // address
 								w := getWord(buf, pos, deprotect)
-								val := fmt.Sprintf("&%X", w)
-								listing = append(listing, val...)
+								listing = append(listing, fmt.Sprintf("&%X", w)...)
 								pos += 2
 
 							case 0x1F: // Constante flottante
@@ -180,17 +181,14 @@ func Basic(buf []byte, fileSize uint16, isBasic bool) []byte {
 									int(getByte(buf, pos, deprotect)) +
 									((int(getByte(buf, pos+3, deprotect) & 0x7F)) << 24))
 								f = 1 + (f / 0x80000000)
-
 								if getByte(buf, pos+3, deprotect)&0x80 == 0 {
 									f = -f
 								}
-
 								exp := getByte(buf, pos+4, deprotect) - 129
 								pos += 5
 								val := fmt.Sprintf("%f", f*math.Pow(float64(2), float64(exp)))
 								// Suppression des '0' inutiles
 								listing = append(listing, val...)
-
 							case 0x7C:
 								listing = append(listing, '|')
 								listing, pos = addWord(buf, 1+pos, listing, deprotect)
@@ -199,13 +197,13 @@ func Basic(buf []byte, fileSize uint16, isBasic bool) []byte {
 									listing = append(listing, Fcts[getByte(buf, pos, deprotect)]...)
 									pos++
 								} else {
+									tmp := make([]byte, 2)
 									tmp[1] = 0
 									tmp[0] = getByte(buf, pos, deprotect) & 0x7F
 									pos++
 									listing = append(listing, tmp...)
 								}
 							default:
-
 							}
 						}
 					}
@@ -223,7 +221,7 @@ func Basic(buf []byte, fileSize uint16, isBasic bool) []byte {
 	// Conversion des caractères accentués si nécessaire
 	for i := len(listing) - 1; i >= 0; i-- {
 		if !unicode.IsPrint(rune(listing[i])) && listing[i] != '\n' && listing[i] != '\r' {
-			listing[i] = '?'
+			listing[i] = ' '
 		}
 	}
 
