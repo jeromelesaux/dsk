@@ -240,7 +240,6 @@ func main() {
 			exitOnError(msg, hint)
 		}
 		if *list {
-			cmdRunned = true
 			isError, msg, hint := listDsk(d, *dskPath)
 			if isError {
 				exitOnError(msg, hint)
@@ -355,6 +354,15 @@ func main() {
 		if *remove {
 			cmdRunned = true
 			isError, msg, hint := removeFileDsk(d, *dskPath, *fileInDsk)
+			if isError {
+				exitOnError(msg, hint)
+			}
+		}
+
+		// no arguments commands
+		if !cmdRunned {
+			cmdRunned = true
+			isError, msg, hint = listDsk(d, *dskPath)
 			if isError {
 				exitOnError(msg, hint)
 			}
