@@ -30,7 +30,7 @@ var (
 	format         = flag.Bool("format", false, "Format the followed dsk or sna.")
 	dskType        = flag.Int("dsktype", 0, "DSK Type :\n\t0 : DSK\n\t1 : EDSK\n\t3 : SNA\n")
 	dskPath        = flag.String("dsk", "", "Dsk path to handle.")
-	fileInDsk      = flag.String("amsdosfile", "", "File to handle in (or to insert in) the dsk.")
+	fileInDsk      = flag.String("file", "", "File to handle in (or to insert in) the dsk.")
 	hexa           = flag.Bool("hex", false, "List the amsdosfile in hexadecimal.")
 	info           = flag.Bool("info", false, "Get informations of the amsdosfile (size, execute and loading address). Or get sna informations.")
 	ascii          = flag.Bool("ascii", false, "list the amsdosfile in ascii mode.")
@@ -43,7 +43,7 @@ var (
 	loadingAddress = flag.String("load", "", "Loading address of the inserted file. (hexadecimal #170 allowed.)")
 	user           = flag.Int("user", 0, "User number of the inserted file.")
 	force          = flag.Bool("force", false, "Force overwriting of the inserted file.")
-	fileType       = flag.String("type", "", "Type of the inserted file \n\tascii : type ascii\n\tprotected : type ascii protected\n\tbinary : type binary\n")
+	fileType       = flag.String("type", "", "Type of the inserted file \n\tprotected : type ascii protected\n\tbinary : type binary\n")
 	snaPath        = flag.String("sna", "", "SNA file to handle")
 	analyse        = flag.Bool("analyze", false, "Returns the DSK header")
 	cpcType        = flag.Int("cpctype", 2, "CPC type (sna import feature): \n\tCPC464 : 0\n\tCPC664: 1\n\tCPC6128 : 2\n\tUnknown : 3\n\tCPCPlus6128 : 4\n\tCPCPlus464 : 5\n\tGX4000 : 6\n\t")
@@ -434,12 +434,6 @@ func main() {
 				header.User)
 		}
 		if *addHeader {
-			if *executeAddress == "" {
-				exitOnError("When adding amsdos header executing address must be set.", "dsk -addheader -amsdosfile hello.bin -exec #1000 -load 500")
-			}
-			if *loadingAddress == "" {
-				exitOnError("When adding amsdos header loading address must be set.", "dsk -addheader -amsdosfile hello.bin -exec #1000 -load 500")
-			}
 
 			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", execAddress, loadAddress)
 			isAmsdos, header := amsdos.CheckAmsdos(content)
@@ -514,10 +508,10 @@ func sampleUsage() {
 		"\t* Create empty sna file : dsk -sna output.sna\n"+
 		"\t* List dsk content : dsk -dsk output.dsk -list\n"+
 		"\t* Get information on Sna file : dsk -sna output.sna -info\n"+
-		"\t* Get information on file in dsk  : dsk -dsk output.dsk -amsdosfile hello.bin -info\n"+
-		"\t* List file content in hexadecimal in dsk file : dsk -dsk output.dsk -amsdosfile hello.bin -hex\n"+
-		"\t* Put file in dsk file : dsk -dsk output.dsk -put -amsdosfile hello.bin -exec #1000 -load 500\n"+
-		"\t* Put file in sna file (here for a cpc plus): dsk -sna output.sna -put -amsdosfile hello.bin -exec #1000 -load 500 -screenmode 0 -cpctype 4\n\n\n")
+		"\t* Get information on file in dsk  : dsk -dsk output.dsk -file hello.bin -info\n"+
+		"\t* List file content in hexadecimal in dsk file : dsk -dsk output.dsk -file hello.bin -hex\n"+
+		"\t* Put file in dsk file : dsk -dsk output.dsk -put -file hello.bin -exec \"#1000\" -load \"500\" -type binary\n"+
+		"\t* Put file in sna file (here for a cpc plus): dsk -sna output.sna -put -file hello.bin -exec \"#1000\" -load 500 -screenmode 0 -cpctype 4\n\n\n")
 	flag.PrintDefaults()
 }
 
