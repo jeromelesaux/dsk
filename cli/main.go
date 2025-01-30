@@ -22,50 +22,52 @@ import (
 )
 
 var (
-	help           = flag.Bool("help", false, "display extended help.")
-	list           = flag.Bool("list", false, "List content of dsk.")
-	track          = flag.Int("track", 39, "Track number (format).")
+	help           = flag.Bool("help", false, "Display extended help.")
+	list           = flag.Bool("list", false, "List the contents of a DSK file.")
+	track          = flag.Int("track", 39, "Track number (for formatting).")
 	heads          = flag.Int("head", 1, "Number of heads in the DSK (format)")
-	sector         = flag.Int("sector", 9, "Sector number (format).")
-	format         = flag.Bool("format", false, "Format the followed dsk or sna.")
-	dskType        = flag.Int("dsktype", 0, "DSK Type :\n\t0 : DSK\n\t1 : EDSK\n\t3 : SNA\n")
-	dskPath        = flag.String("dsk", "", "Dsk path to handle.")
-	fileInDsk      = flag.String("file", "", "File to handle in (or to insert in) the dsk.")
-	hexa           = flag.Bool("hex", false, "List the amsdosfile in hexadecimal.")
-	info           = flag.Bool("info", false, "Get informations of the amsdosfile (size, execute and loading address). Or get sna informations.")
-	ascii          = flag.Bool("ascii", false, "list the amsdosfile in ascii mode.")
-	desassemble    = flag.Bool("desassemble", false, "list the amsdosfile desassembled.")
-	get            = flag.Bool("get", false, "Get the file in the dsk.")
-	remove         = flag.Bool("remove", false, "Remove the amsdosfile from the current dsk.")
-	basic          = flag.Bool("basic", false, "List a basic amsdosfile.")
-	put            = flag.Bool("put", false, "Put the amsdosfile in the current dsk.")
-	executeAddress = flag.String("exec", "", "Execute address of the inserted file. (hexadecimal #170 allowed.)")
-	loadingAddress = flag.String("load", "", "Loading address of the inserted file. (hexadecimal #170 allowed.)")
-	user           = flag.Int("user", 0, "User number of the inserted file.")
-	force          = flag.Bool("force", false, "Force overwriting of the inserted file.")
-	fileType       = flag.String("type", "", "Type of the inserted file \n\tprotected : type ascii protected\n\tbinary : type binary\n")
-	snaPath        = flag.String("sna", "", "SNA file to handle")
-	analyse        = flag.Bool("analyze", false, "Returns the DSK header")
-	cpcType        = flag.Int("cpctype", 2, "CPC type (sna import feature): \n\tCPC464 : 0\n\tCPC664: 1\n\tCPC6128 : 2\n\tUnknown : 3\n\tCPCPlus6128 : 4\n\tCPCPlus464 : 5\n\tGX4000 : 6\n\t")
-	screenMode     = flag.Int("screenmode", 1, "screen mode parameter for the sna.")
-	addHeader      = flag.Bool("addheader", false, "Add header to the standalone file (must be set with exec, load and type options).")
-	vendorFormat   = flag.Bool("vendor", false, "Format in vendor format (sectors number #09, end track #27)")
-	dataFormat     = flag.Bool("data", true, "Format in vendor format (sectors number #09, end track #27)")
-	rawimport      = flag.Bool("rawimport", false, "raw imports the amsdosfile, this option is associated with -dsk, -track and -sector.\nThis option will do a raw copy of the file starting to track and sector values.\nfor instance : dsk -dsk mydskfile.dsk -amsdosfile file.bin -rawimport -track 1 -sector 0")
-	rawexport      = flag.Bool("rawexport", false, "raw exports the amsdosfile, this option is associated with -dsk, -track and -sector.\nThis option will do a raw extract of the content beginning to track and sector values and will stop when size is reached.\nfor instance : dsk -dsk mydskfile.dsk -amsdosfile file.bin -rawexport -track 1 -sector 0 -size 16384")
-	size           = flag.Int("size", 0, "Size to extract in rawexport, see rawexport for more details.")
-	autotest       = flag.Bool("autotest", false, "Executs all tests.")
-	autoextract    = flag.String("autoextract", "", "Extract all DSK contained in the folder path")
-	snaVersion     = flag.Int("snaversion", 1, "Set the sna version (1 or 2 available).")
-	quiet          = flag.Bool("quiet", false, "remove useless display (for scripting for instance)")
+	sector         = flag.Int("sector", 9, "Number of sectors (format).")
+	format         = flag.Bool("format", false, "Format the specified DSK or SNA file.")
+	dskType        = flag.Int("dsktype", 0, "DSK Type: 0 = DSK, 1 = EDSK, 3 = SNA.")
+	dskPath        = flag.String("dsk", "", "Path to the DSK file to handle.")
+	fileInDsk      = flag.String("file", "", "File to handle or insert into the DSK file.")
+	hexa           = flag.Bool("hex", false, "\tDisplay an AMSDOS file in hexadecimal format.")
+	info           = flag.Bool("info", false, "Retrieve information about an AMSDOS file (size, execution, and loading address) or an SNA file.")
+	ascii          = flag.Bool("ascii", false, "Display an AMSDOS file in ASCII format.")
+	desassemble    = flag.Bool("desassemble", false, "Disassemble an AMSDOS file.")
+	get            = flag.Bool("get", false, "\tExtract a file from the DSK file.")
+	remove         = flag.Bool("remove", false, "Remove the AMSDOS file from the DSK file.")
+	basic          = flag.Bool("basic", false, "Display a basic AMSDOS file.")
+	put            = flag.Bool("put", false, "\tInsert the AMSDOS file into the DSK file.")
+	executeAddress = flag.String("exec", "", "Execution address for the inserted file (hexadecimal format, e.g., #170 allowed).")
+	loadingAddress = flag.String("load", "", "Loading address for the inserted file (hexadecimal format, e.g., #170 allowed).")
+	user           = flag.Int("user", 0, "User number for the inserted file.")
+	force          = flag.Bool("force", false, "Force overwrite of an existing file in the DSK.")
+	fileType       = flag.String("type", "", "Type of the inserted file: 'ascii' or 'binary'.")
+	snaPath        = flag.String("sna", "", "\tPath to the SNA file to handle.")
+	analyse        = flag.Bool("analyze", false, "Analyze and display the DSK header.")
+	cpcType        = flag.Int("cpctype", 2, "CPC type for SNA import: 0 = CPC464, 1 = CPC664, 2 = CPC6128, 3 = Unknown, 4 = CPCPlus6128, 5 = CPCPlus464, 6 = GX4000.")
+	screenMode     = flag.Int("screenmode", 1, "Screen mode parameter for SNA files.")
+	addHeader      = flag.Bool("addheader", false, "Add an AMSDOS header to a standalone file (must be used with the 'exec', 'load', and 'type' options).")
+	vendorFormat   = flag.Bool("vendor", false, "Use vendor format for formatting (sector count = #09, last track = #27).")
+	dataFormat     = flag.Bool("data", true, "Use data format for formatting (sector count = #09, last track = #27).")
+	rawimport      = flag.Bool("rawimport", false, "Perform a raw import of an AMSDOS file. Requires '-dsk', '-track', and '-sector' options. \n\t\tCopies the file directly starting from the specified track and sector. e.g.: dsk -dsk mydskfile.dsk -amsdosfile file.bin -rawimport -track 1 -sector 0")
+	rawexport      = flag.Bool("rawexport", false, "Perform a raw export of an AMSDOS file. Requires '-dsk', '-track', '-sector', and '-size' options. \n\t\tExtracts the file content from the specified track and sector up to the given size. e.g.: dsk -dsk mydskfile.dsk -amsdosfile file.bin -rawexport -track 1 -sector 0 -size 16384")
+	size           = flag.Int("size", 0, "Size of data to extract for 'rawexport'. See 'rawexport' for details.")
+	autotest       = flag.Bool("autotest", false, "Run all available tests.")
+	autoextract    = flag.String("autoextract", "", "Extract all DSK files from a specified folder.")
+	snaVersion     = flag.Int("snaversion", 1, "Specify the SNA version (1 or 2 available).")
+	quiet          = flag.Bool("quiet", false, "Suppress unnecessary output (useful for scripting).")
 	appVersion     = "0.25"
-	version        = flag.Bool("version", false, "Display the app's version and quit.")
+	version        = flag.Bool("version", false, "Display the application version and exit.")
 )
 
 func main() {
 	var cmdRunned bool = false
 
 	var execAddress, loadAddress uint16
+
+	flag.Usage = sampleUsage
 	flag.Parse()
 
 	if *help {
@@ -501,18 +503,21 @@ func resumeAction(dskFilepath, action, amsdosfile, informations string, quiet bo
 }
 
 func sampleUsage() {
-	fmt.Fprintf(os.Stderr, "\nHere sample usages :\n"+
-		"\t* Create empty simple dsk file : dsk -dsk output.dsk -format\n"+
-		"\t* Create empty simple dsk file with custom tracks and sectors: dsk -dsk output.dsk -format -sector 8 -track 42\n"+
-		"\t* Create empty extended dsk file with custom head, tracks and sectors: dsk -dsk output.dsk -format -sector 8 -track 42 -dsktype 1 -head 2\n"+
-		"\t* Create empty sna file : dsk -sna output.sna\n"+
-		"\t* List dsk content : dsk -dsk output.dsk -list\n"+
-		"\t* Get information on Sna file : dsk -sna output.sna -info\n"+
-		"\t* Get information on file in dsk  : dsk -dsk output.dsk -file hello.bin -info\n"+
-		"\t* List file content in hexadecimal in dsk file : dsk -dsk output.dsk -file hello.bin -hex\n"+
-		"\t* Put file in dsk file : dsk -dsk output.dsk -put -file hello.bin -exec \"#1000\" -load \"500\" -type binary\n"+
-		"\t* Put file in sna file (here for a cpc plus): dsk -sna output.sna -put -file hello.bin -exec \"#1000\" -load 500 -screenmode 0 -cpctype 4\n\n\n")
-	flag.PrintDefaults()
+	fmt.Fprintf(os.Stderr, "\nHere are some sample usages:\n"+
+		"  dsk -dsk output.dsk -format                  # Create an empty simple DSK file.\n"+
+		"  dsk -dsk output.dsk -format -sector 8 -track 42  # Create a simple empty DSK file with custom tracks and sectors.\n"+
+		"  dsk -dsk output.dsk -format -sector 8 -track 42 -dsktype 1 -head 2  # Create an empty extended DSK file with custom heads, tracks, and sectors.\n"+
+		"  dsk -sna output.sna                          # Create an empty SNA file.\n"+
+		"  dsk -dsk output.dsk -list                    # List the contents of the DSK file.\n"+
+		"  dsk -sna output.sna -info                    # Get information about the SNA file.\n"+
+		"  dsk -dsk output.dsk -file hello.bin -info    # Get information about a file in the DSK.\n"+
+		"  dsk -dsk output.dsk -file hello.bin -hex     # Display the file content in hexadecimal format from the DSK file.\n"+
+		"  dsk -dsk output.dsk -put -file hello.bin -exec \"#1000\" -load \"500\" -type binary  # Insert a file into the DSK file.\n"+
+		"  dsk -sna output.sna -put -file hello.bin -exec \"#1000\" -load 500 -screenmode 0 -cpctype 4  # Insert a file into the SNA file (for a CPC Plus system).\n\n")
+	fmt.Printf(("Options:\n"))
+	flag.VisitAll(func(f *flag.Flag) {
+		fmt.Printf("  -%s \t%s (default: %q)\n", f.Name, f.Usage, f.DefValue)
+	})
 }
 
 func exitOnError(errorMessage, hint string) {
