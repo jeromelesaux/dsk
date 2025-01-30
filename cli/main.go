@@ -66,6 +66,8 @@ func main() {
 	var cmdRunned bool = false
 
 	var execAddress, loadAddress uint16
+
+	flag.Usage = sampleUsage
 	flag.Parse()
 
 	if *help {
