@@ -36,6 +36,8 @@ build: clean init
 	(make compile ARCH=arm OS=linux GOARM=5)
 	@echo "Compilation for older windows"
 	(make compile ARCH=386 OS=windows EXT=.exe)
+	@echo "Compilation for Risc V"
+	(make compile ARCH=riscv64 OS=linux)
 
 init:
 	mkdir ${BINARIES}
