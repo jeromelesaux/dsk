@@ -92,8 +92,12 @@ func main() {
 		hasHeader, headerInf := amsdos.CheckAmsdos(content)
 		if hasHeader {
 			fileType = "binary"
-			execAddress = headerInf.Exec
-			loadAddress = headerInf.Address
+			if *executeAddress == "" {
+				execAddress = headerInf.Exec
+			}
+			if *loadingAddress == "" {
+				loadAddress = headerInf.Address
+			}
 		}
 	}
 
