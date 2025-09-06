@@ -30,47 +30,46 @@ var (
 	format         = flag.Bool("format", false, "Format the specified DSK or SNA file.")
 	dskType        = flag.Int("dsktype", 0, "DSK Type: 0 = DSK, 1 = EDSK, 3 = SNA.")
 	dskPath        = flag.String("dsk", "", "Path to the DSK file to handle.")
-	fileInDsk      = flag.String("file", "", "File to handle or insert into the DSK file.")
 	hexa           = flag.Bool("hex", false, "\tDisplay an AMSDOS file in hexadecimal format.")
 	info           = flag.Bool("info", false, "Retrieve information about an AMSDOS file (size, execution, and loading address) or an SNA file.")
 	ascii          = flag.Bool("ascii", false, "Display an AMSDOS file in ASCII format.")
 	desassemble    = flag.Bool("desassemble", false, "Disassemble an AMSDOS file.")
-	get            = flag.Bool("get", false, "\tExtract a file from the DSK file.")
+	get            = flag.String("get", "", "\tExtract a file from the DSK file.")
 	remove         = flag.Bool("remove", false, "Remove the AMSDOS file from the DSK file.")
 	basic          = flag.Bool("basic", false, "Display a basic AMSDOS file.")
-	put            = flag.Bool("put", false, "\tInsert the AMSDOS file into the DSK file.")
+	put            = flag.String("put", "", "\tInsert the AMSDOS file into the DSK file.")
 	executeAddress = flag.String("exec", "", "Execution address for the inserted file (hexadecimal format, e.g., #170 allowed).")
 	loadingAddress = flag.String("load", "", "Loading address for the inserted file (hexadecimal format, e.g., #170 allowed).")
 	user           = flag.Int("user", 0, "User number for the inserted file.")
 	force          = flag.Bool("force", false, "Force overwrite of an existing file in the DSK.")
-	fileType       = flag.String("type", "", "Type of the inserted file: 'ascii' or 'binary'.")
-	snaPath        = flag.String("sna", "", "\tPath to the SNA file to handle.")
-	analyse        = flag.Bool("analyze", false, "Analyze and display the DSK header.")
-	cpcType        = flag.Int("cpctype", 2, "CPC type for SNA import: 0 = CPC464, 1 = CPC664, 2 = CPC6128, 3 = Unknown, 4 = CPCPlus6128, 5 = CPCPlus464, 6 = GX4000.")
-	screenMode     = flag.Int("screenmode", 1, "Screen mode parameter for SNA files.")
-	addHeader      = flag.Bool("addheader", false, "Add an AMSDOS header to a standalone file (must be used with the 'exec', 'load', and 'type' options).")
-	vendorFormat   = flag.Bool("vendor", false, "Use vendor format for formatting (sector count = #09, last track = #27).")
-	dataFormat     = flag.Bool("data", true, "Use data format for formatting (sector count = #09, last track = #27).")
-	rawimport      = flag.Bool("rawimport", false, "Perform a raw import of an AMSDOS file. Requires '-dsk', '-track', and '-sector' options. \n\t\tCopies the file directly starting from the specified track and sector. e.g.: dsk -dsk mydskfile.dsk -amsdosfile file.bin -rawimport -track 1 -sector 0")
-	rawexport      = flag.Bool("rawexport", false, "Perform a raw export of an AMSDOS file. Requires '-dsk', '-track', '-sector', and '-size' options. \n\t\tExtracts the file content from the specified track and sector up to the given size. e.g.: dsk -dsk mydskfile.dsk -amsdosfile file.bin -rawexport -track 1 -sector 0 -size 16384")
-	size           = flag.Int("size", 0, "Size of data to extract for 'rawexport'. See 'rawexport' for details.")
-	autotest       = flag.Bool("autotest", false, "Run all available tests.")
-	autoextract    = flag.String("autoextract", "", "Extract all DSK files from a specified folder.")
-	snaVersion     = flag.Int("snaversion", 1, "Specify the SNA version (1 or 2 available).")
-	quiet          = flag.Bool("quiet", false, "Suppress unnecessary output (useful for scripting).")
-	appVersion     = "0.25"
-	version        = flag.Bool("version", false, "Display the application version and exit.")
+	//fileType       = flag.String("type", "", "Type of the inserted file: 'ascii' or 'binary'.")
+	snaPath      = flag.String("sna", "", "\tPath to the SNA file to handle.")
+	analyse      = flag.Bool("analyze", false, "Analyze and display the DSK header.")
+	cpcType      = flag.Int("cpctype", 2, "CPC type for SNA import: 0 = CPC464, 1 = CPC664, 2 = CPC6128, 3 = Unknown, 4 = CPCPlus6128, 5 = CPCPlus464, 6 = GX4000.")
+	screenMode   = flag.Int("screenmode", 1, "Screen mode parameter for SNA files.")
+	vendorFormat = flag.Bool("vendor", false, "Use vendor format for formatting (sector count = #09, last track = #27).")
+	dataFormat   = flag.Bool("data", true, "Use data format for formatting (sector count = #09, last track = #27).")
+	rawimport    = flag.Bool("rawimport", false, "Perform a raw import of an AMSDOS file. Requires '-dsk', '-track', and '-sector' options. \n\t\tCopies the file directly starting from the specified track and sector. e.g.: dsk -dsk mydskfile.dsk -amsdosfile file.bin -rawimport -track 1 -sector 0")
+	rawexport    = flag.Bool("rawexport", false, "Perform a raw export of an AMSDOS file. Requires '-dsk', '-track', '-sector', and '-size' options. \n\t\tExtracts the file content from the specified track and sector up to the given size. e.g.: dsk -dsk mydskfile.dsk -amsdosfile file.bin -rawexport -track 1 -sector 0 -size 16384")
+	size         = flag.Int("size", 0, "Size of data to extract for 'rawexport'. See 'rawexport' for details.")
+	autotest     = flag.Bool("autotest", false, "Run all available tests.")
+	autoextract  = flag.String("autoextract", "", "Extract all DSK files from a specified folder.")
+	snaVersion   = flag.Int("snaversion", 1, "Specify the SNA version (1 or 2 available).")
+	quiet        = flag.Bool("quiet", false, "Suppress unnecessary output (useful for scripting).")
+	appVersion   = "0.26"
+	version      = flag.Bool("version", false, "Display the application version and exit.")
 )
 
 func main() {
 	var cmdRunned bool = false
-
+	var addHeader bool
 	var execAddress, loadAddress uint16
+	fileType := "ascii"
 
 	flag.Usage = sampleUsage
 	flag.Parse()
 
-	if *help {
+	if *help || len(flag.Args()) == 1 {
 		sampleUsage()
 		os.Exit(0)
 	}
@@ -83,6 +82,23 @@ func main() {
 	if *autotest {
 		autotests()
 		os.Exit(0)
+	}
+
+	if *put != "" {
+		content, err := os.ReadFile(*put)
+		if err != nil {
+			exitOnError(err.Error(), fmt.Sprintf("file %s issue", *put))
+		}
+		hasHeader, headerInf := amsdos.CheckAmsdos(content)
+		if hasHeader {
+			fileType = "binary"
+			execAddress = headerInf.Exec
+			loadAddress = headerInf.Address
+		}
+	}
+
+	if *loadingAddress != "" || *executeAddress != "" {
+		addHeader = true
 	}
 
 	if *autoextract != "" {
@@ -123,6 +139,7 @@ func main() {
 	if !*quiet {
 		fmt.Fprintf(os.Stderr, "DSK cli version [%s]\nMade by Sid (ImpAct)\n", appVersion)
 	}
+	// gestion des SNAs
 	if *snaPath != "" {
 		if *info {
 			cmdRunned = true
@@ -149,17 +166,17 @@ func main() {
 			fmt.Println(dsk.DisplayHex([]byte(content), 16))
 			os.Exit(0)
 		}
-		if *put {
+		if *put != "" {
 			cmdRunned = true
-			if *fileInDsk != "" {
+			if *put != "" {
 				cpcTYPE := sna.CPCType(*cpcType)
 				crtc := sna.UM6845R
 				if *cpcType > 3 {
 					crtc = sna.ASIC_6845
 				}
-				if err := sna.ImportInSna(*fileInDsk, *snaPath, execAddress, uint8(*screenMode), cpcTYPE, crtc, *snaVersion); err != nil {
+				if err := sna.ImportInSna(*put, *snaPath, execAddress, uint8(*screenMode), cpcTYPE, crtc, *snaVersion); err != nil {
 					fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
-						*fileInDsk,
+						*put,
 						*snaPath,
 						err)
 					os.Exit(1)
@@ -169,21 +186,21 @@ func main() {
 				fmt.Fprintf(os.Stderr, "Missing input (argument -amsdosfile) file to import in sna file (%s)\n", *snaPath)
 			}
 		}
-		if *get {
+		if *get != "" {
 			cmdRunned = true
-			if *fileInDsk != "" {
+			if *get != "" {
 				content, err := sna.ExportFromSna(*snaPath)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
-						*fileInDsk,
+						*get,
 						*snaPath,
 						err)
 					os.Exit(1)
 				}
-				f, err := os.Create(*fileInDsk)
+				f, err := os.Create(*get)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
-						*fileInDsk,
+						*get,
 						*snaPath,
 						err)
 					os.Exit(1)
@@ -192,7 +209,7 @@ func main() {
 				_, err = f.Write(content)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
-						*fileInDsk,
+						*get,
 						*snaPath,
 						err)
 					os.Exit(1)
@@ -203,7 +220,7 @@ func main() {
 					content, err := sna.ExportFromSna(*snaPath)
 					if err != nil {
 						fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
-							*fileInDsk,
+							*get,
 							*snaPath,
 							err)
 						os.Exit(1)
@@ -212,7 +229,7 @@ func main() {
 					if isError {
 						exitOnError(msg, hint)
 					}
-					isError, msg, hint = rawImportDataInDsk(d, *fileInDsk, *dskPath, *track, *sector, content)
+					isError, msg, hint = rawImportDataInDsk(d, *get, *dskPath, *track, *sector, content)
 					if isError {
 						exitOnError(msg, hint)
 					}
@@ -223,7 +240,9 @@ func main() {
 			}
 		}
 	}
-	if *dskPath == "" && *fileInDsk == "" {
+
+	// verification que le fichier DSK est present
+	if *dskPath == "" && *get == "" && *put == "" {
 		sampleUsage()
 		exitOnError("No dsk set.", "")
 	}
@@ -258,7 +277,7 @@ func main() {
 
 		if *info {
 			cmdRunned = true
-			isError, msg, hint := fileinfoDsk(d, *fileInDsk)
+			isError, msg, hint := fileinfoDsk(d, *get)
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -266,7 +285,7 @@ func main() {
 
 		if *hexa {
 			cmdRunned = true
-			isError, msg, hint := hexaFileDsk(d, *fileInDsk)
+			isError, msg, hint := hexaFileDsk(d, *get)
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -274,7 +293,7 @@ func main() {
 
 		if *desassemble {
 			cmdRunned = true
-			isError, msg, hint := desassembleFileDsk(d, *fileInDsk)
+			isError, msg, hint := desassembleFileDsk(d, *get)
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -282,7 +301,7 @@ func main() {
 
 		if *ascii {
 			cmdRunned = true
-			isError, msg, hint := asciiFileDsk(d, *fileInDsk)
+			isError, msg, hint := asciiFileDsk(d, *get)
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -290,15 +309,15 @@ func main() {
 
 		if *basic {
 			cmdRunned = true
-			if *fileInDsk == "" {
-				exitOnError("amsdosfile option is empty, set it.", "dsk -dsk output.dsk -basic -amsdosfile hello.bin")
+			if *get == "" {
+				exitOnError("amsdosfile option is empty, set it.", "dsk -dsk output.dsk -basic -get hello.bin")
 			}
-			amsdosFile := dsk.GetNomDir(*fileInDsk)
+			amsdosFile := dsk.GetNomDir(*get)
 			indice := d.FileExists(amsdosFile)
 			if indice == dsk.NOT_FOUND {
-				fmt.Fprintf(os.Stderr, "File %s does not exist\n", *fileInDsk)
+				fmt.Fprintf(os.Stderr, "File %s does not exist\n", *get)
 			} else {
-				content, err := d.GetFileIn(*fileInDsk, indice)
+				content, err := d.GetFileIn(*get, indice)
 				if err != nil {
 					fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 				}
@@ -307,23 +326,23 @@ func main() {
 				if hasAmsdos {
 
 					body, filesize, _ := d.ViewFile(indice)
-					fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", *fileInDsk, filesize)
+					fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", *get, filesize)
 					fmt.Fprintf(os.Stdout, "%s", utils.Basic(body, uint16(filesize), true))
 				} else {
-					fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", *fileInDsk, len(content))
+					fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", *get, len(content))
 					fmt.Fprintf(os.Stdout, "%s", content)
 				}
 			}
 		}
 
-		if *get {
+		if *get != "" {
 			cmdRunned = true
 			directory, err := os.Getwd()
 			if err != nil {
 				exitOnError(err.Error(), "Please use autoextract option")
 			}
 
-			isError, msg, hint := getFileDsk(d, *fileInDsk, *dskPath, directory)
+			isError, msg, hint := getFileDsk(d, *get, *dskPath, directory)
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -331,7 +350,7 @@ func main() {
 
 		if *rawimport {
 			cmdRunned = true
-			isError, msg, hint := rawImportDsk(d, *fileInDsk, *dskPath, *track, *sector)
+			isError, msg, hint := rawImportDsk(d, *put, *dskPath, *track, *sector)
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -339,15 +358,15 @@ func main() {
 
 		if *rawexport {
 			cmdRunned = true
-			isError, msg, hint := rawExportDsk(d, *fileInDsk, *dskPath, *track, *sector, *size)
+			isError, msg, hint := rawExportDsk(d, *put, *dskPath, *track, *sector, *size)
 			if isError {
 				exitOnError(msg, hint)
 			}
 		}
 
-		if *put {
+		if *put != "" {
 			cmdRunned = true
-			isError, msg, hint := putFileDsk(d, *fileInDsk, *dskPath, *fileType, loadAddress, execAddress, uint16(*user))
+			isError, msg, hint := putFileDsk(d, *put, *dskPath, fileType, loadAddress, execAddress, uint16(*user))
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -355,7 +374,7 @@ func main() {
 
 		if *remove {
 			cmdRunned = true
-			isError, msg, hint := removeFileDsk(d, *dskPath, *fileInDsk)
+			isError, msg, hint := removeFileDsk(d, *dskPath, *put)
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -371,18 +390,18 @@ func main() {
 		}
 	} else {
 		//
-		// now dsk will work on an amsdosfile
+		// now dsk will work on an amsdosfile no dsk file set
 		//
-		if *fileInDsk == "" {
-			exitOnError("Error no amsdos file is set\n", "set your amsdos file with option -amsdosfile like dsk -dsk output.dsk -put -amsdosfile hello.bin")
+		if *get == "" {
+			exitOnError("Error no file is set\n", "set your amsdos file with option like dsk -get hello.bin")
 		}
-		f, err := os.Open(*fileInDsk)
+		f, err := os.Open(*get)
 		if err != nil {
-			exitOnError(fmt.Sprintf("Cannot open file %s error :%v\n", *fileInDsk, err), "Check your dsk file path")
+			exitOnError(fmt.Sprintf("Cannot open file %s error :%v\n", *get, err), "Check your file path")
 		}
 		content, err := io.ReadAll(f)
 		if err != nil {
-			exitOnError(fmt.Sprintf("Cannot read file %s error :%v\n", *fileInDsk, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze")
+			exitOnError(fmt.Sprintf("Cannot read file %s error :%v\n", *get, err), "cannot read the file content")
 		}
 
 		if *basic {
@@ -393,7 +412,7 @@ func main() {
 				content = content[dsk.HeaderSize:]
 			}
 
-			fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", *fileInDsk, len(content))
+			fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", *get, len(content))
 			fmt.Fprintf(os.Stdout, "%s", utils.Basic(content, uint16(len(content)), true))
 		}
 		if *desassemble {
@@ -419,7 +438,7 @@ func main() {
 			cmdRunned = true
 			isAmsdos, header := amsdos.CheckAmsdos(content)
 			if !isAmsdos {
-				exitOnError(fmt.Sprintf("File (%s) does not contain amsdos header.\n", *fileInDsk), "may be a ascii file")
+				exitOnError(fmt.Sprintf("File (%s) does not contain amsdos header.\n", *get), "may be a ascii file")
 			}
 			fmt.Fprintf(os.Stdout, "Amsdos informations :\n\tFilename:%s\n\tSize:#%X (%.2f Ko)\n\tSize2:#%X (%.2f Ko)\n\tLogical Size:#%X (%.2f Ko)\n\tExecute Address:#%X\n\tLoading Address:#%X\n\tChecksum:#%X\n\tType:%d\n\tUser:%d\n",
 				header.Filename,
@@ -435,14 +454,14 @@ func main() {
 				header.Type,
 				header.User)
 		}
-		if *addHeader {
+		if addHeader {
 
 			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", execAddress, loadAddress)
 			isAmsdos, header := amsdos.CheckAmsdos(content)
 			if isAmsdos {
 				exitOnError("The file already contains an amsdos header", "Check your file")
 			}
-			filename := dsk.GetNomAmsdos(*fileInDsk)
+			filename := dsk.GetNomAmsdos(*get)
 			header.Size = uint16(len(content))
 			header.Size2 = uint16(len(content))
 			copy(header.Filename[:], []byte(filename[0:12]))
@@ -460,16 +479,16 @@ func main() {
 				exitOnError("error while writing header : "+err.Error(), "Check your file")
 			}
 
-			f, err := os.Create(*fileInDsk)
+			f, err := os.Create(*get)
 			if err != nil {
-				exitOnError(fmt.Sprintf("Error while creating file [%s] error:%v\n", *fileInDsk, err), "Check your dsk file path")
+				exitOnError(fmt.Sprintf("Error while creating file [%s] error:%v\n", *get, err), "Check your dsk file path")
 			}
 			defer f.Close()
 			_, err = f.Write(rbuff.Bytes())
 			if err != nil {
-				exitOnError(fmt.Sprintf("Error while writing data in file [%s] error:%v\n", *fileInDsk, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze")
+				exitOnError(fmt.Sprintf("Error while writing data in file [%s] error:%v\n", *get, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze")
 			}
-			resumeAction("none", "add amsdos header", *fileInDsk, informations, *quiet)
+			resumeAction("none", "add amsdos header", *get, informations, *quiet)
 			fmt.Fprintf(os.Stdout, "Amsdos informations :\n\tFilename:%s\n\tSize:#%X (%.2f Ko)\n\tSize2:#%X (%.2f Ko)\n\tLogical Size:#%X (%.2f Ko)\n\tExecute Address:#%X\n\tLoading Address:#%X\n\tChecksum:#%X\n\tType:%d\n\tUser:%d\n",
 				header.Filename,
 				header.Size,
@@ -508,12 +527,13 @@ func sampleUsage() {
 		"  dsk -dsk output.dsk -format -sector 8 -track 42  # Create a simple empty DSK file with custom tracks and sectors.\n"+
 		"  dsk -dsk output.dsk -format -sector 8 -track 42 -dsktype 1 -head 2  # Create an empty extended DSK file with custom heads, tracks, and sectors.\n"+
 		"  dsk -sna output.sna                          # Create an empty SNA file.\n"+
+		"  dsk -info -get hello.bin                     # Display header informations on the file hello.bin"+
 		"  dsk -dsk output.dsk -list                    # List the contents of the DSK file.\n"+
 		"  dsk -sna output.sna -info                    # Get information about the SNA file.\n"+
-		"  dsk -dsk output.dsk -file hello.bin -info    # Get information about a file in the DSK.\n"+
-		"  dsk -dsk output.dsk -file hello.bin -hex     # Display the file content in hexadecimal format from the DSK file.\n"+
-		"  dsk -dsk output.dsk -put -file hello.bin -exec \"#1000\" -load \"500\" -type binary  # Insert a file into the DSK file.\n"+
-		"  dsk -sna output.sna -put -file hello.bin -exec \"#1000\" -load 500 -screenmode 0 -cpctype 4  # Insert a file into the SNA file (for a CPC Plus system).\n\n")
+		"  dsk -dsk output.dsk -get hello.bin -info     # Get information about a file in the DSK.\n"+
+		"  dsk -dsk output.dsk g-et hello.bin -hex      # Display the file content in hexadecimal format from the DSK file.\n"+
+		"  dsk -dsk output.dsk -put hello.bin -exec \"#1000\" -load \"500\" -type binary  # Insert a file into the DSK file.\n"+
+		"  dsk -sna output.sna -put hello.bin -exec \"#1000\" -load 500 -screenmode 0 -cpctype 4  # Insert a file into the SNA file (for a CPC Plus system).\n\n")
 	fmt.Printf(("Options:\n"))
 	flag.VisitAll(func(f *flag.Flag) {
 		fmt.Printf("  -%s \t%s (default: %q)\n", f.Name, f.Usage, f.DefValue)
@@ -602,8 +622,15 @@ func listDsk(d dsk.DSK, dskPath string) (onError bool, message, hint string) {
 }
 
 func openDsk(osFile string) (d dsk.DSK, onError bool, message, hint string) {
+	if _, err := os.Stat(osFile); errors.Is(err, os.ErrNotExist) {
+		onError, msgErr, hint := formatDsk(osFile, *sector, *track, *heads, 0, true, false)
+		if onError {
+			return dsk.DSK{}, onError, msgErr, hint
+		}
+	}
 	f, err := os.Open(osFile)
 	if err != nil {
+		// format new dsk
 		return d, true, fmt.Sprintf("Error while read file (%s) error %v\n", osFile, err), "Check your dsk file path"
 	}
 	defer f.Close()
@@ -1237,25 +1264,22 @@ func resetArguments() {
 	*format = false
 	*dskType = 0
 	*dskPath = ""
-	*fileInDsk = ""
 	*hexa = false
 	*info = false
 	*ascii = false
 	*desassemble = false
-	*get = false
+	*get = ""
 	*remove = false
 	*basic = false
-	*put = false
+	*put = ""
 	*executeAddress = ""
 	*loadingAddress = ""
 	*user = 0
 	*force = false
-	*fileType = ""
 	*snaPath = ""
 	*analyse = false
 	*cpcType = 2
 	*screenMode = 1
-	*addHeader = false
 	*vendorFormat = false
 	*dataFormat = true
 	*rawimport = false
@@ -1421,7 +1445,7 @@ func parsing8bitsRasmAnnotation() bool {
 }
 
 func putFileBinaryDataTest(filePath, dskFilepath string) bool {
-	*put = true
+	*put = dskFilepath
 	fileType := "binary"
 	d, onError, _, _ := openDsk(dskFilepath)
 	if onError {
@@ -1432,7 +1456,7 @@ func putFileBinaryDataTest(filePath, dskFilepath string) bool {
 }
 
 func getFileBinaryDataTest(filePath, dskFilepath string) bool {
-	*get = true
+	*get = dskFilepath
 	// fileType := "binary"
 	d, onError, _, _ := openDsk(dskFilepath)
 	if onError {
