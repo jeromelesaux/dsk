@@ -33,7 +33,7 @@ var (
 	hexa           = flag.Bool("hex", false, "\tDisplay an AMSDOS file in hexadecimal format.")
 	info           = flag.Bool("info", false, "Retrieve information about an AMSDOS file (size, execution, and loading address) or an SNA file.")
 	ascii          = flag.Bool("ascii", false, "Display an AMSDOS file in ASCII format.")
-	desassemble    = flag.Bool("desassemble", false, "Disassemble an AMSDOS file.")
+	disassemble    = flag.Bool("disassemble", false, "Disassemble an AMSDOS file.")
 	get            = flag.String("get", "", "\tExtract a file from the DSK file.")
 	remove         = flag.Bool("remove", false, "Remove the AMSDOS file from the DSK file.")
 	basic          = flag.Bool("basic", false, "Display a basic AMSDOS file.")
@@ -295,7 +295,7 @@ func main() {
 			}
 		}
 
-		if *desassemble {
+		if *disassemble {
 			cmdRunned = true
 			isError, msg, hint := desassembleFileDsk(d, *get)
 			if isError {
@@ -419,7 +419,7 @@ func main() {
 			fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", *get, len(content))
 			fmt.Fprintf(os.Stdout, "%s", utils.Basic(content, uint16(len(content)), true))
 		}
-		if *desassemble {
+		if *disassemble {
 			cmdRunned = true
 			var address uint16
 			isAmsdos, header := amsdos.CheckAmsdos(content)
@@ -535,7 +535,7 @@ func sampleUsage() {
 		"  dsk -dsk output.dsk -list                    # List the contents of the DSK file.\n"+
 		"  dsk -sna output.sna -info                    # Get information about the SNA file.\n"+
 		"  dsk -dsk output.dsk -get hello.bin -info     # Get information about a file in the DSK.\n"+
-		"  dsk -dsk output.dsk g-et hello.bin -hex      # Display the file content in hexadecimal format from the DSK file.\n"+
+		"  dsk -dsk output.dsk -get hello.bin -hex      # Display the file content in hexadecimal format from the DSK file.\n"+
 		"  dsk -dsk output.dsk -put hello.bin -exec \"#1000\" -load \"500\" -type binary  # Insert a file into the DSK file.\n"+
 		"  dsk -sna output.sna -put hello.bin -exec \"#1000\" -load 500 -screenmode 0 -cpctype 4  # Insert a file into the SNA file (for a CPC Plus system).\n\n")
 	fmt.Printf(("Options:\n"))
@@ -731,7 +731,7 @@ func putFileDsk(d dsk.DSK, fileInDsk, dskPath string, fileType string, loadAddre
 	amsdosFile := dsk.GetNomDir(fileInDsk)
 	indice := d.FileExists(amsdosFile)
 	if indice != dsk.NOT_FOUND && !*force {
-		fmt.Fprintf(os.Stderr, "File %s already exists\n", fileInDsk)
+		exitOnError(fmt.Sprintf("File %s already exists\n", fileInDsk), "use -force to force file put")
 	} else {
 		if indice != dsk.NOT_FOUND && *force {
 			// suppress file
@@ -1271,7 +1271,7 @@ func resetArguments() {
 	*hexa = false
 	*info = false
 	*ascii = false
-	*desassemble = false
+	*disassemble = false
 	*get = ""
 	*remove = false
 	*basic = false
@@ -1491,7 +1491,7 @@ func asciiFileBinaryDataTest(filePath, dskFilepath string) bool {
 }
 
 func desassembleFileBinaryDataTest(filePath, dskFilepath string) bool {
-	*desassemble = true
+	*disassemble = true
 	d, onError, _, _ := openDsk(dskFilepath)
 	if onError {
 		return onError
