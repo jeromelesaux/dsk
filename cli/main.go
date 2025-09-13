@@ -536,7 +536,7 @@ func sampleUsage() {
 		"  dsk -sna output.sna -info                    # Get information about the SNA file.\n"+
 		"  dsk -dsk output.dsk -get hello.bin -info     # Get information about a file in the DSK.\n"+
 		"  dsk -dsk output.dsk -get hello.bin -hex      # Display the file content in hexadecimal format from the DSK file.\n"+
-		"  dsk -dsk output.dsk -put hello.bin -exec \"#1000\" -load \"500\" -type binary  # Insert a file into the DSK file.\n"+
+		"  dsk -dsk output.dsk -put hello.bin -exec \"#1000\" -load \"500\"  # Insert a file into the DSK file.\n"+
 		"  dsk -sna output.sna -put hello.bin -exec \"#1000\" -load 500 -screenmode 0 -cpctype 4  # Insert a file into the SNA file (for a CPC Plus system).\n\n")
 	fmt.Printf(("Options:\n"))
 	flag.VisitAll(func(f *flag.Flag) {
