@@ -246,10 +246,7 @@ func main() {
 	}
 
 	// verification que le fichier DSK est present
-	if *dskPath == "" && *get == "" && *put == "" && *info == "" {
-		sampleUsage()
-		exitOnError("No dsk set.", "")
-	}
+
 	if *format {
 		cmdRunned = true
 		isError, msg, hint := formatDsk(*dskPath, *sector, *track, *heads, 0, *vendorFormat, *dataFormat)
