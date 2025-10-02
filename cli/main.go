@@ -56,6 +56,7 @@ var (
 	autoextract  = flag.String("autoextract", "", "Extract all DSK files from a specified folder.")
 	snaVersion   = flag.Int("snaversion", 1, "Specify the SNA version (1 or 2 available).")
 	quiet        = flag.Bool("quiet", false, "Suppress unnecessary output (useful for scripting).")
+	stdoutOpt    = flag.Bool("stdout", false, "To redirect to stdout when using get file")
 	appVersion   = "0.27"
 	version      = flag.Bool("version", false, "Display the application version and exit.")
 )
@@ -310,9 +311,6 @@ func main() {
 
 		if *basic != "" {
 			cmdRunned = true
-			if *get == "" {
-				exitOnError("amsdosfile option is empty, set it.", "dsk -dsk output.dsk -basic hello.bas")
-			}
 			amsdosFile := dsk.GetNomDir(*basic)
 			indice := d.FileExists(amsdosFile)
 			if indice == dsk.NOT_FOUND {
@@ -342,10 +340,30 @@ func main() {
 			if err != nil {
 				exitOnError(err.Error(), "Please use autoextract option")
 			}
+			if *stdoutOpt {
+				amsdosFile := dsk.GetNomDir(*get)
+				indice := d.FileExists(amsdosFile)
+				if indice == dsk.NOT_FOUND {
+					fmt.Fprintf(os.Stderr, "File %s does not exist\n", *get)
+				} else {
+					content, err := d.GetFileIn(*get, indice)
+					if err != nil {
+						fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
+					}
 
-			isError, msg, hint := getFileDsk(d, *get, *dskPath, directory)
-			if isError {
-				exitOnError(msg, hint)
+					hasAmsdos, _ := amsdos.CheckAmsdos(content)
+					if hasAmsdos {
+						body, _, _ := d.ViewFile(indice)
+						os.Stdout.Write(body)
+					} else {
+						os.Stdout.Write(content)
+					}
+				}
+			} else {
+				isError, msg, hint := getFileDsk(d, *get, *dskPath, directory)
+				if isError {
+					exitOnError(msg, hint)
+				}
 			}
 		}
 
