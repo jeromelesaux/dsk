@@ -738,34 +738,34 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddre
 	//
 	// Regarde si le fichier contient une en-tete ou non
 	//
-	if err == nil && header.Checksum == header.ComputedChecksum16() {
-		isAmsdos = true
-	}
-	if !isAmsdos {
-		// Creer une en-tete amsdos par defaut
-		fmt.Fprintf(os.Stderr, "Create header... (%s)\n", masque)
-		header = &amsdos.StAmsdos{}
-		header.User = byte(userNumber)
-		header.Size = uint16(fileLength)
-		header.Size2 = uint16(fileLength)
-		header.LogicalSize = uint16(fileLength)
-		copy(header.Filename[:], []byte(cFileName[0:12]))
-		header.Address = loadAddress
-		if loadAddress != 0 {
-			typeModeImport = MODE_BINAIRE
-		}
-		header.Exec = exeAddress
-		if exeAddress != 0 || loadAddress != 0 {
-			typeModeImport = MODE_BINAIRE
-		}
-		header.Type = typeModeImport
+	// if err == nil && header.Checksum == header.ComputedChecksum16() {
+	// 	isAmsdos = true
+	// }
+	// if !isAmsdos {
+	// 	// Creer une en-tete amsdos par defaut
+	// 	fmt.Fprintf(os.Stderr, "Create header... (%s)\n", masque)
+	// 	header = &amsdos.StAmsdos{}
+	// 	header.User = byte(userNumber)
+	// 	header.Size = uint16(fileLength)
+	// 	header.Size2 = uint16(fileLength)
+	// 	header.LogicalSize = uint16(fileLength)
+	// 	copy(header.Filename[:], []byte(cFileName[0:12]))
+	// 	header.Address = loadAddress
+	// 	if loadAddress != 0 {
+	// 		typeModeImport = MODE_BINAIRE
+	// 	}
+	// 	header.Exec = exeAddress
+	// 	if exeAddress != 0 || loadAddress != 0 {
+	// 		typeModeImport = MODE_BINAIRE
+	// 	}
+	// 	header.Type = typeModeImport
 
-		// Il faut recalculer le checksum en comptant es adresses !
-		header.Checksum = header.ComputedChecksum16()
+	// 	// Il faut recalculer le checksum en comptant es adresses !
+	// 	header.Checksum = header.ComputedChecksum16()
 
-	} else {
-		fmt.Fprintf(os.Stderr, "File has already header...(%s)\n", masque)
-	}
+	// } else {
+	fmt.Fprintf(os.Stderr, "File has already header...(%s)\n", masque)
+	// }
 	//
 	// En fonction du mode d'importation...
 	//

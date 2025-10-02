@@ -57,7 +57,7 @@ var (
 	snaVersion   = flag.Int("snaversion", 1, "Specify the SNA version (1 or 2 available).")
 	quiet        = flag.Bool("quiet", false, "Suppress unnecessary output (useful for scripting).")
 	stdoutOpt    = flag.Bool("stdout", false, "To redirect to stdout when using get file")
-	appVersion   = "0.28"
+	appVersion   = "0.29"
 	version      = flag.Bool("version", false, "Display the application version and exit.")
 )
 
@@ -693,21 +693,30 @@ func fileinfoDsk(d dsk.DSK, fileInDsk string) (onError bool, message, hint strin
 		}
 		isAmsdos, header := amsdos.CheckAmsdos(content)
 		if !isAmsdos {
-			return true, fmt.Sprintf("File (%s) does not contain amsdos header.\n", fileInDsk), "add address of execution and loading like : dsk -dsk output.dsk -put -amsdosfile hello.bin -exec \"#1000\" -load 500"
+			entry, err := d.GetInfoDirEntry(uint8(indice))
+			if err != nil {
+				fmt.Fprintf(os.Stderr, "Error while getting file entry in dsk error :%v\n", err)
+			}
+			fmt.Fprintf(os.Stdout, "Amsdos informations :\n\tAscii file\n\tFilename:%s\n\tPage Number:#%d\n\tUser:%d\n",
+				string(entry.Nom[:])+"."+string(entry.Ext[:]),
+				entry.NbPages,
+				entry.User,
+			)
+		} else {
+			fmt.Fprintf(os.Stdout, "Amsdos informations :\n\tFilename:%s\n\tSize:#%X (%.2f Ko)\n\tSize2:#%X (%.2f Ko)\n\tLogical Size:#%X (%.2f Ko)\n\tExecute Address:#%X\n\tLoading Address:#%X\n\tChecksum:#%X\n\tType:%d\n\tUser:%d\n",
+				header.Filename,
+				header.Size,
+				float64(header.Size)/1024.,
+				header.Size2,
+				float64(header.Size2)/1024.,
+				header.LogicalSize,
+				float64(header.LogicalSize)/1024.,
+				header.Exec,
+				header.Address,
+				header.Checksum,
+				header.Type,
+				header.User)
 		}
-		fmt.Fprintf(os.Stdout, "Amsdos informations :\n\tFilename:%s\n\tSize:#%X (%.2f Ko)\n\tSize2:#%X (%.2f Ko)\n\tLogical Size:#%X (%.2f Ko)\n\tExecute Address:#%X\n\tLoading Address:#%X\n\tChecksum:#%X\n\tType:%d\n\tUser:%d\n",
-			header.Filename,
-			header.Size,
-			float64(header.Size)/1024.,
-			header.Size2,
-			float64(header.Size2)/1024.,
-			header.LogicalSize,
-			float64(header.LogicalSize)/1024.,
-			header.Exec,
-			header.Address,
-			header.Checksum,
-			header.Type,
-			header.User)
 	}
 	return false, "", ""
 }
