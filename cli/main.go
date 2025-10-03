@@ -913,7 +913,7 @@ func asciiFileDsk(d dsk.DSK, fileInDsk string, isSdtout bool) (onError bool, mes
 			fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 		}
 		paddedFileSize := 0
-		for i := filesize; i != 0; i-- {
+		for i := filesize - 1; i != 0; i-- {
 			if content[i] == 0x1A {
 				paddedFileSize = i - 1
 				break
