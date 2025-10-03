@@ -57,7 +57,7 @@ var (
 	snaVersion   = flag.Int("snaversion", 1, "Specify the SNA version (1 or 2 available).")
 	quiet        = flag.Bool("quiet", false, "Suppress unnecessary output (useful for scripting).")
 	stdoutOpt    = flag.Bool("stdout", false, "To redirect to stdout when using get file")
-	appVersion   = "0.29"
+	appVersion   = "0.30"
 	version      = flag.Bool("version", false, "Display the application version and exit.")
 )
 
