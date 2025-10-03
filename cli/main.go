@@ -303,7 +303,7 @@ func main() {
 
 		if *ascii != "" {
 			cmdRunned = true
-			isError, msg, hint := asciiFileDsk(d, *ascii)
+			isError, msg, hint := asciiFileDsk(d, *ascii, *stdoutOpt)
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -899,7 +899,7 @@ func removeFileDsk(d dsk.DSK, dskPath, fileInDsk string) (onError bool, message,
 	return false, "", ""
 }
 
-func asciiFileDsk(d dsk.DSK, fileInDsk string) (onError bool, message, hint string) {
+func asciiFileDsk(d dsk.DSK, fileInDsk string, isSdtout bool) (onError bool, message, hint string) {
 	if fileInDsk == "" {
 		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -ascii -amsdosfile hello.txt"
 	}
@@ -912,7 +912,23 @@ func asciiFileDsk(d dsk.DSK, fileInDsk string) (onError bool, message, hint stri
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 		}
-		fmt.Println(string(content[0:filesize]))
+		paddedFileSize := 0
+		for i := filesize; i != 0; i-- {
+			if content[i] == 0x1A {
+				paddedFileSize = i - 1
+				break
+			}
+
+		}
+
+		if paddedFileSize != 0 {
+			filesize = paddedFileSize
+		}
+		if isSdtout {
+			os.Stdout.Write(content[0:filesize])
+		} else {
+			fmt.Println(string(content[0:filesize]))
+		}
 	}
 	return false, "", ""
 }
@@ -1513,7 +1529,7 @@ func asciiFileBinaryDataTest(fileInDsk, dskFilepath string) bool {
 	if onError {
 		return onError
 	}
-	isError, _, _ := asciiFileDsk(d, fileInDsk)
+	isError, _, _ := asciiFileDsk(d, fileInDsk, false)
 	return isError
 }
 
