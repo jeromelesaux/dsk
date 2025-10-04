@@ -1406,7 +1406,9 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 			}
 		}
 	}*/
-
+	if tailleFichier > len(b) {
+		return b, nil
+	}
 	return b[0:tailleFichier], nil
 }
 
