@@ -743,9 +743,10 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddre
 	// Regarde si le fichier contient une en-tete ou non
 	//
 	if err == nil && header.Checksum == header.ComputedChecksum16() {
+		fmt.Fprintf(os.Stderr, "Header found...(%s)\n", masque)
 		isAmsdos = true
 	}
-	if !isAmsdos {
+	if !isAmsdos && typeModeImport != MODE_ASCII {
 		// Creer une en-tete amsdos par defaut
 		fmt.Fprintf(os.Stderr, "Create header... (%s)\n", masque)
 		header = &amsdos.StAmsdos{}
@@ -768,7 +769,7 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddre
 		header.Checksum = header.ComputedChecksum16()
 
 	} else {
-		fmt.Fprintf(os.Stderr, "File has already header...(%s)\n", masque)
+		fmt.Fprintf(os.Stderr, "No header added...(%s)\n", masque)
 	}
 	//
 	// En fonction du mode d'importation...
@@ -783,7 +784,7 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddre
 			fmt.Fprintf(os.Stderr, "Removing header...(%s)\n", masque)
 			copy(buff[0:], buff[binary.Size(amsdos.StAmsdos{}):])
 		}
-	case MODE_BINAIRE, MODE_ASCII:
+	case MODE_BINAIRE:
 		//
 		// Importation en mode BINAIRE
 		//
