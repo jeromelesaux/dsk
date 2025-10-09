@@ -104,6 +104,7 @@ func main() {
 
 	if *loadingAddress != "" || *executeAddress != "" {
 		addHeader = true
+		fileType = "binary"
 	}
 
 	if *autoextract != "" {
