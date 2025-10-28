@@ -696,7 +696,7 @@ func GetNomAmsdos(masque string) string {
 	return string(amsdosFile)
 }
 
-func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddress, userNumber uint16, isSystemFile, readOnly bool) error {
+func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddress, userNumber uint16, isSystemFile, readOnly, hidden bool) error {
 	buff := make([]byte, 0x20000)
 	cFileName := GetNomAmsdos(masque)
 	header := &amsdos.StAmsdos{}
@@ -820,17 +820,17 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddre
 		return ErrorFileSizeExceed
 	}
 	// if (MODE_BINAIRE) ClearAmsdos(Buff); //Remplace les octets inutilises par des 0 dans l'en-tete
-	return d.CopyFile(buff, cFileName, uint16(fileLength), 256, userNumber, isSystemFile, readOnly)
+	return d.CopyFile(buff, cFileName, uint16(fileLength), 256, userNumber, isSystemFile, readOnly, hidden)
 }
 
 // Copie un fichier sur le DSK
 //
 // la taille est determine par le nombre de NbPages
 // regarder pourquoi different d'une autre DSK
-func (d *DSK) CopyFile(bufFile []byte, fileName string, fileLength, maxBloc, userNumber uint16, isSystemFile, readOnly bool) error {
+func (d *DSK) CopyFile(bufFile []byte, fileName string, fileLength, maxBloc, userNumber uint16, isSystemFile, readOnly, isHide bool) error {
 	var nbPages, taillePage int
 	d.FillBitmap()
-	dirLoc := d.GetNomDir(fileName)
+	dirLoc := d.GetNomDir(fileName, isHide)
 	var posFile uint16                       // Construit l'entree pour mettre dans le catalogue
 	for posFile = 0; posFile < fileLength; { // Pour chaque bloc du fichier
 		posDir, err := d.RechercheDirLibre() // Trouve une entree libre dans le CAT
@@ -901,7 +901,7 @@ func (d *DSK) FillBitmap() int {
 	return nbKo
 }
 
-func (d *DSK) GetNomDir(nomFile string) StDirEntry {
+func (d *DSK) GetNomDir(nomFile string, isHide bool) StDirEntry {
 	e := StDirEntry{}
 	for i := 0; i < 8; i++ {
 		e.Nom[i] = ' '
@@ -912,6 +912,13 @@ func (d *DSK) GetNomDir(nomFile string) StDirEntry {
 	}
 	copy(e.Ext[:], []byte(nomFile[9:12]))
 	copy(e.Nom[:], []byte(nomFile[0:8]))
+
+	if isHide {
+		// Bit 7 of byte 1 of the extension is "1" if the file is hidden/system,
+		// otherwise the file is listed
+		mask := byte(0b0000001)
+		e.Nom[1] |= mask
+	}
 	return e
 }
 

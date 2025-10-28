@@ -57,7 +57,8 @@ var (
 	snaVersion   = flag.Int("snaversion", 1, "Specify the SNA version (1 or 2 available).")
 	quiet        = flag.Bool("quiet", false, "Suppress unnecessary output (useful for scripting).")
 	stdoutOpt    = flag.Bool("stdout", false, "To redirect to stdout when using get file")
-	appVersion   = "0.33"
+	hidden       = flag.Bool("hide", false, "hide the imported file")
+	appVersion   = "0.34"
 	version      = flag.Bool("version", false, "Display the application version and exit.")
 )
 
@@ -386,7 +387,7 @@ func main() {
 
 		if *put != "" {
 			cmdRunned = true
-			isError, msg, hint := putFileDsk(d, *put, *dskPath, fileType, loadAddress, execAddress, uint16(*user))
+			isError, msg, hint := putFileDsk(d, *put, *dskPath, fileType, loadAddress, execAddress, uint16(*user), false)
 			if isError {
 				exitOnError(msg, hint)
 			}
@@ -761,7 +762,7 @@ func analyseDsk(d dsk.DSK, dskPath string) (onError bool, message, hint string) 
 	return false, "", ""
 }
 
-func putFileDsk(d dsk.DSK, fileInDsk, dskPath string, fileType string, loadAddress, execAddress, user uint16) (onError bool, message, hint string) {
+func putFileDsk(d dsk.DSK, fileInDsk, dskPath string, fileType string, loadAddress, execAddress, user uint16, hide bool) (onError bool, message, hint string) {
 	if fileInDsk == "" {
 		exitOnError("amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put -amsdosfile hello.bin -exec \"#1000\" -load 500")
 	}
@@ -780,13 +781,13 @@ func putFileDsk(d dsk.DSK, fileInDsk, dskPath string, fileType string, loadAddre
 		switch fileType {
 		case "ascii":
 			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", execAddress, loadAddress)
-			if err := d.PutFile(fileInDsk, dsk.MODE_ASCII, 0, 0, user, false, false); err != nil {
+			if err := d.PutFile(fileInDsk, dsk.MODE_ASCII, 0, 0, user, false, false, hide); err != nil {
 				return true, fmt.Sprintf("Error while inserted file (%s) in dsk (%s) error :%v\n", fileInDsk, dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
 			}
 			resumeAction(dskPath, "put ascii", fileInDsk, informations, *quiet)
 		case "binary":
 			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", execAddress, loadAddress)
-			if err := d.PutFile(fileInDsk, dsk.MODE_BINAIRE, loadAddress, execAddress, user, false, false); err != nil {
+			if err := d.PutFile(fileInDsk, dsk.MODE_BINAIRE, loadAddress, execAddress, user, false, false, hide); err != nil {
 				return true, fmt.Sprintf("Error while inserted file (%s) in dsk (%s) error :%v\n", fileInDsk, dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
 			}
 			resumeAction(dskPath, "put binary", fileInDsk, informations, *quiet)
@@ -1195,7 +1196,7 @@ func autotests() {
 	}
 
 	testsDone++
-	if putFileBinaryDataTest("test.bin", dskpath) {
+	if putFileBinaryDataTest("test.bin", dskpath, false) {
 		fmt.Printf("KO\n")
 		testsOnError++
 	} else {
@@ -1221,7 +1222,7 @@ func autotests() {
 	}
 
 	testsDone++
-	if putFileBinaryDataTest("test3.bin", dskpath) {
+	if putFileBinaryDataTest("test3.bin", dskpath, *hidden) {
 		fmt.Printf("KO\n")
 		testsOnError++
 	} else {
@@ -1501,14 +1502,14 @@ func parsing8bitsRasmAnnotation() bool {
 	return v == 0xD0
 }
 
-func putFileBinaryDataTest(filePath, dskFilepath string) bool {
+func putFileBinaryDataTest(filePath, dskFilepath string, hide bool) bool {
 	*put = dskFilepath
 	fileType := "binary"
 	d, onError, _, _ := openDsk(dskFilepath)
 	if onError {
 		return onError
 	}
-	isError, _, _ := putFileDsk(d, filePath, dskFilepath, fileType, 0x800, 0x800, uint16(*user))
+	isError, _, _ := putFileDsk(d, filePath, dskFilepath, fileType, 0x800, 0x800, uint16(*user), hide)
 	return isError
 }
 
