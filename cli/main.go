@@ -387,7 +387,7 @@ func main() {
 
 		if *put != "" {
 			cmdRunned = true
-			isError, msg, hint := putFileDsk(d, *put, *dskPath, fileType, loadAddress, execAddress, uint16(*user), false)
+			isError, msg, hint := putFileDsk(d, *put, *dskPath, fileType, loadAddress, execAddress, uint16(*user), *hidden)
 			if isError {
 				exitOnError(msg, hint)
 			}

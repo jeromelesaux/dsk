@@ -916,8 +916,7 @@ func (d *DSK) GetNomDir(nomFile string, isHide bool) StDirEntry {
 	if isHide {
 		// Bit 7 of byte 1 of the extension is "1" if the file is hidden/system,
 		// otherwise the file is listed
-		mask := byte(0b0000001)
-		e.Nom[1] |= mask
+		e.Ext[1] |= 0x80
 	}
 	return e
 }
