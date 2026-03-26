@@ -58,7 +58,7 @@ var (
 	stdoutOpt    = flag.Bool("stdout", false, "To redirect to stdout when using get file")
 	hidden       = flag.Bool("hide", false, "hide the imported file")
 	removeHeader = flag.Bool("removeheader", false, "remove amsdos header from exported file")
-	appVersion   = "0.34"
+	appVersion   = "0.35"
 	version      = flag.Bool("version", false, "Display the application version and exit.")
 )
 
