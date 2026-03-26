@@ -692,7 +692,9 @@ func GetNomAmsdos(masque string) string {
 	copy(amsdosFile[0:filenameSize], file[0:filenameSize])
 	amsdosFile[8] = '.'
 	ext := strings.ToUpper(filepath.Ext(masque))
-	copy(amsdosFile[9:12], ext[1:])
+	if len(ext) > 1 {
+		copy(amsdosFile[9:12], ext[1:])
+	}
 	return string(amsdosFile)
 }
 

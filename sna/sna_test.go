@@ -28,3 +28,28 @@ func TestMemoryChunck(t *testing.T) {
 		assert.Equal(t, expected, got)
 	})
 }
+
+func TestNewSna(t *testing.T) {
+	header := sna.NewSnaHeader()
+	s := sna.NewSna(header)
+	assert.NotNil(t, s)
+	assert.Equal(t, header, s.Header)
+}
+
+func TestCPCValue(t *testing.T) {
+	tests := []struct {
+		cpc      sna.CPC
+		expected uint8
+	}{
+		{sna.CPC464, 0},
+		{sna.CPC664, 1},
+		{sna.CPC6128, 2},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.cpc), func(t *testing.T) {
+			result := sna.CPCValue(tt.cpc)
+			assert.Equal(t, tt.expected, result)
+		})
+	}
+}

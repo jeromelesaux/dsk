@@ -12,7 +12,6 @@ import (
 	"os"
 	"path"
 	"path/filepath"
-	"strconv"
 	"strings"
 
 	"github.com/jeromelesaux/dsk/amsdos"
@@ -58,6 +57,7 @@ var (
 	quiet        = flag.Bool("quiet", false, "Suppress unnecessary output (useful for scripting).")
 	stdoutOpt    = flag.Bool("stdout", false, "To redirect to stdout when using get file")
 	hidden       = flag.Bool("hide", false, "hide the imported file")
+	removeHeader = flag.Bool("removeheader", false, "remove amsdos header from exported file")
 	appVersion   = "0.34"
 	version      = flag.Bool("version", false, "Display the application version and exit.")
 )
@@ -127,7 +127,7 @@ func main() {
 					if err {
 						fmt.Fprintf(os.Stderr, "Error while opening file %s error :%s\n", dskFilepath, msg)
 					}
-					err, msg, _ = getFileDsk(d, "*", dskFilepath, dskfolderPath)
+					err, msg, _ = getFileDsk(d, "*", dskFilepath, dskfolderPath, *removeHeader)
 					if err {
 						fmt.Fprintf(os.Stderr, "Error while writing file %s in folder %s error :%s\n", dskFilepath, dskfolderPath, msg)
 					}
@@ -138,10 +138,18 @@ func main() {
 	}
 
 	if *executeAddress != "" {
-		execAddress = parseHexadecimal16bits(*executeAddress)
+		var err error
+		execAddress, err = utils.ParseHex16(*executeAddress)
+		if err != nil {
+			exitOnError(err.Error(), "Invalid execute address format")
+		}
 	}
 	if *loadingAddress != "" {
-		loadAddress = parseHexadecimal16bits(*loadingAddress)
+		var err error
+		loadAddress, err = utils.ParseHex16(*loadingAddress)
+		if err != nil {
+			exitOnError(err.Error(), "Invalid loading address format")
+		}
 	}
 	if !*quiet {
 		fmt.Fprintf(os.Stderr, "DSK cli version [%s]\nMade by Sid (ImpAct)\n", appVersion)
@@ -362,7 +370,7 @@ func main() {
 					}
 				}
 			} else {
-				isError, msg, hint := getFileDsk(d, *get, *dskPath, directory)
+				isError, msg, hint := getFileDsk(d, *get, *dskPath, directory, *removeHeader)
 				if isError {
 					exitOnError(msg, hint)
 				}
@@ -723,35 +731,6 @@ func fileinfoDsk(d dsk.DSK, fileInDsk string) (onError bool, message, hint strin
 	return false, "", ""
 }
 
-func parseHexadecimal16bits(address string) (value16 uint16) {
-	switch address[0] {
-	case '#':
-		value := strings.Replace(address, "#", "", -1)
-		v, err := strconv.ParseUint(value, 16, 16)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "cannot get the hexadecimal value fom %s, error : %v\n", *executeAddress, err)
-		} else {
-			value16 = uint16(v)
-		}
-	case '0':
-		value := strings.Replace(address, "0x", "", -1)
-		v, err := strconv.ParseUint(value, 16, 16)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "cannot get the hexadecimal value fom %s, error : %v\n", *executeAddress, err)
-		} else {
-			value16 = uint16(v)
-		}
-	default:
-		v, err := strconv.ParseUint(address, 10, 16)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "cannot get the hexadecimal value fom %s, error : %v\n", *executeAddress, err)
-		} else {
-			value16 = uint16(v)
-		}
-	}
-	return
-}
-
 func analyseDsk(d dsk.DSK, dskPath string) (onError bool, message, hint string) {
 	if err := d.CheckDsk(); err != nil {
 		return true, fmt.Sprintf("Error while read dsk file (%s) error %v\n", dskPath, err), "Check your dsk file path or Check your dsk file with option -dsk yourdsk.dsk -analyze"
@@ -807,7 +786,7 @@ func putFileDsk(d dsk.DSK, fileInDsk, dskPath string, fileType string, loadAddre
 	return false, "", ""
 }
 
-func getFileDsk(d dsk.DSK, fileInDsk, dskPath, directory string) (onError bool, message, hint string) {
+func getFileDsk(d dsk.DSK, fileInDsk, dskPath, directory string, removeHeader bool) (onError bool, message, hint string) {
 	if fileInDsk == "" {
 		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -get -amsdosfile hello.bin"
 	}
@@ -846,6 +825,12 @@ func getFileDsk(d dsk.DSK, fileInDsk, dskPath, directory string) (onError bool, 
 				if err != nil {
 					return true, fmt.Sprintf("Error while creating file (%s) error %v\n", filename, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
 				}
+				if removeHeader {
+					isAmsdos, _ := amsdos.CheckAmsdos(content)
+					if isAmsdos {
+						content = content[256:] // Remove the first 256 bytes (AMS/DOS header)
+					}
+				}
 				_, err = af.Write(content)
 				if err != nil {
 					return true, fmt.Sprintf("Error while copying content in file (%s) error %v\n", filename, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
@@ -871,6 +856,12 @@ func getFileDsk(d dsk.DSK, fileInDsk, dskPath, directory string) (onError bool, 
 				return true, fmt.Sprintf("Error while creating file (%s) error %v\n", filename, err), "Check your file path"
 			}
 			defer af.Close()
+			if removeHeader {
+				isAmsdos, _ := amsdos.CheckAmsdos(content)
+				if isAmsdos {
+					content = content[256:] // Remove the first 256 bytes (AMS/DOS header)
+				}
+			}
 			_, err = af.Write(content)
 			if err != nil {
 				return true, fmt.Sprintf("Error while copying content in file (%s) error %v\n", filename, err), " Check your dsk  with option -dsk yourdsk.dsk -analyze"
@@ -1480,25 +1471,37 @@ func analyseDataTest(dskFilepath string) bool {
 
 func parsing16bitsRasmAnnotation() bool {
 	fmt.Printf("Parsing value rasm annotation #C000 ")
-	v := parseHexadecimal16bits("#C000")
+	v, err := utils.ParseHex16("#C000")
+	if err != nil {
+		return false
+	}
 	return v == 0xC000
 }
 
 func parsing16bitsCAnnotation() bool {
 	fmt.Printf("Parsing value c annotation 0xC000 ")
-	v := parseHexadecimal16bits("0xC000")
+	v, err := utils.ParseHex16("0xC000")
+	if err != nil {
+		return false
+	}
 	return v == 0xC000
 }
 
 func parsing16bitsIntegerAnnotation() bool {
 	fmt.Printf("Parsing value integer annotation 49152 ")
-	v := parseHexadecimal16bits("49152")
+	v, err := utils.ParseHex16("49152")
+	if err != nil {
+		return false
+	}
 	return v == 0xC000
 }
 
 func parsing8bitsRasmAnnotation() bool {
 	fmt.Printf("Parsing value c annotation #D0 ")
-	v := parseHexadecimal16bits("#D0")
+	v, err := utils.ParseHex16("#D0")
+	if err != nil {
+		return false
+	}
 	return v == 0xD0
 }
 
@@ -1520,7 +1523,7 @@ func getFileBinaryDataTest(filePath, dskFilepath string) bool {
 	if onError {
 		return onError
 	}
-	isError, _, _ := getFileDsk(d, filePath, dskFilepath, "")
+	isError, _, _ := getFileDsk(d, filePath, dskFilepath, "", false)
 	return isError
 }
 
