@@ -93,7 +93,7 @@ func main() {
 		}
 		hasHeader, headerInf := amsdos.CheckAmsdos(content)
 		if hasHeader {
-			fd.Type = "binary"
+			fd.Type = action.AmsdosTypeBinary
 			if *executeAddress == "" {
 				fd.Exec = headerInf.Exec
 			}
@@ -105,7 +105,7 @@ func main() {
 
 	if *loadingAddress != "" || *executeAddress != "" {
 		fd.AddHeader = true
-		fd.Type = "binary"
+		fd.Type = action.AmsdosTypeBinary
 	}
 
 	if *autoextract != "" {
@@ -261,7 +261,6 @@ func main() {
 	if *format {
 		cmdRunned = true
 		isError, m, hint := action.FormatDsk(action.DskDescriptor{Path: *dskPath, Sector: *sector, Track: *track, Head: *heads}, *vendorFormat, *dataFormat, *force)
-
 		if isError {
 			msg.ExitOnError(m, hint)
 		}
@@ -321,27 +320,7 @@ func main() {
 
 		if *basic != "" {
 			cmdRunned = true
-			amsdosFile := dsk.GetNomDir(*basic)
-			indice := d.FileExists(amsdosFile)
-			if indice == dsk.NOT_FOUND {
-				fmt.Fprintf(os.Stderr, "File %s does not exist\n", *basic)
-			} else {
-				content, err := d.GetFileIn(*basic, indice)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
-				}
-
-				hasAmsdos, _ := amsdos.CheckAmsdos(content)
-				if hasAmsdos {
-
-					body, filesize, _ := d.ViewFile(indice)
-					fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", *basic, filesize)
-					fmt.Fprintf(os.Stdout, "%s", utils.Basic(body, uint16(filesize), true))
-				} else {
-					fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", *basic, len(content))
-					fmt.Fprintf(os.Stdout, "%s", content)
-				}
-			}
+			action.ListBasic(d, *basic)
 		}
 
 		if *get != "" {

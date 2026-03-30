@@ -85,50 +85,69 @@ func FormatDsk(desc DskDescriptor, vendorFormat bool, dataFormat, force bool) (o
 	return false, "", ""
 }
 
-func DisplayHexaFileDsk(d dsk.DSK, fileInDsk string) (onError bool, message, hint string) {
-	if fileInDsk == "" {
+func DisplayHexaFileDsk(d dsk.DSK, filepath string) (onError bool, message, hint string) {
+	if filepath == "" {
 		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -hex -amsdosfile hello.bin"
 	}
-	amsdosFile := dsk.GetNomDir(fileInDsk)
-	indice := d.FileExists(amsdosFile)
-	if indice == dsk.NOT_FOUND {
-		fmt.Fprintf(os.Stderr, "File %s does not exist\n", fileInDsk)
-	} else {
-		content, fileSize, err := d.ViewFile(indice)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
-		}
-		fmt.Println(dsk.DisplayHex(content[0:fileSize], 16))
+
+	content, fileSize, err := GetContentDsk(d, filepath)
+	if err != nil {
+		return true, err.Error(), "Check your dsk file with option -dsk yourdsk.dsk -analyze"
 	}
+
+	fmt.Println(dsk.DisplayHex(content[0:fileSize], 16))
 	return false, "", ""
 }
 
-func DesassembleFileDsk(d dsk.DSK, fileInDsk string) (onError bool, message, hint string) {
-	if fileInDsk == "" {
-		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -desassemble -amsdosfile hello.bin"
+func GetContentDsk(d dsk.DSK, filepath string) ([]byte, int, error) {
+	if filepath == "" {
+		return nil, 0, fmt.Errorf("amsdosfile option is empty, set it.")
 	}
-	amsdosFile := dsk.GetNomDir(fileInDsk)
+	amsdosFile := dsk.GetNomDir(filepath)
 	indice := d.FileExists(amsdosFile)
 	if indice == dsk.NOT_FOUND {
-		fmt.Fprintf(os.Stderr, "File %s does not exist\n", fileInDsk)
-	} else {
-		content, filesize, err := d.ViewFile(indice)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
-		}
-		var address uint16
-		raw, err := d.GetFileIn(fileInDsk, indice)
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
-		} else {
-			isAmsdos, header := amsdos.CheckAmsdos(raw)
-			if isAmsdos {
-				address = header.Exec
-			}
-		}
-
-		fmt.Println(utils.Desass(content[0:filesize], uint16(filesize), address))
+		return nil, 0, fmt.Errorf("File %s does not exist", filepath)
 	}
+	content, size, err := d.ViewFile(indice)
+	if err != nil {
+		return nil, size, fmt.Errorf("Error while getting file in dsk error :%v", err)
+	}
+	return content, size, nil
+}
+
+func DesassembleFileDsk(d dsk.DSK, filepath string) (onError bool, message, hint string) {
+	if filepath == "" {
+		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -desassemble -amsdosfile hello.bin"
+	}
+
+	content, filesize, err := GetContentDsk(d, filepath)
+	if err != nil {
+		return true, err.Error(), "Check your dsk file with option -dsk yourdsk.dsk -analyze"
+	}
+	var address uint16
+	isAmsdos, header := amsdos.CheckAmsdos(content)
+	if isAmsdos {
+		address = header.Exec
+	}
+
+	fmt.Println(utils.Desass(content[0:filesize], uint16(filesize), address))
+	return false, "", ""
+}
+
+func ListBasic(d dsk.DSK, filepath string) (onError bool, message, hint string) {
+	content, filesize, err := GetContentDsk(d, filepath)
+	if err != nil {
+		return true, err.Error(), "Check your dsk file with option -dsk yourdsk.dsk -analyze"
+	}
+	hasAmsdos, _ := amsdos.CheckAmsdos(content)
+	if hasAmsdos {
+		fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", filepath, filesize)
+		fmt.Fprintf(os.Stdout, "%s", utils.Basic(content, uint16(filesize), true))
+	} else {
+		fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", filepath, len(content))
+		fmt.Fprintf(os.Stdout, "%s", content)
+	}
+
 	return false, "", ""
 }
 
