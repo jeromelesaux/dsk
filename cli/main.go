@@ -49,8 +49,8 @@ var (
 	screenMode   = flag.Int("screenmode", 1, "Screen mode parameter for SNA files.")
 	vendorFormat = flag.Bool("vendor", false, "Use vendor format for formatting (sector count = #09, last track = #27).")
 	dataFormat   = flag.Bool("data", true, "Use data format for formatting (sector count = #09, last track = #27).")
-	rawimport    = flag.Bool("rawimport", false, "Perform a raw import of an AMSDOS file. Requires '-dsk', '-track', and '-sector' options. \n\t\tCopies the file directly starting from the specified track and sector. e.g.: dsk -dsk mydskfile.dsk -amsdosfile file.bin -rawimport -track 1 -sector 0")
-	rawexport    = flag.Bool("rawexport", false, "Perform a raw export of an AMSDOS file. Requires '-dsk', '-track', '-sector', and '-size' options. \n\t\tExtracts the file content from the specified track and sector up to the given size. e.g.: dsk -dsk mydskfile.dsk -amsdosfile file.bin -rawexport -track 1 -sector 0 -size 16384")
+	rawimport    = flag.Bool("rawimport", false, "Perform a raw import of an AMSDOS file. Requires '-dsk', '-track', and '-sector' options. \n\t\tCopies the file directly starting from the specified track and sector. e.g.: dsk -dsk mydskfile.dsk -put file.bin -rawimport -track 1 -sector 0")
+	rawexport    = flag.Bool("rawexport", false, "Perform a raw export of an AMSDOS file. Requires '-dsk', '-track', '-sector', and '-size' options. \n\t\tExtracts the file content from the specified track and sector up to the given size. e.g.: dsk -dsk mydskfile.dsk -get file.bin -rawexport -track 1 -sector 0 -size 16384")
 	size         = flag.Int("size", 0, "Size of data to extract for 'rawexport'. See 'rawexport' for details.")
 	autotest     = flag.Bool("autotest", false, "Run all available tests.")
 	autoextract  = flag.String("autoextract", "", "Extract all DSK files from a specified folder.")
@@ -184,12 +184,11 @@ func main() {
 		if *put != "" {
 			cmdRunned = true
 			if *put != "" {
-				cpcTYPE := sna.CPCType(*cpcType)
 				crtc := sna.UM6845R
 				if *cpcType > 3 {
 					crtc = sna.ASIC_6845
 				}
-				if err := sna.ImportInSna(*put, *snaPath, fd.Exec, uint8(*screenMode), cpcTYPE, crtc, *snaVersion); err != nil {
+				if err := sna.ImportInSna(*put, *snaPath, fd.Exec, uint8(*screenMode), sna.CPCType(*cpcType), crtc, *snaVersion); err != nil {
 					fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
 						*put,
 						*snaPath,
@@ -198,7 +197,7 @@ func main() {
 				}
 				os.Exit(0)
 			} else {
-				fmt.Fprintf(os.Stderr, "Missing input (argument -amsdosfile) file to import in sna file (%s)\n", *snaPath)
+				fmt.Fprintf(os.Stderr, "Missing input (argument -put) file to import in sna file (%s)\n", *snaPath)
 			}
 		}
 		if *get != "" {

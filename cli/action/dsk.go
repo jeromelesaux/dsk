@@ -87,7 +87,7 @@ func FormatDsk(desc DskDescriptor, vendorFormat bool, dataFormat, force bool) (o
 
 func DisplayHexaFileDsk(d dsk.DSK, filepath string) (onError bool, message, hint string) {
 	if filepath == "" {
-		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -hex -amsdosfile hello.bin"
+		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -hex hello.bin"
 	}
 
 	content, fileSize, err := GetContentDsk(d, filepath)
@@ -117,7 +117,7 @@ func GetContentDsk(d dsk.DSK, filepath string) ([]byte, int, error) {
 
 func DesassembleFileDsk(d dsk.DSK, filepath string) (onError bool, message, hint string) {
 	if filepath == "" {
-		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -desassemble -amsdosfile hello.bin"
+		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -desassemble hello.bin"
 	}
 
 	content, filesize, err := GetContentDsk(d, filepath)
@@ -163,7 +163,7 @@ func AnalyseDsk(d dsk.DSK, dskPath string) (onError bool, message, hint string) 
 
 func PutFileDsk(d dsk.DSK, dskPath string, desc AmsdosFileDescriptor, hide, force, quiet bool) (onError bool, message, hint string) {
 	if desc.Path == "" {
-		msg.ExitOnError("amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put -amsdosfile hello.bin -exec \"#1000\" -load 500")
+		msg.ExitOnError("amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put hello.bin -exec \"#1000\" -load 500")
 	}
 	amsdosFile := dsk.GetNomDir(desc.Path)
 	indice := d.FileExists(amsdosFile)
@@ -208,7 +208,7 @@ func PutFileDsk(d dsk.DSK, dskPath string, desc AmsdosFileDescriptor, hide, forc
 
 func RemoveFileDsk(d dsk.DSK, dskPath, fileInDsk string) (onError bool, message, hint string) {
 	if fileInDsk == "" {
-		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -remove -amsdosfile hello.bin"
+		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -remove hello.bin"
 	}
 	amsdosFile := dsk.GetNomDir(fileInDsk)
 	indice := d.FileExists(amsdosFile)
@@ -236,7 +236,7 @@ func RemoveFileDsk(d dsk.DSK, dskPath, fileInDsk string) (onError bool, message,
 
 func GetFileDsk(d dsk.DSK, fileInDsk, dskPath, directory string, removeHeader, quiet bool) (onError bool, message, hint string) {
 	if fileInDsk == "" {
-		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -get -amsdosfile hello.bin"
+		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -get hello.bin"
 	}
 	if fileInDsk == "*" {
 		err := d.GetCatalogue()
@@ -323,7 +323,7 @@ func GetFileDsk(d dsk.DSK, fileInDsk, dskPath, directory string, removeHeader, q
 
 func AsciiFileDsk(d dsk.DSK, fileInDsk string, isSdtout bool) (onError bool, message, hint string) {
 	if fileInDsk == "" {
-		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -ascii -amsdosfile hello.txt"
+		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -ascii hello.txt"
 	}
 	amsdosFile := dsk.GetNomDir(fileInDsk)
 	indice := d.FileExists(amsdosFile)
@@ -357,7 +357,7 @@ func AsciiFileDsk(d dsk.DSK, fileInDsk string, isSdtout bool) (onError bool, mes
 
 func RawExportDsk(d dsk.DSK, fileInDsk string, desc DskDescriptor, size int, quiet bool) (onError bool, message, hint string) {
 	if fileInDsk == "" {
-		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put -amsdosfile hello.bin -rawimport -track 1 -sector 0"
+		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put hello.bin -rawimport -track 1 -sector 0"
 	}
 
 	if desc.Track == 39 {
@@ -420,7 +420,7 @@ func OpenDsk(osFile string, desc DskDescriptor, quiet bool) (d dsk.DSK, onError 
 
 func FileinfoDsk(d dsk.DSK, fileInDsk string) (onError bool, message, hint string) {
 	if fileInDsk == "" {
-		return true, "amsdosfile option is empty, set it.", "usage sample : dsk -dsk output.dsk -amsdosfile hello.bin -info "
+		return true, "amsdosfile option is empty, set it.", "usage sample : dsk -dsk output.dsk hello.bin -info "
 	}
 	amsdosFile := dsk.GetNomDir(fileInDsk)
 	indice := d.FileExists(amsdosFile)
@@ -494,7 +494,7 @@ func RawImportDataInDsk(d dsk.DSK, fileInDsk string, desc DskDescriptor, content
 
 func RawImportDsk(d dsk.DSK, fileInDsk string, desc DskDescriptor, quiet bool) (onError bool, message, hint string) {
 	if fileInDsk == "" {
-		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put -amsdosfile hello.bin -rawimport -track 1 -sector 0"
+		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put hello.bin -rawimport -track 1 -sector 0"
 	}
 
 	buf, err := os.ReadFile(fileInDsk)
