@@ -64,13 +64,12 @@ var (
 )
 
 func main() {
-	var cmdRunned bool = false
-	var addHeader bool
-	var execAddress, loadAddress uint16
-	fileType := "ascii"
+	var cmdRunned bool
 
 	flag.Usage = sampleUsage
 	flag.Parse()
+
+	fd := action.AmsdosFileDescriptor{Type: action.AmsdosTypeAscii, User: uint16(*user)}
 
 	if *help || len(flag.Args()) == 1 {
 		sampleUsage()
@@ -94,19 +93,19 @@ func main() {
 		}
 		hasHeader, headerInf := amsdos.CheckAmsdos(content)
 		if hasHeader {
-			fileType = "binary"
+			fd.Type = "binary"
 			if *executeAddress == "" {
-				execAddress = headerInf.Exec
+				fd.Exec = headerInf.Exec
 			}
 			if *loadingAddress == "" {
-				loadAddress = headerInf.Address
+				fd.Load = headerInf.Address
 			}
 		}
 	}
 
 	if *loadingAddress != "" || *executeAddress != "" {
-		addHeader = true
-		fileType = "binary"
+		fd.AddHeader = true
+		fd.Type = "binary"
 	}
 
 	if *autoextract != "" {
@@ -140,14 +139,14 @@ func main() {
 
 	if *executeAddress != "" {
 		var err error
-		execAddress, err = utils.ParseHex16(*executeAddress)
+		fd.Exec, err = utils.ParseHex16(*executeAddress)
 		if err != nil {
 			msg.ExitOnError(err.Error(), "Invalid execute address format")
 		}
 	}
 	if *loadingAddress != "" {
 		var err error
-		loadAddress, err = utils.ParseHex16(*loadingAddress)
+		fd.Load, err = utils.ParseHex16(*loadingAddress)
 		if err != nil {
 			msg.ExitOnError(err.Error(), "Invalid loading address format")
 		}
@@ -190,7 +189,7 @@ func main() {
 				if *cpcType > 3 {
 					crtc = sna.ASIC_6845
 				}
-				if err := sna.ImportInSna(*put, *snaPath, execAddress, uint8(*screenMode), cpcTYPE, crtc, *snaVersion); err != nil {
+				if err := sna.ImportInSna(*put, *snaPath, fd.Exec, uint8(*screenMode), cpcTYPE, crtc, *snaVersion); err != nil {
 					fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
 						*put,
 						*snaPath,
@@ -396,7 +395,8 @@ func main() {
 
 		if *put != "" {
 			cmdRunned = true
-			isError, m, hint := action.PutFileDsk(d, *put, *dskPath, fileType, loadAddress, execAddress, uint16(*user), *hidden, *force, *quiet)
+			fd.Path = *put
+			isError, m, hint := action.PutFileDsk(d, *dskPath, fd, *hidden, *force, *quiet)
 			if isError {
 				msg.ExitOnError(m, hint)
 			}
@@ -490,7 +490,7 @@ func main() {
 				header.Type,
 				header.User)
 		}
-		if addHeader {
+		if fd.AddHeader {
 			if *get == "" {
 				msg.ExitOnError("Error no file is set\n", "set your amsdos file with option like dsk -get hello.bin")
 			}
@@ -498,7 +498,7 @@ func main() {
 			if err != nil {
 				msg.ExitOnError(fmt.Sprintf("Cannot read file %s error :%v\n", *get, err), "cannot read the file content")
 			}
-			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", execAddress, loadAddress)
+			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", fd.Exec, fd.Load)
 			isAmsdos, header := amsdos.CheckAmsdos(content)
 			if isAmsdos {
 				msg.ExitOnError("The file already contains an amsdos header", "Check your file")
@@ -507,8 +507,8 @@ func main() {
 			header.Size = uint16(len(content))
 			header.Size2 = uint16(len(content))
 			copy(header.Filename[:], []byte(filename[0:12]))
-			header.Address = loadAddress
-			header.Exec = execAddress
+			header.Address = fd.Load
+			header.Exec = fd.Exec
 			// Il faut recalculer le checksum en comptant es adresses !
 			header.Checksum = header.ComputedChecksum16()
 			var rbuff bytes.Buffer
@@ -986,12 +986,18 @@ func parsing8bitsRasmAnnotation() bool {
 
 func putFileBinaryDataTest(filePath, dskFilepath string, hide bool) bool {
 	*put = dskFilepath
-	fileType := "binary"
 	d, onError, _, _ := action.OpenDsk(dskFilepath, action.DskDescriptor{Path: dskFilepath, Sector: *sector, Track: *track, Head: *heads}, *quiet)
 	if onError {
 		return onError
 	}
-	isError, _, _ := action.PutFileDsk(d, filePath, dskFilepath, fileType, 0x800, 0x800, uint16(*user), hide, false, *quiet)
+	fd := action.AmsdosFileDescriptor{
+		Path: filePath,
+		Exec: 0x800,
+		Load: 0x800,
+		User: uint16(*user),
+		Type: action.AmsdosTypeBinary,
+	}
+	isError, _, _ := action.PutFileDsk(d, dskFilepath, fd, hide, false, *quiet)
 	return isError
 }
 

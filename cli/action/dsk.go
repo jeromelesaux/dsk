@@ -13,12 +13,28 @@ import (
 	"github.com/jeromelesaux/dsk/utils"
 )
 
+type AmsdosType string
+
+var (
+	AmsdosTypeAscii  AmsdosType = "ascii"
+	AmsdosTypeBinary AmsdosType = "binary"
+)
+
 type DskDescriptor struct {
 	Sector int
 	Track  int
 	Head   int
 	Path   string
 	Type   int
+}
+
+type AmsdosFileDescriptor struct {
+	Path      string
+	Exec      uint16
+	Load      uint16
+	User      uint16
+	Type      AmsdosType
+	AddHeader bool
 }
 
 func ListDsk(d dsk.DSK, dskPath string) (onError bool, message, hint string) {
@@ -126,14 +142,14 @@ func AnalyseDsk(d dsk.DSK, dskPath string) (onError bool, message, hint string) 
 	return false, "", ""
 }
 
-func PutFileDsk(d dsk.DSK, fileInDsk, dskPath string, fileType string, loadAddress, execAddress, user uint16, hide, force, quiet bool) (onError bool, message, hint string) {
-	if fileInDsk == "" {
+func PutFileDsk(d dsk.DSK, dskPath string, desc AmsdosFileDescriptor, hide, force, quiet bool) (onError bool, message, hint string) {
+	if desc.Path == "" {
 		msg.ExitOnError("amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put -amsdosfile hello.bin -exec \"#1000\" -load 500")
 	}
-	amsdosFile := dsk.GetNomDir(fileInDsk)
+	amsdosFile := dsk.GetNomDir(desc.Path)
 	indice := d.FileExists(amsdosFile)
 	if indice != dsk.NOT_FOUND && !force {
-		msg.ExitOnError(fmt.Sprintf("File %s already exists\n", fileInDsk), "use -force to force file put")
+		msg.ExitOnError(fmt.Sprintf("File %s already exists\n", desc.Path), "use -force to force file put")
 	} else {
 		if indice != dsk.NOT_FOUND && force {
 			// suppress file
@@ -142,19 +158,19 @@ func PutFileDsk(d dsk.DSK, fileInDsk, dskPath string, fileType string, loadAddre
 				msg.ExitOnError(fmt.Sprintf("error while removing file %v", err), "check your dsk content")
 			}
 		}
-		switch fileType {
-		case "ascii":
-			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", execAddress, loadAddress)
-			if err := d.PutFile(fileInDsk, dsk.MODE_ASCII, 0, 0, user, false, false, hide); err != nil {
-				return true, fmt.Sprintf("Error while inserted file (%s) in dsk (%s) error :%v\n", fileInDsk, dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
+		switch desc.Type {
+		case AmsdosTypeAscii:
+			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", desc.Exec, desc.Load)
+			if err := d.PutFile(desc.Path, dsk.MODE_ASCII, 0, 0, desc.User, false, false, hide); err != nil {
+				return true, fmt.Sprintf("Error while inserted file (%s) in dsk (%s) error :%v\n", desc.Path, dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
 			}
-			msg.ResumeAction(dskPath, "put ascii", fileInDsk, informations, quiet)
-		case "binary":
-			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", execAddress, loadAddress)
-			if err := d.PutFile(fileInDsk, dsk.MODE_BINAIRE, loadAddress, execAddress, user, false, false, hide); err != nil {
-				return true, fmt.Sprintf("Error while inserted file (%s) in dsk (%s) error :%v\n", fileInDsk, dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
+			msg.ResumeAction(dskPath, "put ascii", desc.Path, informations, quiet)
+		case AmsdosTypeBinary:
+			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", desc.Exec, desc.Load)
+			if err := d.PutFile(desc.Path, dsk.MODE_BINAIRE, desc.Load, desc.Exec, desc.User, false, false, hide); err != nil {
+				return true, fmt.Sprintf("Error while inserted file (%s) in dsk (%s) error :%v\n", desc.Path, dskPath, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze"
 			}
-			msg.ResumeAction(dskPath, "put binary", fileInDsk, informations, quiet)
+			msg.ResumeAction(dskPath, "put binary", desc.Path, informations, quiet)
 		default:
 			fmt.Fprintf(os.Stderr, "File type option unknown please choose between ascii or binary.")
 		}
