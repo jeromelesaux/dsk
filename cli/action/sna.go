@@ -65,20 +65,28 @@ func (s *SnaAction) WithSnaInfoAction(isSet bool) *SnaAction {
 }
 
 func (s *SnaAction) WithSnaFormatAction(isSet bool) *SnaAction {
-	s.tasks = append(s.tasks, SnaFormatAction)
+	if isSet {
+		s.tasks = append(s.tasks, SnaFormatAction)
+	}
 	return s
 }
 
 func (s *SnaAction) WithSnaHexaListAction(isSet bool) *SnaAction {
-	s.tasks = append(s.tasks, SnaHexaListAction)
+	if isSet {
+		s.tasks = append(s.tasks, SnaHexaListAction)
+	}
 	return s
 }
 func (s *SnaAction) WithSnaPutAction(isSet bool) *SnaAction {
-	s.tasks = append(s.tasks, SnaPutAction)
+	if isSet {
+		s.tasks = append(s.tasks, SnaPutAction)
+	}
 	return s
 }
 func (s *SnaAction) WithSnaGetAction(isSet bool) *SnaAction {
-	s.tasks = append(s.tasks, SnaGetAction)
+	if isSet {
+		s.tasks = append(s.tasks, SnaGetAction)
+	}
 	return s
 }
 
