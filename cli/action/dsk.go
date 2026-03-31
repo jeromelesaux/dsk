@@ -155,7 +155,7 @@ type Action struct {
 	options Options
 	desc    DskDescriptor
 	fd      AmsdosFileDescriptor
-	actions *DskTasks
+	tasks   *DskTasks
 }
 
 func (a Action) DskIsSet() bool {
@@ -186,13 +186,13 @@ func NewAction(paths ...string) *Action {
 		}
 	}
 	return &Action{
-		Path:    path,
-		actions: NewDskTasks(),
+		Path:  path,
+		tasks: NewDskTasks(),
 	}
 }
 
 func (a *Action) WithDskActions(actions *DskTasks) *Action {
-	a.actions = actions
+	a.tasks = actions
 	return a
 }
 
@@ -201,7 +201,7 @@ func (a *Action) DoDskActions() (onError bool, message, hint string) {
 	if onError {
 		return onError, message, hint
 	}
-	for _, action := range a.actions.a {
+	for _, action := range a.tasks.a {
 		switch action.a {
 		case ActionFormatDsk:
 			onError, message, hint = FormatDsk(a.Path, a.desc, a.options.vendorFormat, a.options.dataFormat, a.options.force)
@@ -295,7 +295,7 @@ func (a *Action) DoFileActions() (onError bool, message, hint string) {
 
 	}
 
-	for _, action := range a.actions.a {
+	for _, action := range a.tasks.a {
 		switch action.a {
 		case ActionDisplayHexaFileDsk:
 			fmt.Println(dsk.DisplayHex(content, 16))

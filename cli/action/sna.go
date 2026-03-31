@@ -25,7 +25,7 @@ type SnaAction struct {
 	CPCType    int
 	Version    int
 	Screenmode int
-	actions    []SnaTask
+	tasks      []SnaTask
 }
 
 func NewSnaAction(snapath string) *SnaAction {
@@ -60,30 +60,30 @@ func (s *SnaAction) WithScreemode(m int) *SnaAction {
 }
 
 func (s *SnaAction) WithSnaInfoAction(isSet bool) *SnaAction {
-	s.actions = append(s.actions, SnaInfoAction)
+	s.tasks = append(s.tasks, SnaInfoAction)
 	return s
 }
 
 func (s *SnaAction) WithSnaFormatAction(isSet bool) *SnaAction {
-	s.actions = append(s.actions, SnaFormatAction)
+	s.tasks = append(s.tasks, SnaFormatAction)
 	return s
 }
 
 func (s *SnaAction) WithSnaHexaListAction(isSet bool) *SnaAction {
-	s.actions = append(s.actions, SnaHexaListAction)
+	s.tasks = append(s.tasks, SnaHexaListAction)
 	return s
 }
 func (s *SnaAction) WithSnaPutAction(isSet bool) *SnaAction {
-	s.actions = append(s.actions, SnaPutAction)
+	s.tasks = append(s.tasks, SnaPutAction)
 	return s
 }
 func (s *SnaAction) WithSnaGetAction(isSet bool) *SnaAction {
-	s.actions = append(s.actions, SnaGetAction)
+	s.tasks = append(s.tasks, SnaGetAction)
 	return s
 }
 
 func (s *SnaAction) DoSnaActions() (onError bool, message, hint string) {
-	for _, task := range s.actions {
+	for _, task := range s.tasks {
 		switch task {
 		case SnaInfoAction:
 			return InfoSna(s.Path)
