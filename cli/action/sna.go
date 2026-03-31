@@ -93,10 +93,8 @@ func (s *SnaAction) WithSnaGetAction(isSet bool) *SnaAction {
 func (s *SnaAction) DoSnaActions() (onError bool, message, hint string) {
 	for _, task := range s.tasks {
 		switch task {
-		case SnaInfoAction:
-			return InfoSna(s.Path)
 		case SnaFormatAction:
-			return FormatSna(s.Path, s.Version)
+			onError, message, hint = FormatSna(s.Path, s.Version)
 		case SnaHexaListAction:
 			sna, err := sna.ReadSna(s.Path)
 			if err != nil {
@@ -136,8 +134,13 @@ func (s *SnaAction) DoSnaActions() (onError bool, message, hint string) {
 					s.Path,
 					err), ""
 			}
+		case SnaInfoAction:
+			onError, message, hint = InfoSna(s.Path)
 		default:
-			return InfoSna(s.Path)
+			onError, message, hint = InfoSna(s.Path)
+		}
+		if onError {
+			return onError, message, hint
 		}
 	}
 	return false, "", ""
