@@ -69,7 +69,7 @@ func main() {
 	flag.Usage = sampleUsage
 	flag.Parse()
 
-	fd := action.AmsdosFileDescriptor{Type: action.AmsdosTypeAscii, User: uint16(*user)}
+	fd := action.NewAmsdosFileDescriptor().WithUser(uint16(*user))
 
 	if *help || len(flag.Args()) == 1 {
 		sampleUsage()
