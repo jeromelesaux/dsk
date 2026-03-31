@@ -606,7 +606,7 @@ func ExportFromSna(snaPath string) ([]byte, error) {
 	return s.Data, err
 }
 
-func ImportInSna(filePath, snaPath string, execAddress uint16, screenMode uint8, cpcType CPC, crtcType CRTC, version int) error {
+func ImportInSna(filePath, snaPath string, screenMode uint8, cpcType CPC, crtcType CRTC, version int) error {
 	var sna *SNA
 	switch version {
 	case 1:
@@ -641,10 +641,9 @@ func ImportInSna(filePath, snaPath string, execAddress uint16, screenMode uint8,
 	if err := sna.Put(buff[0:nb], header.Address, filesize); err != nil {
 		return err
 	}
-	if execAddress == 0 {
-		if header.Exec != 0 {
-			execAddress = header.Exec
-		}
+	var execAddress uint16 = 0
+	if header.Exec != 0 {
+		execAddress = header.Exec
 	}
 
 	sna.Header.RegisterPCHigh = uint8(execAddress >> 8)

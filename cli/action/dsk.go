@@ -36,10 +36,11 @@ type DskDescriptor struct {
 
 func NewDskDescriptor() *DskDescriptor {
 	return &DskDescriptor{
-		Sector: 9,
-		Track:  39,
-		Head:   2,
-		Type:   dsk.DataFormat,
+		Sector:     9,
+		Track:      39,
+		Head:       2,
+		Type:       dsk.DataFormat,
+		FolderPath: "./",
 	}
 }
 
@@ -111,6 +112,15 @@ func (a *AmsdosFileDescriptor) WithPath(path string) *AmsdosFileDescriptor {
 	return a
 }
 
+func (a *AmsdosFileDescriptor) WithPaths(s ...string) *AmsdosFileDescriptor {
+	for _, v := range s {
+		if v != "" {
+			a.Path = v
+		}
+	}
+	return a
+}
+
 func (a *AmsdosFileDescriptor) AddExec(exec string) *AmsdosFileDescriptor {
 	if exec != "" {
 		value, err := utils.ParseHex16(exec)
@@ -145,11 +155,11 @@ type Action struct {
 	options Options
 	desc    DskDescriptor
 	fd      AmsdosFileDescriptor
-	actions *DskActions
+	actions *DskTasks
 }
 
 func (a Action) DskIsSet() bool {
-	return strings.Contains(strings.ToLower(a.Path), ".dsk")
+	return a.Path != ""
 }
 
 func (a *Action) WithOptions(options Options) *Action {
@@ -167,14 +177,21 @@ func (a *Action) WithAmsdosFileDescriptor(fd AmsdosFileDescriptor) *Action {
 	return a
 }
 
-func NewAction(dskPath string) *Action {
+func NewAction(paths ...string) *Action {
+	var path string
+	for _, v := range paths {
+		if v != "" {
+			path = v
+			break
+		}
+	}
 	return &Action{
-		Path:    dskPath,
-		actions: NewDskActions(),
+		Path:    path,
+		actions: NewDskTasks(),
 	}
 }
 
-func (a *Action) WithDskActions(actions *DskActions) *Action {
+func (a *Action) WithDskActions(actions *DskTasks) *Action {
 	a.actions = actions
 	return a
 }
@@ -209,7 +226,7 @@ func (a *Action) DoDskActions() (onError bool, message, hint string) {
 		case ActionRawImportDsk:
 			onError, message, hint = RawImportDsk(a.d, a.fd.Path, a.desc, a.options.quiet)
 		case ActionGetAllFileDsk:
-			onError, message, hint = GetAllFileDsk(a.d, a.desc, a.options)
+			onError, message, hint = GetAllFileDsk(action.Folder, a.desc, a.options)
 		case ActionListDsk:
 			onError, message, hint = ListDsk(a.d, a.Path)
 		default:
@@ -311,16 +328,16 @@ func (a *Action) DoFileActions() (onError bool, message, hint string) {
 	return false, "", ""
 }
 
-func GetAllFileDsk(d dsk.DSK, desc DskDescriptor, opts Options) (onError bool, message, hint string) {
-	files, err := fs.ReadDir(os.DirFS("/"), desc.FolderPath)
+func GetAllFileDsk(folder string, desc DskDescriptor, opts Options) (onError bool, message, hint string) {
+	files, err := fs.ReadDir(os.DirFS("/"), folder)
 	if err != nil {
 		msg.ExitOnError(err.Error(), "Please check your folder path")
 	}
 	for _, file := range files {
 		if !file.IsDir() {
 			if strings.ToUpper(path.Ext(file.Name())) == ".DSK" {
-				dskfolderPath := desc.FolderPath + string(filepath.Separator) + strings.Replace(file.Name(), path.Ext(file.Name()), "", -1)
-				dskFilepath := desc.FolderPath + string(filepath.Separator) + file.Name()
+				dskfolderPath := folder + string(filepath.Separator) + strings.Replace(file.Name(), path.Ext(file.Name()), "", -1)
+				dskFilepath := folder + string(filepath.Separator) + file.Name()
 				err = os.Mkdir(dskfolderPath, os.ModePerm)
 				if err != nil && !errors.Is(err, os.ErrExist) {
 					msg.ExitOnError(err.Error(), "Please check your folder path")

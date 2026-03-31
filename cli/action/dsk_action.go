@@ -1,122 +1,123 @@
 package action
 
-type DskAction string
+type DskTask string
 
 var (
-	ActionListDsk            DskAction = "list"
-	ActionFormatDsk          DskAction = "format"
-	ActionDisplayHexaFileDsk DskAction = "hexa"
-	ActionDesassembleFileDsk DskAction = "desassemble"
-	ActionListBasic          DskAction = "listbasic"
-	ActionAnalyseDsk         DskAction = "analyze"
-	ActionPutFileDsk         DskAction = "put"
-	ActionRemoveFileDsk      DskAction = "remove"
-	ActionGetFileDsk         DskAction = "get"
-	ActionGetAllFileDsk      DskAction = "getall"
-	ActionAsciiFileDsk       DskAction = "ascii"
-	ActionRawExportDsk       DskAction = "rawexport"
-	ActionRawImportDsk       DskAction = "rawimport"
-	ActionFileinfoDsk        DskAction = "info"
+	ActionListDsk            DskTask = "list"
+	ActionFormatDsk          DskTask = "format"
+	ActionDisplayHexaFileDsk DskTask = "hexa"
+	ActionDesassembleFileDsk DskTask = "desassemble"
+	ActionListBasic          DskTask = "listbasic"
+	ActionAnalyseDsk         DskTask = "analyze"
+	ActionPutFileDsk         DskTask = "put"
+	ActionRemoveFileDsk      DskTask = "remove"
+	ActionGetFileDsk         DskTask = "get"
+	ActionGetAllFileDsk      DskTask = "getall"
+	ActionAsciiFileDsk       DskTask = "ascii"
+	ActionRawExportDsk       DskTask = "rawexport"
+	ActionRawImportDsk       DskTask = "rawimport"
+	ActionFileinfoDsk        DskTask = "info"
 )
 
-type DskActionFile struct {
-	File string
-	a    DskAction
+type DskTaskFile struct {
+	File   string
+	Folder string
+	a      DskTask
 }
 
-type DskActions struct {
-	a []DskActionFile
+type DskTasks struct {
+	a []DskTaskFile
 }
 
-func NewDskActions() *DskActions {
-	return &DskActions{
-		a: []DskActionFile{},
+func NewDskTasks() *DskTasks {
+	return &DskTasks{
+		a: []DskTaskFile{},
 	}
 }
 
-func (a *DskActions) WithActionListDsk(path string, isSet bool) *DskActions {
+func (a *DskTasks) WithActionListDsk(path string, isSet bool) *DskTasks {
 	if isSet {
-		a.a = append(a.a, DskActionFile{File: path, a: ActionListDsk})
-	}
-	return a
-}
-
-func (a *DskActions) WithActionFormatDsk(path string, isSet bool) *DskActions {
-	if isSet {
-		a.a = append(a.a, DskActionFile{File: path, a: ActionFormatDsk})
-	}
-	return a
-}
-func (a *DskActions) WithActionDisplayHexaFileDsk(path string, isSet bool) *DskActions {
-	if isSet {
-		a.a = append(a.a, DskActionFile{File: path, a: ActionDisplayHexaFileDsk})
-	}
-	return a
-}
-func (a *DskActions) WithActionDesassembleFileDsk(path string, isSet bool) *DskActions {
-	if isSet {
-		a.a = append(a.a, DskActionFile{File: path, a: ActionDesassembleFileDsk})
-	}
-	return a
-}
-func (a *DskActions) WithActionListBasic(path string, isSet bool) *DskActions {
-	if isSet {
-		a.a = append(a.a, DskActionFile{File: path, a: ActionListBasic})
-	}
-	return a
-}
-func (a *DskActions) WithActionAnalyseDsk(path string, isSet bool) *DskActions {
-	if isSet {
-		a.a = append(a.a, DskActionFile{File: path, a: ActionAnalyseDsk})
-	}
-	return a
-}
-func (a *DskActions) WithActionPutFileDsk(path string, isSet bool) *DskActions {
-	if isSet {
-		a.a = append(a.a, DskActionFile{File: path, a: ActionPutFileDsk})
-	}
-	return a
-}
-func (a *DskActions) WithActionRemoveFileDsk(path string, isSet bool) *DskActions {
-	if isSet {
-		a.a = append(a.a, DskActionFile{File: path, a: ActionRemoveFileDsk})
-	}
-	return a
-}
-func (a *DskActions) WithActionGetFileDsk(path string, isSet bool) *DskActions {
-	if isSet {
-		a.a = append(a.a, DskActionFile{File: path, a: ActionGetFileDsk})
-	}
-	return a
-}
-func (a *DskActions) WithActionAsciiFileDsk(path string, isSet bool) *DskActions {
-	if isSet {
-		a.a = append(a.a, DskActionFile{File: path, a: ActionAsciiFileDsk})
-	}
-	return a
-}
-func (a *DskActions) WithActionRawExportDsk(path string, isSet bool) *DskActions {
-	if isSet {
-		a.a = append(a.a, DskActionFile{File: path, a: ActionRawExportDsk})
-	}
-	return a
-}
-func (a *DskActions) WithActionRawImportDsk(path string, isSet bool) *DskActions {
-	if isSet {
-		a.a = append(a.a, DskActionFile{File: path, a: ActionRawImportDsk})
-	}
-	return a
-}
-func (a *DskActions) WithActionFileinfoDsk(path string, isSet bool) *DskActions {
-	if isSet {
-		a.a = append(a.a, DskActionFile{File: path, a: ActionFileinfoDsk})
+		a.a = append(a.a, DskTaskFile{File: path, a: ActionListDsk})
 	}
 	return a
 }
 
-func (a *DskActions) WithActionGetAllFileDsk(path string, isSet bool) *DskActions {
+func (a *DskTasks) WithActionFormatDsk(path string, isSet bool) *DskTasks {
 	if isSet {
-		a.a = append(a.a, DskActionFile{File: path, a: ActionGetAllFileDsk})
+		a.a = append(a.a, DskTaskFile{File: path, a: ActionFormatDsk})
+	}
+	return a
+}
+func (a *DskTasks) WithActionDisplayHexaFileDsk(path string, isSet bool) *DskTasks {
+	if isSet {
+		a.a = append(a.a, DskTaskFile{File: path, a: ActionDisplayHexaFileDsk})
+	}
+	return a
+}
+func (a *DskTasks) WithActionDesassembleFileDsk(path string, isSet bool) *DskTasks {
+	if isSet {
+		a.a = append(a.a, DskTaskFile{File: path, a: ActionDesassembleFileDsk})
+	}
+	return a
+}
+func (a *DskTasks) WithActionListBasic(path string, isSet bool) *DskTasks {
+	if isSet {
+		a.a = append(a.a, DskTaskFile{File: path, a: ActionListBasic})
+	}
+	return a
+}
+func (a *DskTasks) WithActionAnalyseDsk(path string, isSet bool) *DskTasks {
+	if isSet {
+		a.a = append(a.a, DskTaskFile{File: path, a: ActionAnalyseDsk})
+	}
+	return a
+}
+func (a *DskTasks) WithActionPutFileDsk(path string, isSet bool) *DskTasks {
+	if isSet {
+		a.a = append(a.a, DskTaskFile{File: path, a: ActionPutFileDsk})
+	}
+	return a
+}
+func (a *DskTasks) WithActionRemoveFileDsk(path string, isSet bool) *DskTasks {
+	if isSet {
+		a.a = append(a.a, DskTaskFile{File: path, a: ActionRemoveFileDsk})
+	}
+	return a
+}
+func (a *DskTasks) WithActionGetFileDsk(path string, isSet bool) *DskTasks {
+	if isSet {
+		a.a = append(a.a, DskTaskFile{File: path, a: ActionGetFileDsk})
+	}
+	return a
+}
+func (a *DskTasks) WithActionAsciiFileDsk(path string, isSet bool) *DskTasks {
+	if isSet {
+		a.a = append(a.a, DskTaskFile{File: path, a: ActionAsciiFileDsk})
+	}
+	return a
+}
+func (a *DskTasks) WithActionRawExportDsk(path string, isSet bool) *DskTasks {
+	if isSet {
+		a.a = append(a.a, DskTaskFile{File: path, a: ActionRawExportDsk})
+	}
+	return a
+}
+func (a *DskTasks) WithActionRawImportDsk(path string, isSet bool) *DskTasks {
+	if isSet {
+		a.a = append(a.a, DskTaskFile{File: path, a: ActionRawImportDsk})
+	}
+	return a
+}
+func (a *DskTasks) WithActionFileinfoDsk(path string, isSet bool) *DskTasks {
+	if isSet {
+		a.a = append(a.a, DskTaskFile{File: path, a: ActionFileinfoDsk})
+	}
+	return a
+}
+
+func (a *DskTasks) WithActionGetAllFileDsk(path string, isSet bool) *DskTasks {
+	if isSet {
+		a.a = append(a.a, DskTaskFile{Folder: path, File: path, a: ActionGetAllFileDsk})
 	}
 	return a
 }

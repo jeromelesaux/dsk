@@ -8,8 +8,6 @@ import (
 
 	"github.com/jeromelesaux/dsk/cli/action"
 	"github.com/jeromelesaux/dsk/cli/msg"
-	"github.com/jeromelesaux/dsk/dsk"
-	"github.com/jeromelesaux/dsk/sna"
 	"github.com/jeromelesaux/dsk/utils"
 )
 
@@ -65,29 +63,8 @@ func main() {
 		WithUser(uint16(*user)).
 		AddExec(*executeAddress).
 		AddLoad(*loadingAddress).
-		WithAddHeader(*executeAddress != "" || *loadingAddress != "")
-
-	if *put != "" {
-		fd = fd.WithPath(*put)
-	}
-	if *get != "" {
-		fd = fd.WithPath(*get)
-	}
-	if *basic != "" {
-		fd = fd.WithPath(*basic)
-	}
-	if *hexa != "" {
-		fd = fd.WithPath(*hexa)
-	}
-	if *disassemble != "" {
-		fd = fd.WithPath(*disassemble)
-	}
-	if *ascii != "" {
-		fd = fd.WithPath(*ascii)
-	}
-	if *remove != "" {
-		fd = fd.WithPath(*remove)
-	}
+		WithAddHeader(*executeAddress != "" || *loadingAddress != "").
+		WithPaths(*put, *get, *basic, *hexa, *disassemble, *ascii, *remove, *info)
 
 	opts := action.NewOptions().
 		WithQuiet(*quiet).
@@ -102,7 +79,7 @@ func main() {
 		WithRawImport(*rawimport).
 		WithRawExport(*rawexport)
 
-	acts := action.NewDskActions().
+	acts := action.NewDskTasks().
 		WithActionListDsk(*dskPath, true).
 		WithActionFormatDsk(*dskPath, *format).
 		WithActionDisplayHexaFileDsk(*dskPath, *hexa != "").
@@ -124,11 +101,22 @@ func main() {
 		WithHead(*heads).
 		WithType(*dskType)
 
-	act := action.NewAction(*dskPath).
+	dskAct := action.NewAction(*dskPath, *autoextract).
 		WithOptions(*opts).
 		WithAmsdosFileDescriptor(*fd).
 		WithDskDescriptor(*desc).
 		WithDskActions(acts)
+
+	snaAct := action.NewSnaAction(*snaPath).
+		WithCPCType(*cpcType).
+		WithScreemode(*screenMode).
+		WithVersion(*snaVersion).
+		WithSnaFormatAction(*format).
+		WithSnaInfoAction(*info != "").
+		WithSnaGetAction(*get != "").
+		WithSnaPutAction(*put != "").
+		WithSnaHexaListAction(*hexa != "").
+		WithFiles(*get, *put)
 
 	if *help || len(flag.Args()) == 1 {
 		sampleUsage()
@@ -149,119 +137,51 @@ func main() {
 		fmt.Fprintf(os.Stderr, "DSK cli version [%s]\nMade by Sid (ImpAct)\n", appVersion)
 	}
 
-	if act.DskIsSet() {
-		onErr, message, hint := act.DoDskActions()
+	if snaAct.SnaIsSet() {
+		onErr, message, hint := snaAct.DoSnaActions()
 		if onErr {
 			msg.ExitOnError(message, hint)
 		}
 		os.Exit(0)
 	}
-	onErr, message, hint := act.DoFileActions()
+
+	if dskAct.DskIsSet() {
+		onErr, message, hint := dskAct.DoDskActions()
+		if onErr {
+			msg.ExitOnError(message, hint)
+		}
+		os.Exit(0)
+	}
+
+	onErr, message, hint := dskAct.DoFileActions()
 	if onErr {
 		msg.ExitOnError(message, hint)
 	}
 	os.Exit(0)
 
 	// gestion des SNAs
-	if *snaPath != "" {
-		if *info != "" {
-			cmdRunned = true
-			isError, m, hint := action.InfoSna(*snaPath)
-			if isError {
-				msg.ExitOnError(m, hint)
-			}
-			os.Exit(0)
-		}
-		if *format {
-			cmdRunned = true
-			isError, m, hint := action.FormatSna(*snaPath, *snaVersion)
-			if isError {
-				msg.ExitOnError(m, hint)
-			}
-		}
-		if *hexa != "" {
-			cmdRunned = true
-			sna, err := sna.ReadSna(*snaPath)
-			if err != nil {
-				msg.ExitOnError(err.Error(), "Check your sna path")
-			}
-			content := sna.Hexadecimal()
-			fmt.Println(dsk.DisplayHex([]byte(content), 16))
-			os.Exit(0)
-		}
-		if *put != "" {
-			cmdRunned = true
-			if *put != "" {
-				crtc := sna.UM6845R
-				if *cpcType > 3 {
-					crtc = sna.ASIC_6845
-				}
-				if err := sna.ImportInSna(*put, *snaPath, fd.Exec, uint8(*screenMode), sna.CPCType(*cpcType), crtc, *snaVersion); err != nil {
-					fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
-						*put,
-						*snaPath,
-						err)
-					os.Exit(1)
-				}
-				os.Exit(0)
-			} else {
-				fmt.Fprintf(os.Stderr, "Missing input (argument -put) file to import in sna file (%s)\n", *snaPath)
-			}
-		}
-		if *get != "" {
-			cmdRunned = true
-			if *get != "" {
-				content, err := sna.ExportFromSna(*snaPath)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
-						*get,
-						*snaPath,
-						err)
-					os.Exit(1)
-				}
-				f, err := os.Create(*get)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
-						*get,
-						*snaPath,
-						err)
-					os.Exit(1)
-				}
-				defer f.Close()
-				_, err = f.Write(content)
-				if err != nil {
-					fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
-						*get,
-						*snaPath,
-						err)
-					os.Exit(1)
-				}
-				os.Exit(0)
-			} else {
-				if *dskPath != "" {
-					content, err := sna.ExportFromSna(*snaPath)
-					if err != nil {
-						fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
-							*get,
-							*snaPath,
-							err)
-						os.Exit(1)
-					}
-					d, isError, m, hint := action.OpenDsk(*dskPath, action.DskDescriptor{Path: *dskPath, Sector: *sector, Track: *track, Head: *heads}, *quiet)
-					if isError {
-						msg.ExitOnError(m, hint)
-					}
-					isError, m, hint = action.RawImportDataInDsk(d, *get, action.DskDescriptor{Path: *dskPath, Sector: *sector, Track: *track, Head: *heads}, content, *quiet)
-					if isError {
-						msg.ExitOnError(m, hint)
-					}
 
-				} else {
-					fmt.Fprintf(os.Stderr, "Missing input file to import in sna file (%s)\n", *snaPath)
-				}
-			}
-		}
-	}
+	// if *dskPath != "" {
+	// 	content, err := sna.ExportFromSna(*snaPath)
+	// 	if err != nil {
+	// 		fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
+	// 			*get,
+	// 			*snaPath,
+	// 			err)
+	// 		os.Exit(1)
+	// 	}
+	// 	d, isError, m, hint := action.OpenDsk(*dskPath, action.DskDescriptor{Path: *dskPath, Sector: *sector, Track: *track, Head: *heads}, *quiet)
+	// 	if isError {
+	// 		msg.ExitOnError(m, hint)
+	// 	}
+	// 	isError, m, hint = action.RawImportDataInDsk(d, *get, action.DskDescriptor{Path: *dskPath, Sector: *sector, Track: *track, Head: *heads}, content, *quiet)
+	// 	if isError {
+	// 		msg.ExitOnError(m, hint)
+	// 	}
+
+	// } else {
+	// 	fmt.Fprintf(os.Stderr, "Missing input file to import in sna file (%s)\n", *snaPath)
+	// }
 
 	if !cmdRunned {
 		sampleUsage()
