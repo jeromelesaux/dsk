@@ -14,61 +14,61 @@ type Options struct {
 	rawExport    bool
 }
 
-func NewOptions() Options {
-	return Options{}
+func NewOptions() *Options {
+	return &Options{}
 }
 
-func (o *Options) WithQuiet(quiet bool) Options {
+func (o *Options) WithQuiet(quiet bool) *Options {
 	o.quiet = quiet
-	return *o
+	return o
 }
 
-func (o *Options) WithFormat(format bool) Options {
+func (o *Options) WithFormat(format bool) *Options {
 	o.format = format
-	return *o
+	return o
 }
 
-func (o *Options) WithForce(force bool) Options {
+func (o *Options) WithForce(force bool) *Options {
 	o.force = force
-	return *o
+	return o
 }
 
-func (o *Options) WithAnalyze(analyze bool) Options {
+func (o *Options) WithAnalyze(analyze bool) *Options {
 	o.analyze = analyze
-	return *o
+	return o
 }
 
-func (o *Options) WithDataFormat(dataFormat bool) Options {
+func (o *Options) WithDataFormat(dataFormat bool) *Options {
 	o.dataFormat = dataFormat
-	return *o
+	return o
 }
 
-func (o *Options) WithVendorFormat(vendorFormat bool) Options {
+func (o *Options) WithVendorFormat(vendorFormat bool) *Options {
 	o.vendorFormat = vendorFormat
-	return *o
+	return o
 }
 
-func (o *Options) WithStdout(stdout bool) Options {
+func (o *Options) WithStdout(stdout bool) *Options {
 	o.stdout = stdout
-	return *o
+	return o
 }
 
-func (o *Options) WithHidden(hidden bool) Options {
+func (o *Options) WithHidden(hidden bool) *Options {
 	o.hidden = hidden
-	return *o
+	return o
 }
 
-func (o *Options) WithRemoveHeader(removeHeader bool) Options {
+func (o *Options) WithRemoveHeader(removeHeader bool) *Options {
 	o.removeHeader = removeHeader
-	return *o
+	return o
 }
 
-func (o *Options) WithRawImport(rawImport bool) Options {
+func (o *Options) WithRawImport(rawImport bool) *Options {
 	o.rawImport = rawImport
-	return *o
+	return o
 }
 
-func (o *Options) WithRawExport(rawExport bool) Options {
+func (o *Options) WithRawExport(rawExport bool) *Options {
 	o.rawExport = rawExport
-	return *o
+	return o
 }

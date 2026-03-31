@@ -1,19 +1,11 @@
 package main
 
 import (
-	"bytes"
-	"encoding/binary"
-	"errors"
 	"flag"
 	"fmt"
-	"io/fs"
 	"math/rand"
 	"os"
-	"path"
-	"path/filepath"
-	"strings"
 
-	"github.com/jeromelesaux/dsk/amsdos"
 	"github.com/jeromelesaux/dsk/cli/action"
 	"github.com/jeromelesaux/dsk/cli/msg"
 	"github.com/jeromelesaux/dsk/dsk"
@@ -59,7 +51,7 @@ var (
 	stdoutOpt    = flag.Bool("stdout", false, "To redirect to stdout when using get file")
 	hidden       = flag.Bool("hide", false, "hide the imported file")
 	removeHeader = flag.Bool("removeheader", false, "remove amsdos header from exported file")
-	appVersion   = "0.35"
+	appVersion   = "0.36"
 	version      = flag.Bool("version", false, "Display the application version and exit.")
 )
 
@@ -69,7 +61,74 @@ func main() {
 	flag.Usage = sampleUsage
 	flag.Parse()
 
-	fd := action.NewAmsdosFileDescriptor().WithUser(uint16(*user))
+	fd := action.NewAmsdosFileDescriptor().
+		WithUser(uint16(*user)).
+		AddExec(*executeAddress).
+		AddLoad(*loadingAddress).
+		WithAddHeader(*executeAddress != "" || *loadingAddress != "")
+
+	if *put != "" {
+		fd = fd.WithPath(*put)
+	}
+	if *get != "" {
+		fd = fd.WithPath(*get)
+	}
+	if *basic != "" {
+		fd = fd.WithPath(*basic)
+	}
+	if *hexa != "" {
+		fd = fd.WithPath(*hexa)
+	}
+	if *disassemble != "" {
+		fd = fd.WithPath(*disassemble)
+	}
+	if *ascii != "" {
+		fd = fd.WithPath(*ascii)
+	}
+	if *remove != "" {
+		fd = fd.WithPath(*remove)
+	}
+
+	opts := action.NewOptions().
+		WithQuiet(*quiet).
+		WithFormat(*format).
+		WithForce(*force).
+		WithAnalyze(*analyse).
+		WithDataFormat(*dataFormat).
+		WithVendorFormat(*vendorFormat).
+		WithStdout(*stdoutOpt).
+		WithHidden(*hidden).
+		WithRemoveHeader(*removeHeader).
+		WithRawImport(*rawimport).
+		WithRawExport(*rawexport)
+
+	acts := action.NewDskActions().
+		WithActionListDsk(*dskPath, true).
+		WithActionFormatDsk(*dskPath, *format).
+		WithActionDisplayHexaFileDsk(*dskPath, *hexa != "").
+		WithActionDesassembleFileDsk(*dskPath, *disassemble != "").
+		WithActionListBasic(*dskPath, *basic != "").
+		WithActionAnalyseDsk(*dskPath, *analyse).
+		WithActionPutFileDsk(*dskPath, *put != "").
+		WithActionRemoveFileDsk(*dskPath, *remove != "").
+		WithActionGetFileDsk(*dskPath, *get != "").
+		WithActionAsciiFileDsk(*dskPath, *ascii != "").
+		WithActionRawExportDsk(*dskPath, *rawexport).
+		WithActionRawImportDsk(*dskPath, *rawimport).
+		WithActionFileinfoDsk(*dskPath, *info != "").
+		WithActionGetAllFileDsk(*autoextract, *autoextract != "")
+
+	desc := action.NewDskDescriptor().
+		WithSector(*sector).
+		WithTrack(*track).
+		WithHead(*heads).
+		WithType(*dskType)
+
+	act := action.NewAction(*dskPath).
+		WithOptions(*opts).
+		WithAmsdosFileDescriptor(*fd).
+		WithDskDescriptor(*desc).
+		WithDskActions(acts)
 
 	if *help || len(flag.Args()) == 1 {
 		sampleUsage()
@@ -86,74 +145,23 @@ func main() {
 		os.Exit(0)
 	}
 
-	if *put != "" {
-		content, err := os.ReadFile(*put)
-		if err != nil {
-			msg.ExitOnError(err.Error(), fmt.Sprintf("file %s issue", *put))
-		}
-		hasHeader, headerInf := amsdos.CheckAmsdos(content)
-		if hasHeader {
-			fd.Type = action.AmsdosTypeBinary
-			if *executeAddress == "" {
-				fd.Exec = headerInf.Exec
-			}
-			if *loadingAddress == "" {
-				fd.Load = headerInf.Address
-			}
-		}
-	}
-
-	if *loadingAddress != "" || *executeAddress != "" {
-		fd.AddHeader = true
-		fd.Type = action.AmsdosTypeBinary
-	}
-
-	if *autoextract != "" {
-		files, err := fs.ReadDir(os.DirFS("/"), *autoextract)
-		if err != nil {
-			msg.ExitOnError(err.Error(), "Please check your folder path")
-		}
-		for _, file := range files {
-			if !file.IsDir() {
-				if strings.ToUpper(path.Ext(file.Name())) == ".DSK" {
-					dskfolderPath := *autoextract + string(filepath.Separator) + strings.Replace(file.Name(), path.Ext(file.Name()), "", -1)
-					dskFilepath := *autoextract + string(filepath.Separator) + file.Name()
-					err = os.Mkdir(dskfolderPath, os.ModePerm)
-					if err != nil && !errors.Is(err, os.ErrExist) {
-						msg.ExitOnError(err.Error(), "Please check your folder path")
-					}
-
-					d, err, msg, _ := action.OpenDsk(dskFilepath, action.DskDescriptor{Path: dskFilepath, Sector: *sector, Track: *track, Head: *heads}, *quiet)
-					if err {
-						fmt.Fprintf(os.Stderr, "Error while opening file %s error :%s\n", dskFilepath, msg)
-					}
-					err, msg, _ = action.GetFileDsk(d, "*", dskFilepath, dskfolderPath, *removeHeader, *quiet)
-					if err {
-						fmt.Fprintf(os.Stderr, "Error while writing file %s in folder %s error :%s\n", dskFilepath, dskfolderPath, msg)
-					}
-				}
-			}
-		}
-		os.Exit(0)
-	}
-
-	if *executeAddress != "" {
-		var err error
-		fd.Exec, err = utils.ParseHex16(*executeAddress)
-		if err != nil {
-			msg.ExitOnError(err.Error(), "Invalid execute address format")
-		}
-	}
-	if *loadingAddress != "" {
-		var err error
-		fd.Load, err = utils.ParseHex16(*loadingAddress)
-		if err != nil {
-			msg.ExitOnError(err.Error(), "Invalid loading address format")
-		}
-	}
 	if !*quiet {
 		fmt.Fprintf(os.Stderr, "DSK cli version [%s]\nMade by Sid (ImpAct)\n", appVersion)
 	}
+
+	if act.DskIsSet() {
+		onErr, message, hint := act.DoDskActions()
+		if onErr {
+			msg.ExitOnError(message, hint)
+		}
+		os.Exit(0)
+	}
+	onErr, message, hint := act.DoFileActions()
+	if onErr {
+		msg.ExitOnError(message, hint)
+	}
+	os.Exit(0)
+
 	// gestion des SNAs
 	if *snaPath != "" {
 		if *info != "" {
@@ -252,272 +260,6 @@ func main() {
 					fmt.Fprintf(os.Stderr, "Missing input file to import in sna file (%s)\n", *snaPath)
 				}
 			}
-		}
-	}
-
-	// verification que le fichier DSK est present
-
-	if *format {
-		cmdRunned = true
-		isError, m, hint := action.FormatDsk(action.DskDescriptor{Path: *dskPath, Sector: *sector, Track: *track, Head: *heads}, *vendorFormat, *dataFormat, *force)
-		if isError {
-			msg.ExitOnError(m, hint)
-		}
-	}
-
-	if *dskPath != "" {
-		d, isError, m, hint := action.OpenDsk(*dskPath, action.DskDescriptor{Path: *dskPath, Sector: *sector, Track: *track, Head: *heads}, *quiet)
-		if isError {
-			msg.ExitOnError(m, hint)
-		}
-		if *list {
-			isError, m, hint := action.ListDsk(d, *dskPath)
-			if isError {
-				msg.ExitOnError(m, hint)
-			}
-		}
-
-		if *analyse {
-			cmdRunned = true
-			isError, m, hint := action.AnalyseDsk(d, *dskPath)
-			if isError {
-				msg.ExitOnError(m, hint)
-			}
-		}
-
-		if *info != "" {
-			cmdRunned = true
-			isError, m, hint := action.FileinfoDsk(d, *info)
-			if isError {
-				msg.ExitOnError(m, hint)
-			}
-		}
-
-		if *hexa != "" {
-			cmdRunned = true
-			isError, m, hint := action.DisplayHexaFileDsk(d, *hexa)
-			if isError {
-				msg.ExitOnError(m, hint)
-			}
-		}
-
-		if *disassemble != "" {
-			cmdRunned = true
-			isError, m, hint := action.DesassembleFileDsk(d, *disassemble)
-			if isError {
-				msg.ExitOnError(m, hint)
-			}
-		}
-
-		if *ascii != "" {
-			cmdRunned = true
-			isError, m, hint := action.AsciiFileDsk(d, *ascii, *stdoutOpt)
-			if isError {
-				msg.ExitOnError(m, hint)
-			}
-		}
-
-		if *basic != "" {
-			cmdRunned = true
-			action.ListBasic(d, *basic)
-		}
-
-		if *get != "" {
-			cmdRunned = true
-			directory, err := os.Getwd()
-			if err != nil {
-				msg.ExitOnError(err.Error(), "Please use autoextract option")
-			}
-			if *stdoutOpt {
-				amsdosFile := dsk.GetNomDir(*get)
-				indice := d.FileExists(amsdosFile)
-				if indice == dsk.NOT_FOUND {
-					fmt.Fprintf(os.Stderr, "File %s does not exist\n", *get)
-				} else {
-					content, err := d.GetFileIn(*get, indice)
-					if err != nil {
-						fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
-					}
-
-					hasAmsdos, _ := amsdos.CheckAmsdos(content)
-					if hasAmsdos {
-						body, _, _ := d.ViewFile(indice)
-						os.Stdout.Write(body)
-					} else {
-						os.Stdout.Write(content)
-					}
-				}
-			} else {
-				isError, m, hint := action.GetFileDsk(d, *get, *dskPath, directory, *removeHeader, *quiet)
-				if isError {
-					msg.ExitOnError(m, hint)
-				}
-			}
-		}
-
-		if *rawimport {
-			cmdRunned = true
-			isError, m, hint := action.RawImportDsk(d, *put, action.DskDescriptor{Path: *dskPath, Sector: *sector, Track: *track, Head: *heads}, *quiet)
-			if isError {
-				msg.ExitOnError(m, hint)
-			}
-		}
-
-		if *rawexport {
-			cmdRunned = true
-			isError, m, hint := action.RawExportDsk(d, *put, action.DskDescriptor{Path: *dskPath, Sector: *sector, Head: *heads, Track: *track}, *size, *quiet)
-			if isError {
-				msg.ExitOnError(m, hint)
-			}
-		}
-
-		if *put != "" {
-			cmdRunned = true
-			fd.Path = *put
-			isError, m, hint := action.PutFileDsk(d, *dskPath, fd, *hidden, *force, *quiet)
-			if isError {
-				msg.ExitOnError(m, hint)
-			}
-		}
-
-		if *remove != "" {
-			cmdRunned = true
-			isError, m, hint := action.RemoveFileDsk(d, *dskPath, *remove)
-			if isError {
-				msg.ExitOnError(m, hint)
-			}
-		}
-
-		// no arguments commands
-		if !cmdRunned {
-			cmdRunned = true
-			isError, m, hint = action.ListDsk(d, *dskPath)
-			if isError {
-				msg.ExitOnError(m, hint)
-			}
-			return
-		}
-	} else {
-		//
-		// now dsk will work on an amsdosfile no dsk file set
-		//
-
-		if *basic != "" {
-			cmdRunned = true
-			content, err := os.ReadFile(*basic)
-			if err != nil {
-				msg.ExitOnError(fmt.Sprintf("Cannot read file %s error :%v\n", *basic, err), "cannot read the file content")
-			}
-			isAmsdos, _ := amsdos.CheckAmsdos(content)
-			// remove amsdos header
-			if isAmsdos {
-				content = content[dsk.HeaderSize:]
-			}
-
-			fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", *basic, len(content))
-			fmt.Fprintf(os.Stdout, "%s", utils.Basic(content, uint16(len(content)), true))
-		}
-		if *disassemble != "" {
-			cmdRunned = true
-			var address uint16
-			content, err := os.ReadFile(*disassemble)
-			if err != nil {
-				msg.ExitOnError(fmt.Sprintf("Cannot read file %s error :%v\n", *disassemble, err), "cannot read the file content")
-			}
-			isAmsdos, header := amsdos.CheckAmsdos(content)
-			if isAmsdos {
-				address = header.Address
-				content = content[dsk.HeaderSize:]
-			}
-			fmt.Println(utils.Desass(content, uint16(len(content)), address))
-		}
-		if *hexa != "" {
-			cmdRunned = true
-			content, err := os.ReadFile(*hexa)
-			if err != nil {
-				msg.ExitOnError(fmt.Sprintf("Cannot read file %s error :%v\n", *hexa, err), "cannot read the file content")
-			}
-			isAmsdos, _ := amsdos.CheckAmsdos(content)
-			// remove amsdos header
-			if isAmsdos {
-				content = content[dsk.HeaderSize:]
-			}
-			fmt.Println(dsk.DisplayHex(content, 16))
-		}
-		if *info != "" {
-			cmdRunned = true
-			content, err := os.ReadFile(*info)
-			if err != nil {
-				msg.ExitOnError(fmt.Sprintf("Cannot read file %s error :%v\n", *info, err), "cannot read the file content")
-			}
-			isAmsdos, header := amsdos.CheckAmsdos(content)
-			if !isAmsdos {
-				msg.ExitOnError(fmt.Sprintf("File (%s) does not contain amsdos header.\n", *info), "may be a ascii file")
-			}
-			fmt.Fprintf(os.Stdout, "Amsdos informations :\n\tFilename:%s\n\tSize:#%X (%.2f Ko)\n\tSize2:#%X (%.2f Ko)\n\tLogical Size:#%X (%.2f Ko)\n\tExecute Address:#%X\n\tLoading Address:#%X\n\tChecksum:#%X\n\tType:%d\n\tUser:%d\n",
-				header.Filename,
-				header.Size,
-				float64(header.Size)/1024.,
-				header.Size2,
-				float64(header.Size2)/1024.,
-				header.LogicalSize,
-				float64(header.LogicalSize)/1024.,
-				header.Exec,
-				header.Address,
-				header.Checksum,
-				header.Type,
-				header.User)
-		}
-		if fd.AddHeader {
-			if *get == "" {
-				msg.ExitOnError("Error no file is set\n", "set your amsdos file with option like dsk -get hello.bin")
-			}
-			content, err := os.ReadFile(*get)
-			if err != nil {
-				msg.ExitOnError(fmt.Sprintf("Cannot read file %s error :%v\n", *get, err), "cannot read the file content")
-			}
-			informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", fd.Exec, fd.Load)
-			isAmsdos, header := amsdos.CheckAmsdos(content)
-			if isAmsdos {
-				msg.ExitOnError("The file already contains an amsdos header", "Check your file")
-			}
-			filename := dsk.GetNomAmsdos(*get)
-			header.Size = uint16(len(content))
-			header.Size2 = uint16(len(content))
-			copy(header.Filename[:], []byte(filename[0:12]))
-			header.Address = fd.Load
-			header.Exec = fd.Exec
-			// Il faut recalculer le checksum en comptant es adresses !
-			header.Checksum = header.ComputedChecksum16()
-			var rbuff bytes.Buffer
-			err = binary.Write(&rbuff, binary.LittleEndian, header)
-			if err != nil {
-				msg.ExitOnError("error while writing header : "+err.Error(), "Check your file")
-			}
-			err = binary.Write(&rbuff, binary.LittleEndian, content)
-			if err != nil {
-				msg.ExitOnError("error while writing header : "+err.Error(), "Check your file")
-			}
-
-			if err := utils.Save(*get, rbuff.Bytes()); err != nil {
-				msg.ExitOnError(fmt.Sprintf("Error while writing data in file [%s] error:%v\n", *get, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze")
-			}
-
-			msg.ResumeAction("none", "add amsdos header", *get, informations, *quiet)
-			fmt.Fprintf(os.Stdout, "Amsdos informations :\n\tFilename:%s\n\tSize:#%X (%.2f Ko)\n\tSize2:#%X (%.2f Ko)\n\tLogical Size:#%X (%.2f Ko)\n\tExecute Address:#%X\n\tLoading Address:#%X\n\tChecksum:#%X\n\tType:%d\n\tUser:%d\n",
-				header.Filename,
-				header.Size,
-				float64(header.Size)/1024.,
-				header.Size2,
-				float64(header.Size2)/1024.,
-				header.LogicalSize,
-				float64(header.LogicalSize)/1024.,
-				header.Exec,
-				header.Address,
-				header.Checksum,
-				header.Type,
-				header.User)
-			os.Exit(0)
 		}
 	}
 
@@ -821,7 +563,7 @@ func formatVendorTest(dskFilepath string) bool {
 	sector := *sector
 	track := *track
 	heads := *heads
-	onError, _, _ := action.FormatDsk(action.DskDescriptor{Path: dskFilepath, Sector: sector, Track: track, Head: heads}, true, false, false)
+	onError, _, _ := action.FormatDsk(dskFilepath, action.DskDescriptor{Path: dskFilepath, Sector: sector, Track: track, Head: heads}, true, false, false)
 	return onError
 }
 
@@ -833,7 +575,7 @@ func formatVendorForceTest(dskFilepath string) bool {
 	track := *track
 	heads := *heads
 	*force = true
-	onError, _, _ := action.FormatDsk(action.DskDescriptor{Path: dskFilepath, Sector: sector, Track: track, Head: heads}, true, false, true)
+	onError, _, _ := action.FormatDsk(dskFilepath, action.DskDescriptor{Path: dskFilepath, Sector: sector, Track: track, Head: heads}, true, false, true)
 	return onError
 }
 
@@ -845,7 +587,7 @@ func formatDoubleHeadDataTest(dskFilepath string) bool {
 	track := *track
 	heads := 2
 	dskType := *dskType
-	onError, _, _ := action.FormatDsk(action.DskDescriptor{Path: dskFilepath, Sector: sector, Track: track, Head: heads, Type: dskType}, false, true, false)
+	onError, _, _ := action.FormatDsk(dskFilepath, action.DskDescriptor{Path: dskFilepath, Sector: sector, Track: track, Head: heads, Type: dskType}, false, true, false)
 	return onError
 }
 
@@ -857,7 +599,7 @@ func formatDataTest(dskFilepath string) bool {
 	track := *track
 	heads := *heads
 	dskType := *dskType
-	onError, _, _ := action.FormatDsk(action.DskDescriptor{Path: dskFilepath, Sector: sector, Track: track, Head: heads, Type: dskType}, false, true, false)
+	onError, _, _ := action.FormatDsk(dskFilepath, action.DskDescriptor{Path: dskFilepath, Sector: sector, Track: track, Head: heads, Type: dskType}, false, true, false)
 	return onError
 }
 
@@ -870,7 +612,7 @@ func formatDataForceTest(dskFilepath string) bool {
 	track := *track
 	heads := *heads
 	dskType := *dskType
-	onError, _, _ := action.FormatDsk(action.DskDescriptor{Path: dskFilepath, Sector: sector, Track: track, Head: heads, Type: dskType}, false, true, true)
+	onError, _, _ := action.FormatDsk(dskFilepath, action.DskDescriptor{Path: dskFilepath, Sector: sector, Track: track, Head: heads, Type: dskType}, false, true, true)
 	return onError
 }
 

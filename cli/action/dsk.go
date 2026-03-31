@@ -1,6 +1,8 @@
 package action
 
 import (
+	"bytes"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"io/fs"
@@ -32,27 +34,66 @@ type DskDescriptor struct {
 	FolderPath    string
 }
 
+func NewDskDescriptor() *DskDescriptor {
+	return &DskDescriptor{
+		Sector: 9,
+		Track:  39,
+		Head:   2,
+		Type:   dsk.DataFormat,
+	}
+}
+
+func (d *DskDescriptor) WithSector(sector int) *DskDescriptor {
+	d.Sector = sector
+	return d
+}
+
+func (d *DskDescriptor) WithTrack(track int) *DskDescriptor {
+	d.Track = track
+	return d
+}
+
+func (d *DskDescriptor) WithHead(head int) *DskDescriptor {
+	d.Head = head
+	return d
+}
+
+func (d *DskDescriptor) WithPath(path string) *DskDescriptor {
+	d.Path = path
+	return d
+}
+
+func (d *DskDescriptor) WithType(dskType int) *DskDescriptor {
+	d.Type = dskType
+	return d
+}
+
 type AmsdosFileDescriptor struct {
 	Path      string
 	Exec      uint16
 	Load      uint16
 	User      uint16
 	Type      AmsdosType
-	AddHeader bool
+	addHeader bool
 }
 
 func NewAmsdosFileDescriptor() *AmsdosFileDescriptor {
 	return &AmsdosFileDescriptor{Type: AmsdosTypeAscii}
 }
 
-func (a *AmsdosFileDescriptor) WithType(fileType AmsdosType) AmsdosFileDescriptor {
-	a.Type = fileType
-	return *a
+func (a *AmsdosFileDescriptor) WithAddHeader(addHeader bool) *AmsdosFileDescriptor {
+	a.addHeader = addHeader
+	return a
 }
 
-func (a *AmsdosFileDescriptor) WithUser(user uint16) AmsdosFileDescriptor {
+func (a *AmsdosFileDescriptor) WithType(fileType AmsdosType) *AmsdosFileDescriptor {
+	a.Type = fileType
+	return a
+}
+
+func (a *AmsdosFileDescriptor) WithUser(user uint16) *AmsdosFileDescriptor {
 	a.User = user
-	return *a
+	return a
 }
 
 func (a *AmsdosFileDescriptor) WithExec(exec uint16) AmsdosFileDescriptor {
@@ -60,42 +101,42 @@ func (a *AmsdosFileDescriptor) WithExec(exec uint16) AmsdosFileDescriptor {
 	return *a
 }
 
-func (a *AmsdosFileDescriptor) WithLoad(load uint16) AmsdosFileDescriptor {
+func (a *AmsdosFileDescriptor) WithLoad(load uint16) *AmsdosFileDescriptor {
 	a.Load = load
-	return *a
+	return a
 }
 
-func (a *AmsdosFileDescriptor) WithPath(path string) AmsdosFileDescriptor {
+func (a *AmsdosFileDescriptor) WithPath(path string) *AmsdosFileDescriptor {
 	a.Path = path
-	return *a
+	return a
 }
 
-func (a *AmsdosFileDescriptor) AddExec(exec string) AmsdosFileDescriptor {
+func (a *AmsdosFileDescriptor) AddExec(exec string) *AmsdosFileDescriptor {
 	if exec != "" {
 		value, err := utils.ParseHex16(exec)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error while parsing execute address (%s) error: %v\n", exec, err)
-			return *a
+			return a
 		}
 		a.Exec = uint16(value)
-		a.AddHeader = true
+		a.addHeader = true
 		a.Type = AmsdosTypeBinary
 	}
-	return *a
+	return a
 }
 
-func (a *AmsdosFileDescriptor) AddLoad(load string) AmsdosFileDescriptor {
+func (a *AmsdosFileDescriptor) AddLoad(load string) *AmsdosFileDescriptor {
 	if load != "" {
 		value, err := utils.ParseHex16(load)
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error while parsing load address (%s) error: %v\n", load, err)
-			return *a
+			return a
 		}
 		a.Load = uint16(value)
-		a.AddHeader = true
+		a.addHeader = true
 		a.Type = AmsdosTypeBinary
 	}
-	return *a
+	return a
 }
 
 type Action struct {
@@ -104,33 +145,38 @@ type Action struct {
 	options Options
 	desc    DskDescriptor
 	fd      AmsdosFileDescriptor
-	actions DskActions
+	actions *DskActions
 }
 
 func (a Action) DskIsSet() bool {
-	return a.Path != ""
+	return strings.Contains(strings.ToLower(a.Path), ".dsk")
 }
 
-func (a *Action) WithOptions(options Options) Action {
+func (a *Action) WithOptions(options Options) *Action {
 	a.options = options
-	return *a
+	return a
 }
 
-func (a *Action) WithDskDescriptor(desc DskDescriptor) Action {
+func (a *Action) WithDskDescriptor(desc DskDescriptor) *Action {
 	a.desc = desc
-	return *a
+	return a
 }
 
-func (a *Action) WithAmsdosFileDescriptor(fd AmsdosFileDescriptor) Action {
+func (a *Action) WithAmsdosFileDescriptor(fd AmsdosFileDescriptor) *Action {
 	a.fd = fd
-	return *a
+	return a
 }
 
-func NewAction(dskPath string) Action {
-	return Action{
+func NewAction(dskPath string) *Action {
+	return &Action{
 		Path:    dskPath,
 		actions: NewDskActions(),
 	}
+}
+
+func (a *Action) WithDskActions(actions *DskActions) *Action {
+	a.actions = actions
+	return a
 }
 
 func (a *Action) DoDskActions() (onError bool, message, hint string) {
@@ -140,33 +186,34 @@ func (a *Action) DoDskActions() (onError bool, message, hint string) {
 	}
 	for _, action := range a.actions.a {
 		switch action.a {
-		case ActionListDsk:
-			onError, message, hint = ListDsk(a.d, a.Path)
 		case ActionFormatDsk:
-			onError, message, hint = FormatDsk(a.desc, a.options.vendorFormat, a.options.dataFormat, a.options.force)
+			onError, message, hint = FormatDsk(a.Path, a.desc, a.options.vendorFormat, a.options.dataFormat, a.options.force)
 		case ActionDisplayHexaFileDsk:
-			onError, message, hint = DisplayHexaFileDsk(a.d, action.File)
+			onError, message, hint = DisplayHexaFileDsk(a.d, a.fd.Path)
 		case ActionDesassembleFileDsk:
-			onError, message, hint = DesassembleFileDsk(a.d, action.File)
+			onError, message, hint = DesassembleFileDsk(a.d, a.fd.Path)
 		case ActionListBasic:
-			onError, message, hint = ListBasic(a.d, action.File)
+			onError, message, hint = ListBasic(a.d, a.fd.Path)
 		case ActionAnalyseDsk:
 			onError, message, hint = AnalyseDsk(a.d, a.Path)
 		case ActionPutFileDsk:
 			onError, message, hint = PutFileDsk(a.d, a.Path, a.fd, a.options.hidden, a.options.force, a.options.quiet)
 		case ActionRemoveFileDsk:
-			onError, message, hint = RemoveFileDsk(a.d, a.Path, action.File)
+			onError, message, hint = RemoveFileDsk(a.d, a.Path, a.fd.Path)
 		case ActionGetFileDsk:
 			onError, message, hint = GetFileWithOptions(a.d, a.desc, a.fd, a.options)
 		case ActionAsciiFileDsk:
-			onError, message, hint = AsciiFileDsk(a.d, action.File, a.options.stdout)
+			onError, message, hint = AsciiFileDsk(a.d, a.fd.Path, a.options.stdout)
 		case ActionRawExportDsk:
-			onError, message, hint = RawExportDsk(a.d, action.File, a.desc, a.desc.SizeToExtract, a.options.quiet)
+			onError, message, hint = RawExportDsk(a.d, a.fd.Path, a.desc, a.desc.SizeToExtract, a.options.quiet)
 		case ActionRawImportDsk:
-			onError, message, hint = RawImportDsk(a.d, action.File, a.desc, a.options.quiet)
+			onError, message, hint = RawImportDsk(a.d, a.fd.Path, a.desc, a.options.quiet)
 		case ActionGetAllFileDsk:
 			onError, message, hint = GetAllFileDsk(a.d, a.desc, a.options)
-
+		case ActionListDsk:
+			onError, message, hint = ListDsk(a.d, a.Path)
+		default:
+			onError, message, hint = ListDsk(a.d, a.Path)
 		}
 		if onError {
 			return onError, message, hint
@@ -177,7 +224,91 @@ func (a *Action) DoDskActions() (onError bool, message, hint string) {
 
 // now dsk will work on an amsdosfile no dsk file set
 func (a *Action) DoFileActions() (onError bool, message, hint string) {
-	return true, "File actions are not implemented yet", "Check your command line options"
+	content, err := os.ReadFile(a.fd.Path)
+	if err != nil {
+		msg.ExitOnError(err.Error(), fmt.Sprintf("file %s issue", a.fd.Path))
+	}
+	var address uint16
+	isAmsdos, header := amsdos.CheckAmsdos(content)
+	// remove amsdos header
+	if isAmsdos {
+		content = content[dsk.HeaderSize:]
+		address = header.Address
+	}
+
+	if a.fd.addHeader {
+		informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", a.fd.Exec, a.fd.Load)
+		filename := dsk.GetNomAmsdos(a.fd.Path)
+		header.Size = uint16(len(content))
+		header.Size2 = uint16(len(content))
+		copy(header.Filename[:], []byte(filename[0:12]))
+		header.Address = a.fd.Load
+		header.Exec = a.fd.Exec
+		// Il faut recalculer le checksum en comptant es adresses !
+		header.Checksum = header.ComputedChecksum16()
+		var rbuff bytes.Buffer
+		err = binary.Write(&rbuff, binary.LittleEndian, header)
+		if err != nil {
+			msg.ExitOnError("error while writing header : "+err.Error(), "Check your file")
+		}
+		err = binary.Write(&rbuff, binary.LittleEndian, content)
+		if err != nil {
+			msg.ExitOnError("error while writing header : "+err.Error(), "Check your file")
+		}
+
+		if err := utils.Save(a.fd.Path, rbuff.Bytes()); err != nil {
+			msg.ExitOnError(fmt.Sprintf("Error while writing data in file [%s] error:%v\n", a.fd.Path, err), "Check your dsk  with option -dsk yourdsk.dsk -analyze")
+		}
+
+		msg.ResumeAction("none", "add amsdos header", a.fd.Path, informations, a.options.quiet)
+		fmt.Fprintf(os.Stdout, "Amsdos informations :\n\tFilename:%s\n\tSize:#%X (%.2f Ko)\n\tSize2:#%X (%.2f Ko)\n\tLogical Size:#%X (%.2f Ko)\n\tExecute Address:#%X\n\tLoading Address:#%X\n\tChecksum:#%X\n\tType:%d\n\tUser:%d\n",
+			header.Filename,
+			header.Size,
+			float64(header.Size)/1024.,
+			header.Size2,
+			float64(header.Size2)/1024.,
+			header.LogicalSize,
+			float64(header.LogicalSize)/1024.,
+			header.Exec,
+			header.Address,
+			header.Checksum,
+			header.Type,
+			header.User)
+		return false, "", ""
+
+	}
+
+	for _, action := range a.actions.a {
+		switch action.a {
+		case ActionDisplayHexaFileDsk:
+			fmt.Println(dsk.DisplayHex(content, 16))
+		case ActionDesassembleFileDsk:
+			fmt.Println(utils.Desass(content, uint16(len(content)), address))
+		case ActionListBasic:
+			fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", a.fd.Path, len(content))
+			fmt.Fprintf(os.Stdout, "%s", utils.Basic(content, uint16(len(content)), true))
+		default:
+			if !isAmsdos {
+				msg.ExitOnError(fmt.Sprintf("File (%s) does not contain amsdos header.\n", a.fd.Path), "may be a ascii file")
+			}
+			fmt.Fprintf(os.Stdout, "Amsdos informations :\n\tFilename:%s\n\tSize:#%X (%.2f Ko)\n\tSize2:#%X (%.2f Ko)\n\tLogical Size:#%X (%.2f Ko)\n\tExecute Address:#%X\n\tLoading Address:#%X\n\tChecksum:#%X\n\tType:%d\n\tUser:%d\n",
+				header.Filename,
+				header.Size,
+				float64(header.Size)/1024.,
+				header.Size2,
+				float64(header.Size2)/1024.,
+				header.LogicalSize,
+				float64(header.LogicalSize)/1024.,
+				header.Exec,
+				header.Address,
+				header.Checksum,
+				header.Type,
+				header.User)
+		}
+
+	}
+
+	return false, "", ""
 }
 
 func GetAllFileDsk(d dsk.DSK, desc DskDescriptor, opts Options) (onError bool, message, hint string) {
@@ -230,14 +361,14 @@ func ListDsk(d dsk.DSK, dskPath string) (onError bool, message, hint string) {
 	return false, "", ""
 }
 
-func FormatDsk(desc DskDescriptor, vendorFormat bool, dataFormat, force bool) (onError bool, message, hint string) {
-	_, err := os.Stat(desc.Path)
+func FormatDsk(filepath string, desc DskDescriptor, vendorFormat bool, dataFormat, force bool) (onError bool, message, hint string) {
+	_, err := os.Stat(filepath)
 	if err == nil {
 		if !force {
 			return true, fmt.Sprintf("Error file (%s) already exists", desc.Path), "Use option -force to avoid this message"
 		}
 	}
-	f, err := os.Create(desc.Path)
+	f, err := os.Create(filepath)
 	if err != nil {
 		return true, fmt.Sprintf("Error while write file (%s) error %v", desc.Path, err), "Check your dsk file path."
 	}
@@ -283,7 +414,7 @@ func GetFileWithOptions(d dsk.DSK, desc DskDescriptor, file AmsdosFileDescriptor
 		}
 		hasAmsdos, _ := amsdos.CheckAmsdos(content)
 		if hasAmsdos {
-			os.Stdout.Write(content[256:])
+			os.Stdout.Write(content[dsk.HeaderSize:])
 		} else {
 			os.Stdout.Write(content)
 		}
@@ -470,7 +601,7 @@ func GetFileDsk(d dsk.DSK, fileInDsk, dskPath, directory string, removeHeader, q
 				if removeHeader {
 					isAmsdos, _ := amsdos.CheckAmsdos(content)
 					if isAmsdos {
-						content = content[256:] // Remove the first 256 bytes (AMS/DOS header)
+						content = content[dsk.HeaderSize:] // Remove the first 256 bytes (AMS/DOS header)
 					}
 				}
 				_, err = af.Write(content)
@@ -501,7 +632,7 @@ func GetFileDsk(d dsk.DSK, fileInDsk, dskPath, directory string, removeHeader, q
 			if removeHeader {
 				isAmsdos, _ := amsdos.CheckAmsdos(content)
 				if isAmsdos {
-					content = content[256:] // Remove the first 256 bytes (AMS/DOS header)
+					content = content[dsk.HeaderSize:] // Remove the first 256 bytes (AMS/DOS header)
 				}
 			}
 			_, err = af.Write(content)
@@ -589,7 +720,7 @@ func RawExportDsk(d dsk.DSK, fileInDsk string, desc DskDescriptor, size int, qui
 
 func OpenDsk(osFile string, desc DskDescriptor, quiet bool) (d dsk.DSK, onError bool, message, hint string) {
 	if _, err := os.Stat(osFile); errors.Is(err, os.ErrNotExist) {
-		onError, msgErr, hint := FormatDsk(desc, true, false, false)
+		onError, msgErr, hint := FormatDsk(osFile, desc, true, false, false)
 		if onError {
 			return dsk.DSK{}, onError, msgErr, hint
 		}
@@ -601,7 +732,7 @@ func OpenDsk(osFile string, desc DskDescriptor, quiet bool) (d dsk.DSK, onError 
 	}
 	defer f.Close()
 	if err := d.Read(f); err != nil {
-		return d, true, fmt.Sprintf("Error while read dsk file (%s) error %v\n", desc.Path, err), "Check your dsk file path or Check your dsk file with option -dsk yourdsk.dsk -analyze"
+		return d, true, fmt.Sprintf("Error while read dsk file (%s) error %v\n", osFile, err), "Check your dsk file path or Check your dsk file with option -dsk yourdsk.dsk -analyze"
 	}
 	if err := d.CheckDsk(); err != nil {
 		return d, true, fmt.Sprintf("Error while read dsk file (%s) error %v\n", osFile, err), "Check your dsk file path or Check your dsk file with option -dsk yourdsk.dsk -analyze"
