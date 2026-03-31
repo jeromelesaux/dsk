@@ -108,19 +108,19 @@ func (s *SnaAction) DoSnaActions() (onError bool, message, hint string) {
 				crtc = sna.ASIC_6845
 			}
 			if err := sna.ImportInSna(s.File, s.Path, uint8(s.Screenmode), sna.CPCType(s.CPCType), crtc, s.Version); err != nil {
-				return true, fmt.Sprintf("Error while trying to import file (%s) in new sna (%s) error: %v\n", s.File, s.Path, err), ""
+				return false, fmt.Sprintf("Error while trying to import file (%s) in new sna (%s) error: %v\n", s.File, s.Path, err), ""
 			}
 		case SnaGetAction:
 			content, err := sna.ExportFromSna(s.Path)
 			if err != nil {
-				return true, fmt.Sprintf("Error while trying to import file (%s) in new sna (%s) error: %v\n",
+				return false, fmt.Sprintf("Error while trying to import file (%s) in new sna (%s) error: %v\n",
 					s.File,
 					s.Path,
 					err), ""
 			}
 			f, err := os.Create(s.File)
 			if err != nil {
-				return true, fmt.Sprintf("Error while trying to import file (%s) in new sna (%s) error: %v\n",
+				return false, fmt.Sprintf("Error while trying to import file (%s) in new sna (%s) error: %v\n",
 					s.File,
 					s.Path,
 					err), ""
@@ -128,12 +128,11 @@ func (s *SnaAction) DoSnaActions() (onError bool, message, hint string) {
 			}
 			defer f.Close()
 			_, err = f.Write(content)
-			if err != nil {
-				return true, fmt.Sprintf("Error while trying to import file (%s) in new sna (%s) error: %v\n",
-					s.File,
-					s.Path,
-					err), ""
-			}
+
+			return err == nil, fmt.Sprintf("import file (%s) in new sna (%s) error: %v\n",
+				s.File,
+				s.Path,
+				err), ""
 		case SnaInfoAction:
 			onError, message, hint = InfoSna(s.Path)
 		default:
