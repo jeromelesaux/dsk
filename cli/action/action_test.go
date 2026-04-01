@@ -139,4 +139,3 @@ func TestSnaActionDoSnaActionsFormat(t *testing.T) {
 	}
 	assert.True(t, exists)
 }
-

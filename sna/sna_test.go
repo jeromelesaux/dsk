@@ -107,4 +107,3 @@ func TestSnaReadWriteRoundTrip(t *testing.T) {
 	assert.Equal(t, byte(0x11), s2.Data[0])
 	assert.Equal(t, byte(0x22), s2.Data[1])
 }
-
