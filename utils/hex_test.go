@@ -1,6 +1,7 @@
 package utils
 
 import (
+	"os"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -35,4 +36,26 @@ func TestParseHex16(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestSaveFile(t *testing.T) {
+	path := t.TempDir() + "/test-savefile.bin"
+	data := []byte{0x01, 0x02, 0x03}
+	assert.False(t, SaveFile(data, path), "SaveFile should return false on success")
+	read, err := os.ReadFile(path)
+	assert.NoError(t, err)
+	assert.Equal(t, data, read)
+}
+
+func TestSaveFileInvalidPath(t *testing.T) {
+	assert.True(t, SaveFile([]byte{1, 2, 3}, string([]byte{0x00})))
+}
+
+func TestSave(t *testing.T) {
+	path := t.TempDir() + "/test-save.bin"
+	data := []byte("hello world")
+	assert.NoError(t, Save(path, data))
+	read, err := os.ReadFile(path)
+	assert.NoError(t, err)
+	assert.Equal(t, data, read)
 }
