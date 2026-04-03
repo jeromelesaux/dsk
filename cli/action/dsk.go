@@ -452,11 +452,14 @@ func GetContentDsk(d dsk.DSK, filepath string) ([]byte, int, error) {
 	if indice == dsk.NOT_FOUND {
 		return nil, 0, fmt.Errorf("File %s does not exist", filepath)
 	}
-	content, size, err := d.ViewFile(indice)
+	content, err := d.GetFileIn(filepath, indice)
 	if err != nil {
-		return nil, size, fmt.Errorf("Error while getting file in dsk error :%v", err)
+		fmt.Fprintf(os.Stderr, "Error while getting file in dsk error :%v\n", err)
 	}
-	return content, size, nil
+	if err != nil {
+		return nil, 0, fmt.Errorf("Error while getting file in dsk error :%v", err)
+	}
+	return content, len(content), nil
 }
 
 func DesassembleFileDsk(d dsk.DSK, filepath string) (onError bool, message, hint string) {
