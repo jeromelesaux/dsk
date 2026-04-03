@@ -700,6 +700,7 @@ func GetNomAmsdos(masque string) string {
 
 func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddress, userNumber uint16, isSystemFile, readOnly, hidden bool) error {
 	buff := make([]byte, 0x20000)
+	fileSize := 0
 	cFileName := GetNomAmsdos(masque)
 	header := &amsdos.StAmsdos{}
 	var addHeader bool
@@ -750,12 +751,12 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddre
 	}
 	if !isAmsdos && typeModeImport != MODE_ASCII {
 		// Creer une en-tete amsdos par defaut
+		fileSize = fileLength + 0x80
 		fmt.Fprintf(os.Stderr, "Create header... (%s)\n", masque)
-		header = &amsdos.StAmsdos{}
 		header.User = byte(userNumber)
-		header.Size = uint16(fileLength)
-		header.Size2 = uint16(fileLength)
-		header.LogicalSize = uint16(fileLength)
+		header.Size = uint16(fileSize)
+		header.Size2 = uint16(fileSize)
+		header.LogicalSize = uint16(fileSize)
 		copy(header.Filename[:], []byte(cFileName[0:12]))
 		header.Address = loadAddress
 		if loadAddress != 0 {
@@ -783,6 +784,7 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddre
 		//
 		if isAmsdos {
 			// Supprmier en-tete si elle existe
+			fileSize -= 0x80
 			fmt.Fprintf(os.Stderr, "Removing header...(%s)\n", masque)
 			copy(buff[0:], buff[binary.Size(amsdos.StAmsdos{}):])
 		}
@@ -822,7 +824,7 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddre
 		return ErrorFileSizeExceed
 	}
 	// if (MODE_BINAIRE) ClearAmsdos(Buff); //Remplace les octets inutilises par des 0 dans l'en-tete
-	return d.CopyFile(buff, cFileName, uint16(fileLength), 256, userNumber, isSystemFile, readOnly, hidden)
+	return d.CopyFile(buff, cFileName, uint16(fileSize), 256, userNumber, isSystemFile, readOnly, hidden)
 }
 
 // Copie un fichier sur le DSK
