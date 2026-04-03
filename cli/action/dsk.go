@@ -229,6 +229,8 @@ func (a *Action) DoDskActions() (onError bool, message, hint string) {
 			onError, message, hint = GetAllFileDsk(action.Folder, a.desc, a.options)
 		case ActionListDsk:
 			onError, message, hint = ListDsk(a.d, a.Path)
+		case ActionFileinfoDsk:
+			onError, message, hint = FileinfoDsk(a.d, a.fd.Path)
 		default:
 			onError, message, hint = ListDsk(a.d, a.Path)
 		}
@@ -487,7 +489,7 @@ func ListBasic(d dsk.DSK, filepath string) (onError bool, message, hint string) 
 		fmt.Fprintf(os.Stdout, "%s", utils.Basic(content, uint16(filesize), true))
 	} else {
 		fmt.Fprintf(os.Stderr, "File %s filesize :%d octets\n", filepath, len(content))
-		fmt.Fprintf(os.Stdout, "%s", content)
+		fmt.Fprintf(os.Stdout, "%s", content[:filesize])
 	}
 
 	return false, "", ""
