@@ -1,6 +1,6 @@
 module github.com/jeromelesaux/dsk
 
-go 1.21
+go 1.25
 
 require (
 	github.com/jeromelesaux/m4client v0.0.0-20230327092026-4e80fd2b1474
