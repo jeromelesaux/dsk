@@ -206,8 +206,7 @@ func (a *Action) hfeIsSet() (bool, DskTaskFile) {
 	return false, DskTaskFile{}
 }
 
-func (a *Action) DoDskActions() (onError bool, message, hint string) {
-
+func (a *Action) SetDsk() (onError bool, message, hint string) {
 	hfeIsSet, hfeTask := a.hfeIsSet()
 	if hfeIsSet {
 		hfeDisk, err := hfe.Open(hfeTask.File)
@@ -224,6 +223,14 @@ func (a *Action) DoDskActions() (onError bool, message, hint string) {
 		if onError {
 			return onError, message, hint
 		}
+	}
+	return false, "", ""
+}
+
+func (a *Action) DoDskActions() (onError bool, message, hint string) {
+	onError, message, hint = a.SetDsk()
+	if onError {
+		return onError, message, hint
 	}
 	for _, action := range a.tasks.a {
 		switch action.a {
