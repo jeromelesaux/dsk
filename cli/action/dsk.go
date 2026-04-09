@@ -160,7 +160,8 @@ type Action struct {
 }
 
 func (a Action) DskIsSet() bool {
-	return a.Path != ""
+	hfeExists, _ := a.hfeIsSet()
+	return a.Path != "" || hfeExists
 }
 
 func (a *Action) WithOptions(options Options) *Action {
@@ -228,6 +229,7 @@ func (a *Action) SetDsk() (onError bool, message, hint string) {
 }
 
 func (a *Action) DoDskActions() (onError bool, message, hint string) {
+	var listAlreadyDone bool
 	onError, message, hint = a.SetDsk()
 	if onError {
 		return onError, message, hint
@@ -260,10 +262,13 @@ func (a *Action) DoDskActions() (onError bool, message, hint string) {
 			onError, message, hint = GetAllFileDsk(action.Folder, a.desc, a.options)
 		case ActionListDsk:
 			onError, message, hint = ListDsk(a.d, a.Path)
+			listAlreadyDone = true
 		case ActionFileinfoDsk:
 			onError, message, hint = FileinfoDsk(a.d, a.fd.Path)
 		default:
-			onError, message, hint = ListDsk(a.d, a.Path)
+			if !listAlreadyDone {
+				onError, message, hint = ListDsk(a.d, a.Path)
+			}
 		}
 		if onError {
 			return onError, message, hint

@@ -51,7 +51,7 @@ var (
 	removeHeader = flag.Bool("removeheader", false, "Remove amsdos header from exported file")
 	hfeFilepath  = flag.String("hfe", "", "Path to the HFE file to handle.")
 
-	appVersion = "0.36"
+	appVersion = "0.37"
 	version    = flag.Bool("version", false, "Display the application version and exit.")
 )
 
