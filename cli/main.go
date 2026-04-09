@@ -47,10 +47,12 @@ var (
 	snaVersion   = flag.Int("snaversion", 1, "Specify the SNA version (1 or 2 available).")
 	quiet        = flag.Bool("quiet", false, "Suppress unnecessary output (useful for scripting).")
 	stdoutOpt    = flag.Bool("stdout", false, "To redirect to stdout when using get file")
-	hidden       = flag.Bool("hide", false, "hide the imported file")
-	removeHeader = flag.Bool("removeheader", false, "remove amsdos header from exported file")
-	appVersion   = "0.36"
-	version      = flag.Bool("version", false, "Display the application version and exit.")
+	hidden       = flag.Bool("hide", false, "Hide the imported file")
+	removeHeader = flag.Bool("removeheader", false, "Remove amsdos header from exported file")
+	hfeFilepath  = flag.String("hfe", "", "Path to the HFE file to handle.")
+
+	appVersion = "0.36"
+	version    = flag.Bool("version", false, "Display the application version and exit.")
 )
 
 func main() {
@@ -93,7 +95,8 @@ func main() {
 		WithActionRawExportDsk(*dskPath, *rawexport).
 		WithActionRawImportDsk(*dskPath, *rawimport).
 		WithActionFileinfoDsk(*dskPath, *info != "").
-		WithActionGetAllFileDsk(*autoextract, *autoextract != "")
+		WithActionGetAllFileDsk(*autoextract, *autoextract != "").
+		WithActionHFEFile(*hfeFilepath, *hfeFilepath != "")
 
 	desc := action.NewDskDescriptor().
 		WithSector(*sector).

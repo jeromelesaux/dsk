@@ -14,6 +14,7 @@ import (
 	"github.com/jeromelesaux/dsk/amsdos"
 	"github.com/jeromelesaux/dsk/cli/msg"
 	"github.com/jeromelesaux/dsk/dsk"
+	"github.com/jeromelesaux/dsk/hfe"
 	"github.com/jeromelesaux/dsk/utils"
 )
 
@@ -196,10 +197,33 @@ func (a *Action) WithDskActions(actions *DskTasks) *Action {
 	return a
 }
 
+func (a *Action) hfeIsSet() (bool, DskTaskFile) {
+	for _, action := range a.tasks.a {
+		if action.a == ActionHFEFileinfoDsk {
+			return true, action
+		}
+	}
+	return false, DskTaskFile{}
+}
+
 func (a *Action) DoDskActions() (onError bool, message, hint string) {
-	a.d, onError, message, hint = OpenDsk(a.Path, a.desc, a.options.quiet)
-	if onError {
-		return onError, message, hint
+
+	hfeIsSet, hfeTask := a.hfeIsSet()
+	if hfeIsSet {
+		hfeDisk, err := hfe.Open(hfeTask.File)
+		if err != nil {
+			return true, "Error while reading HFE file", err.Error()
+		}
+		disk, err := hfeDisk.ToDSK()
+		if err != nil {
+			return true, "Error while converting HFE to DSK", err.Error()
+		}
+		a.d = *disk
+	} else {
+		a.d, onError, message, hint = OpenDsk(a.Path, a.desc, a.options.quiet)
+		if onError {
+			return onError, message, hint
+		}
 	}
 	for _, action := range a.tasks.a {
 		switch action.a {
