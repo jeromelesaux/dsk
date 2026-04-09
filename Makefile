@@ -67,4 +67,4 @@ vulncheck:
 	govulncheck $(MODULE)
 
 test:
-	${GO} test ./... -cover
+	${GO} test ./...
