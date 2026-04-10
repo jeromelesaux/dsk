@@ -50,6 +50,7 @@ var (
 	hidden       = flag.Bool("hide", false, "Hide the imported file")
 	removeHeader = flag.Bool("removeheader", false, "Remove amsdos header from exported file")
 	hfeFilepath  = flag.String("hfe", "", "Path to the HFE file to handle.")
+	toDsk        = flag.String("todsk", "", "Convert the specified HFE file to DSK format.")
 
 	appVersion = "0.37"
 	version    = flag.Bool("version", false, "Display the application version and exit.")
@@ -96,7 +97,8 @@ func main() {
 		WithActionRawImportDsk(*dskPath, *rawimport).
 		WithActionFileinfoDsk(*dskPath, *info != "").
 		WithActionGetAllFileDsk(*autoextract, *autoextract != "").
-		WithActionHFEFile(*hfeFilepath, *hfeFilepath != "")
+		WithActionHFEFile(*hfeFilepath, *hfeFilepath != "").
+		WithActionConvertHFEToDSK(*toDsk, *toDsk != "")
 
 	desc := action.NewDskDescriptor().
 		WithSector(*sector).

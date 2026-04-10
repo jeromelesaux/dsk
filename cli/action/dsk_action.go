@@ -18,6 +18,7 @@ var (
 	ActionRawImportDsk       DskTask = "rawimport"
 	ActionFileinfoDsk        DskTask = "info"
 	ActionHFEFileinfoDsk     DskTask = "hfe"
+	ActionConvertHFEToDSK    DskTask = "todsk"
 )
 
 type DskTaskFile struct {
@@ -126,6 +127,13 @@ func (a *DskTasks) WithActionGetAllFileDsk(path string, isSet bool) *DskTasks {
 func (a *DskTasks) WithActionHFEFile(path string, isSet bool) *DskTasks {
 	if isSet {
 		a.a = append(a.a, DskTaskFile{File: path, a: ActionHFEFileinfoDsk})
+	}
+	return a
+}
+
+func (a *DskTasks) WithActionConvertHFEToDSK(path string, isSet bool) *DskTasks {
+	if isSet {
+		a.a = append(a.a, DskTaskFile{File: path, a: ActionConvertHFEToDSK})
 	}
 	return a
 }

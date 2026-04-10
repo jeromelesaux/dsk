@@ -236,6 +236,8 @@ func (a *Action) DoDskActions() (onError bool, message, hint string) {
 	}
 	for _, action := range a.tasks.a {
 		switch action.a {
+		case ActionConvertHFEToDSK:
+			onError, message, hint = SaveDsk(a.d, action.File)
 		case ActionFormatDsk:
 			onError, message, hint = FormatDsk(a.Path, a.desc, a.options.vendorFormat, a.options.dataFormat, a.options.force)
 		case ActionDisplayHexaFileDsk:
@@ -799,6 +801,18 @@ func OpenDsk(osFile string, desc DskDescriptor, quiet bool) (d dsk.DSK, onError 
 		fmt.Fprintf(os.Stderr, "Dsk file (%s)\n", osFile)
 	}
 	return d, false, "", ""
+}
+
+func SaveDsk(d dsk.DSK, osFile string) (onError bool, message, hint string) {
+	f, err := os.Create(osFile)
+	if err != nil {
+		return true, fmt.Sprintf("Error while write file (%s) error %v\n", osFile, err), "Check your dsk file path."
+	}
+	defer f.Close()
+	if err := d.Write(f); err != nil {
+		return true, fmt.Sprintf("Error while write file (%s) error %v\n", osFile, err), "Check your input file"
+	}
+	return false, "", ""
 }
 
 func FileinfoDsk(d dsk.DSK, fileInDsk string) (onError bool, message, hint string) {
