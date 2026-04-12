@@ -99,8 +99,8 @@ func main() {
 		WithActionFileinfoDsk(*dskPath, *info != "").
 		WithActionGetAllFileDsk(*autoextract, *autoextract != "").
 		WithActionHFEFile(*hfeFilepath, *hfeFilepath != "").
-		WithActionConvertHFEToDSK(*toDsk, *toDsk != "").
-		WithActionConvertDSKToHFE(*toHfe, *toHfe != "")
+		WithActionConvertHFEToDSK(*toDsk, *toDsk != "")
+		//.WithActionConvertDSKToHFE(*toHfe, *toHfe != "")
 
 	desc := action.NewDskDescriptor().
 		WithSector(*sector).
@@ -175,7 +175,7 @@ func main() {
 
 func sampleUsage() {
 	fmt.Fprintf(os.Stderr, "\nHere are some sample usages:\n"+
-		"  dsk -dsk input.dsk -toHfe output.hfe			# Convert a DSK file to HFE format.\n"+
+		//"  dsk -dsk input.dsk -toHfe output.hfe			# Convert a DSK file to HFE format.\n"+
 		"  dsk -hfe input.hfe -toDsk output.dsk			# Convert an HFE file to DSK format.\n"+
 		"  dsk -dsk output.dsk -format                  # Create an empty simple DSK file.\n"+
 		"  dsk -dsk output.dsk -format -sector 8 -track 42  # Create a simple empty DSK file with custom tracks and sectors.\n"+
