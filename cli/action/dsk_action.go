@@ -19,6 +19,7 @@ var (
 	ActionFileinfoDsk        DskTask = "info"
 	ActionHFEFileinfoDsk     DskTask = "hfe"
 	ActionConvertHFEToDSK    DskTask = "todsk"
+	ActionConvertDSKToHFE    DskTask = "tohfe"
 )
 
 type DskTaskFile struct {
@@ -134,6 +135,13 @@ func (a *DskTasks) WithActionHFEFile(path string, isSet bool) *DskTasks {
 func (a *DskTasks) WithActionConvertHFEToDSK(path string, isSet bool) *DskTasks {
 	if isSet {
 		a.a = append(a.a, DskTaskFile{File: path, a: ActionConvertHFEToDSK})
+	}
+	return a
+}
+
+func (a *DskTasks) WithActionConvertDSKToHFE(path string, isSet bool) *DskTasks {
+	if isSet {
+		a.a = append(a.a, DskTaskFile{File: path, a: ActionConvertDSKToHFE})
 	}
 	return a
 }

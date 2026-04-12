@@ -51,6 +51,7 @@ var (
 	removeHeader = flag.Bool("removeheader", false, "Remove amsdos header from exported file")
 	hfeFilepath  = flag.String("hfe", "", "Path to the HFE file to handle.")
 	toDsk        = flag.String("todsk", "", "Convert the specified HFE file to DSK format.")
+	toHfe        = flag.String("tohfe", "", "Convert the specified DSK file to HFE format.")
 
 	appVersion = "0.37"
 	version    = flag.Bool("version", false, "Display the application version and exit.")
@@ -98,7 +99,8 @@ func main() {
 		WithActionFileinfoDsk(*dskPath, *info != "").
 		WithActionGetAllFileDsk(*autoextract, *autoextract != "").
 		WithActionHFEFile(*hfeFilepath, *hfeFilepath != "").
-		WithActionConvertHFEToDSK(*toDsk, *toDsk != "")
+		WithActionConvertHFEToDSK(*toDsk, *toDsk != "").
+		WithActionConvertDSKToHFE(*toHfe, *toHfe != "")
 
 	desc := action.NewDskDescriptor().
 		WithSector(*sector).
@@ -164,30 +166,6 @@ func main() {
 	}
 	os.Exit(0)
 
-	// gestion des SNAs
-
-	// if *dskPath != "" {
-	// 	content, err := sna.ExportFromSna(*snaPath)
-	// 	if err != nil {
-	// 		fmt.Fprintf(os.Stderr, "Error while trying to import file (%s) in new sna (%s) error: %v\n",
-	// 			*get,
-	// 			*snaPath,
-	// 			err)
-	// 		os.Exit(1)
-	// 	}
-	// 	d, isError, m, hint := action.OpenDsk(*dskPath, action.DskDescriptor{Path: *dskPath, Sector: *sector, Track: *track, Head: *heads}, *quiet)
-	// 	if isError {
-	// 		msg.ExitOnError(m, hint)
-	// 	}
-	// 	isError, m, hint = action.RawImportDataInDsk(d, *get, action.DskDescriptor{Path: *dskPath, Sector: *sector, Track: *track, Head: *heads}, content, *quiet)
-	// 	if isError {
-	// 		msg.ExitOnError(m, hint)
-	// 	}
-
-	// } else {
-	// 	fmt.Fprintf(os.Stderr, "Missing input file to import in sna file (%s)\n", *snaPath)
-	// }
-
 	if !cmdRunned {
 		sampleUsage()
 	}
@@ -197,6 +175,8 @@ func main() {
 
 func sampleUsage() {
 	fmt.Fprintf(os.Stderr, "\nHere are some sample usages:\n"+
+		"  dsk -dsk input.dsk -toHfe output.hfe			# Convert a DSK file to HFE format.\n"+
+		"  dsk -hfe input.hfe -toDsk output.dsk			# Convert an HFE file to DSK format.\n"+
 		"  dsk -dsk output.dsk -format                  # Create an empty simple DSK file.\n"+
 		"  dsk -dsk output.dsk -format -sector 8 -track 42  # Create a simple empty DSK file with custom tracks and sectors.\n"+
 		"  dsk -dsk output.dsk -format -sector 8 -track 42 -dsktype 1 -head 2  # Create an empty extended DSK file with custom heads, tracks, and sectors.\n"+

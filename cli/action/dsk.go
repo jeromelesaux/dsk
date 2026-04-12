@@ -228,6 +228,14 @@ func (a *Action) SetDsk() (onError bool, message, hint string) {
 	return false, "", ""
 }
 
+func ConvertDSKToHFE(d dsk.DSK, filepath string) (onError bool, message, hint string) {
+	err := hfe.FromDSK(&d, filepath)
+	if err != nil {
+		return true, "Error while converting DSK to HFE", err.Error()
+	}
+	return false, "", ""
+}
+
 func (a *Action) DoDskActions() (onError bool, message, hint string) {
 	var listAlreadyDone bool
 	onError, message, hint = a.SetDsk()
@@ -267,6 +275,8 @@ func (a *Action) DoDskActions() (onError bool, message, hint string) {
 			listAlreadyDone = true
 		case ActionFileinfoDsk:
 			onError, message, hint = FileinfoDsk(a.d, a.fd.Path)
+		case ActionConvertDSKToHFE:
+			onError, message, hint = ConvertDSKToHFE(a.d, action.File)
 		default:
 			if !listAlreadyDone {
 				onError, message, hint = ListDsk(a.d, a.Path)
