@@ -99,8 +99,8 @@ func main() {
 		WithActionFileinfoDsk(*dskPath, *info != "").
 		WithActionGetAllFileDsk(*autoextract, *autoextract != "").
 		WithActionHFEFile(*hfeFilepath, *hfeFilepath != "").
-		WithActionConvertHFEToDSK(*toDsk, *toDsk != "")
-		//.WithActionConvertDSKToHFE(*toHfe, *toHfe != "")
+		WithActionConvertHFEToDSK(*toDsk, *toDsk != "").
+		WithActionConvertDSKToHFE(*toHfe, *toHfe != "")
 
 	desc := action.NewDskDescriptor().
 		WithSector(*sector).

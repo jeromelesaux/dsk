@@ -19,6 +19,7 @@ type Header struct {
 	BitRate         uint16
 	FloppyRPM       uint16
 	FloppyInterface byte
+	MCUVersion      byte // byte at index 17
 	TrackListOffset uint16
 }
 
@@ -60,6 +61,7 @@ func Open(path string) (*HFE, error) {
 		BitRate:         binary.LittleEndian.Uint16(data[12:14]),
 		FloppyRPM:       binary.LittleEndian.Uint16(data[14:16]),
 		FloppyInterface: data[16],
+		MCUVersion:      data[17],
 		TrackListOffset: binary.LittleEndian.Uint16(data[18:20]),
 	}
 
@@ -337,7 +339,7 @@ func buildMFMTrack(track extdsk.CPCEMUTrack) []byte {
 		}
 	}
 	// GAP4b
-	for len(raw) < 6250 {
+	for len(raw) < 6254 {
 		raw = append(raw, 0x4E)
 	}
 	return mfmEncode(raw)
@@ -364,7 +366,8 @@ func interleave(side0, side1 []byte) []byte {
 }
 
 // FromDSK converts a *extdsk.DSK into an HFE file written at path.
-func FromDSK(d *extdsk.DSK, path string) error {
+// If header is provided, it uses those values instead of defaults.
+func FromDSK(d *extdsk.DSK, path string, header ...*Header) error {
 	numTracks := int(d.Entry.NbTracks)
 	numSides := max(int(d.Entry.NbHeads), 1)
 
@@ -422,16 +425,32 @@ func FromDSK(d *extdsk.DSK, path string) error {
 
 	// Header block
 	hdr := make([]byte, blockSize)
+	for i := range hdr {
+		hdr[i] = 0xff
+	}
 	copy(hdr[:8], "HXCPICFE")
-	hdr[8] = 0 // revision
-	hdr[9] = byte(numTracks)
-	hdr[10] = byte(numSides)
-	hdr[11] = 0                                  // ISOIBM_MFM
-	binary.LittleEndian.PutUint16(hdr[12:], 250) // bitrate kbps
-	binary.LittleEndian.PutUint16(hdr[14:], 300) // RPM
-	hdr[16] = 0x07                               // generic shugart
-	hdr[17] = 0xFF
-	binary.LittleEndian.PutUint16(hdr[18:], 1) // LUT at block 1
+	if len(header) > 0 {
+		h := header[0]
+		hdr[8] = h.FormatRevision
+		hdr[9] = h.NumTracks
+		hdr[10] = h.NumSides
+		hdr[11] = h.TrackEncoding
+		binary.LittleEndian.PutUint16(hdr[12:], h.BitRate)
+		binary.LittleEndian.PutUint16(hdr[14:], h.FloppyRPM)
+		hdr[16] = h.FloppyInterface
+		hdr[17] = h.MCUVersion
+		binary.LittleEndian.PutUint16(hdr[18:], h.TrackListOffset)
+	} else {
+		hdr[8] = 0 // revision
+		hdr[9] = byte(numTracks)
+		hdr[10] = byte(numSides)
+		hdr[11] = 0                                   // ISOIBM_MFM
+		binary.LittleEndian.PutUint16(hdr[12:], 0xFA) // bitrate kbps
+		binary.LittleEndian.PutUint16(hdr[14:], 0)    // RPM
+		hdr[16] = 0x06                                // generic shugart
+		hdr[17] = 1                                   // MCU version
+		binary.LittleEndian.PutUint16(hdr[18:], 1)    // LUT at block 1
+	}
 
 	if _, err := f.Write(hdr); err != nil {
 		return err

@@ -23,10 +23,10 @@ func makeDSK(numTracks, numSides int) *extdsk.DSK {
 	return d
 }
 
-func writeHFE(t *testing.T, d *extdsk.DSK) string {
+func writeHFE(t *testing.T, d *extdsk.DSK, header ...*Header) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "test.hfe")
-	if err := FromDSK(d, path); err != nil {
+	if err := FromDSK(d, path, header...); err != nil {
 		t.Fatalf("FromDSK failed: %v", err)
 	}
 	return path
@@ -408,6 +408,70 @@ func TestBRUTAL_HFEToDSK(t *testing.T) {
 	require.NoError(t, err)
 	converted.Write(f)
 	f.Close()
+}
+
+func TestRoundTrip_BRUTAL_HFE(t *testing.T) {
+	src := filepath.Join("testdata", "BRUTAL.HFE")
+	h, err := Open(src)
+	if err != nil {
+		t.Fatalf("Open(%q) failed: %v", src, err)
+	}
+
+	d, err := h.ToDSK()
+	if err != nil {
+		t.Fatalf("ToDSK failed: %v", err)
+	}
+
+	outPath := filepath.Join(t.TempDir(), "brutal_roundtrip.hfe")
+	if err := FromDSK(d, outPath, &h.Header); err != nil {
+		t.Fatalf("FromDSK failed: %v", err)
+	}
+
+	FromDSK(d, "brutal_roundtrip.hfe")
+
+	round, err := Open(outPath)
+	if err != nil {
+		t.Fatalf("Open round-trip HFE failed: %v", err)
+	}
+
+	if round.Header.NumTracks != h.Header.NumTracks {
+		t.Errorf("NumTracks: got %d, want %d", round.Header.NumTracks, h.Header.NumTracks)
+	}
+	if round.Header.NumSides != h.Header.NumSides {
+		t.Errorf("NumSides: got %d, want %d", round.Header.NumSides, h.Header.NumSides)
+	}
+	if len(round.Entries) != len(h.Entries) {
+		t.Errorf("LUT entries: got %d, want %d", len(round.Entries), len(h.Entries))
+	}
+	if len(round.Tracks) != len(h.Tracks) {
+		t.Errorf("Tracks: got %d, want %d", len(round.Tracks), len(h.Tracks))
+	}
+
+	// Convert the round-trip HFE back to DSK and compare with the original DSK
+	d2, err := round.ToDSK()
+	if err != nil {
+		t.Fatalf("ToDSK on round-trip HFE failed: %v", err)
+	}
+
+	if d2.Entry.NbTracks != d.Entry.NbTracks {
+		t.Errorf("DSK NbTracks: got %d, want %d", d2.Entry.NbTracks, d.Entry.NbTracks)
+	}
+	if d2.Entry.NbHeads != d.Entry.NbHeads {
+		t.Errorf("DSK NbHeads: got %d, want %d", d2.Entry.NbHeads, d.Entry.NbHeads)
+	}
+
+	for i := 0; i < int(d.Entry.NbTracks); i++ {
+		if i >= len(d2.Tracks) {
+			t.Errorf("DSK track %d missing in round-trip", i)
+			continue
+		}
+		if d2.Tracks[i].NbSect != d.Tracks[i].NbSect {
+			t.Errorf("DSK track %d: NbSect got %d, want %d", i, d2.Tracks[i].NbSect, d.Tracks[i].NbSect)
+		}
+		if !bytes.Equal(d2.Tracks[i].Data, d.Tracks[i].Data) {
+			t.Errorf("DSK track %d: sector data mismatch", i)
+		}
+	}
 }
 
 // --- Round-trip DSK → HFE → DSK (fichier réel) ---
