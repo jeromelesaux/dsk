@@ -120,16 +120,6 @@ func Open(path string) (*HFE, error) {
 	return h, nil
 }
 
-// reverseBits reverses the bit order within a byte (LSB↔MSB)
-func reverseBits(b byte) byte {
-	var r byte
-	for range 8 {
-		r = (r << 1) | (b & 1)
-		b >>= 1
-	}
-	return r
-}
-
 // mfmDecode extracts data bits from an HFE MFM bitstream.
 // HFE stores bits LSB-first per byte when the track data is written to the file.
 func mfmDecode(mfm []byte) []byte {
