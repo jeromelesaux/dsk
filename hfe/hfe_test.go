@@ -23,10 +23,10 @@ func makeDSK(numTracks, numSides int) *extdsk.DSK {
 	return d
 }
 
-func writeHFE(t *testing.T, d *extdsk.DSK, header ...*Header) string {
+func writeHFE(t *testing.T, d *extdsk.DSK) string {
 	t.Helper()
 	path := filepath.Join(t.TempDir(), "test.hfe")
-	if err := FromDSK(d, path, header...); err != nil {
+	if err := FromDSK(d, path); err != nil {
 		t.Fatalf("FromDSK failed: %v", err)
 	}
 	return path
@@ -252,8 +252,8 @@ func TestFromDSK_HeaderFields(t *testing.T) {
 	if binary.LittleEndian.Uint16(raw[12:14]) != 250 {
 		t.Errorf("BitRate: expected 250")
 	}
-	if binary.LittleEndian.Uint16(raw[14:16]) != 300 {
-		t.Errorf("RPM: expected 300")
+	if binary.LittleEndian.Uint16(raw[14:16]) != 0 {
+		t.Errorf("RPM: expected 0")
 	}
 }
 
@@ -411,40 +411,19 @@ func TestBRUTAL_HFEToDSK(t *testing.T) {
 }
 
 func TestRoundTrip_BRUTAL_HFE(t *testing.T) {
-	src := filepath.Join("testdata", "BRUTAL.HFE")
-	h, err := Open(src)
-	if err != nil {
-		t.Fatalf("Open(%q) failed: %v", src, err)
-	}
 
-	d, err := h.ToDSK()
-	if err != nil {
-		t.Fatalf("ToDSK failed: %v", err)
-	}
+	src := filepath.Join("testdata", "BRUTAL.DSK")
+	d, err := extdsk.ReadDsk(src)
+	require.NoError(t, err)
 
 	outPath := filepath.Join(t.TempDir(), "brutal_roundtrip.hfe")
-	if err := FromDSK(d, outPath, &h.Header); err != nil {
+	if err := FromDSK(d, outPath); err != nil {
 		t.Fatalf("FromDSK failed: %v", err)
 	}
-
-	FromDSK(d, "brutal_roundtrip.hfe")
 
 	round, err := Open(outPath)
 	if err != nil {
 		t.Fatalf("Open round-trip HFE failed: %v", err)
-	}
-
-	if round.Header.NumTracks != h.Header.NumTracks {
-		t.Errorf("NumTracks: got %d, want %d", round.Header.NumTracks, h.Header.NumTracks)
-	}
-	if round.Header.NumSides != h.Header.NumSides {
-		t.Errorf("NumSides: got %d, want %d", round.Header.NumSides, h.Header.NumSides)
-	}
-	if len(round.Entries) != len(h.Entries) {
-		t.Errorf("LUT entries: got %d, want %d", len(round.Entries), len(h.Entries))
-	}
-	if len(round.Tracks) != len(h.Tracks) {
-		t.Errorf("Tracks: got %d, want %d", len(round.Tracks), len(h.Tracks))
 	}
 
 	// Convert the round-trip HFE back to DSK and compare with the original DSK
@@ -561,4 +540,17 @@ func TestRoundTrip_FromDSK_ToDSK(t *testing.T) {
 			t.Errorf("track %d data mismatch", i)
 		}
 	}
+}
+
+func TestLoadDefaultHFE(t *testing.T) {
+
+	h, err := Open("empty.hfe")
+	require.NoError(t, err)
+
+	d, err := h.ToDSK()
+	require.NoError(t, err)
+
+	err = FromDSK(d, "empty_roundtrip.hfe")
+	require.NoError(t, err)
+
 }

@@ -131,7 +131,7 @@ func reverseBits(b byte) byte {
 }
 
 // mfmDecode extracts data bits from an HFE MFM bitstream.
-// HFE stores bits LSB-first per byte: bit 0 is clock, bit 1 is data, etc.
+// HFE stores bits LSB-first per byte when the track data is written to the file.
 func mfmDecode(mfm []byte) []byte {
 	totalBits := len(mfm) * 8
 	out := make([]byte, 0, totalBits/16)
@@ -251,10 +251,55 @@ func mfmEncode(data []byte) []byte {
 	out := make([]byte, (len(bits)+7)/8)
 	for i, b := range bits {
 		if b != 0 {
-			out[i/8] |= 1 << uint(i%8) // LSB-first
+			out[i/8] |= 1 << uint(i%8)
 		}
 	}
 	return out
+}
+
+func mfmEncodeSync(data []byte, sync []bool) []byte {
+	var bits []uint8
+	prevBit := byte(0)
+	for i, b := range data {
+		if i < len(sync) && sync[i] {
+			switch b {
+			case 0xC2:
+				bits = append(bits, byteToBits(0x4A)...)
+				bits = append(bits, byteToBits(0x24)...)
+				prevBit = b & 1
+				continue
+			case 0xA1:
+				bits = append(bits, byteToBits(0x22)...)
+				bits = append(bits, byteToBits(0x91)...)
+				prevBit = b & 1
+				continue
+			}
+		}
+		for j := 7; j >= 0; j-- {
+			dataBit := (b >> uint(j)) & 1
+			clockBit := byte(0)
+			if dataBit == 0 && prevBit == 0 {
+				clockBit = 1
+			}
+			bits = append(bits, clockBit, dataBit)
+			prevBit = dataBit
+		}
+	}
+	out := make([]byte, (len(bits)+7)/8)
+	for i, b := range bits {
+		if b != 0 {
+			out[i/8] |= 1 << uint(i%8)
+		}
+	}
+	return out
+}
+
+func byteToBits(b byte) []uint8 {
+	bits := make([]uint8, 8)
+	for i := 0; i < 8; i++ {
+		bits[i] = (b >> uint(i)) & 1
+	}
+	return bits
 }
 
 func crc16(data []byte) uint16 {
@@ -275,20 +320,34 @@ func crc16(data []byte) uint16 {
 // buildMFMTrack encodes a DSK track (sectors + data) into a raw MFM byte stream
 func buildMFMTrack(track extdsk.CPCEMUTrack) []byte {
 	var raw []byte
+	var syncFlags []bool
+
+	appendRaw := func(b byte, sync bool) {
+		raw = append(raw, b)
+		syncFlags = append(syncFlags, sync)
+	}
+	appendBytes := func(bs ...byte) {
+		for _, b := range bs {
+			appendRaw(b, false)
+		}
+	}
 
 	// GAP4a
 	for range 80 {
-		raw = append(raw, 0x4E)
+		appendRaw(0x4E, false)
 	}
 	// Sync
 	for range 12 {
-		raw = append(raw, 0x00)
+		appendRaw(0x00, false)
 	}
 	// IAM
-	raw = append(raw, 0xC2, 0xC2, 0xC2, 0xFC)
+	appendRaw(0xC2, true)
+	appendRaw(0xC2, true)
+	appendRaw(0xC2, true)
+	appendRaw(0xFC, false)
 	// GAP1
 	for range 50 {
-		raw = append(raw, 0x4E)
+		appendRaw(0x4E, false)
 	}
 
 	dataOffset := 0
@@ -301,23 +360,29 @@ func buildMFMTrack(track extdsk.CPCEMUTrack) []byte {
 
 		// Sync
 		for range 12 {
-			raw = append(raw, 0x00)
+			appendRaw(0x00, false)
 		}
 		// IDAM
-		raw = append(raw, 0xA1, 0xA1, 0xA1, 0xFE)
+		appendRaw(0xA1, true)
+		appendRaw(0xA1, true)
+		appendRaw(0xA1, true)
+		appendRaw(0xFE, false)
 		idam := []byte{sec.C, sec.H, sec.R, sec.N}
-		raw = append(raw, idam...)
+		appendBytes(idam...)
 		crc := crc16(append([]byte{0xA1, 0xA1, 0xA1, 0xFE}, idam...))
-		raw = append(raw, byte(crc>>8), byte(crc))
+		appendBytes(byte(crc>>8), byte(crc))
 		// GAP2
 		for range 22 {
-			raw = append(raw, 0x4E)
+			appendRaw(0x4E, false)
 		}
 		for range 12 {
-			raw = append(raw, 0x00)
+			appendRaw(0x00, false)
 		}
 		// DAM
-		raw = append(raw, 0xA1, 0xA1, 0xA1, 0xFB)
+		appendRaw(0xA1, true)
+		appendRaw(0xA1, true)
+		appendRaw(0xA1, true)
+		appendRaw(0xFB, false)
 
 		// sector data
 		sdata := make([]byte, sectorSize)
@@ -328,21 +393,21 @@ func buildMFMTrack(track extdsk.CPCEMUTrack) []byte {
 		if dataOffset < len(track.Data) {
 			copy(sdata, track.Data[dataOffset:end])
 		}
-		raw = append(raw, sdata...)
+		appendBytes(sdata...)
 		dataOffset += sectorSize
 
 		crc = crc16(append([]byte{0xA1, 0xA1, 0xA1, 0xFB}, sdata...))
-		raw = append(raw, byte(crc>>8), byte(crc))
+		appendBytes(byte(crc>>8), byte(crc))
 		// GAP3
 		for i := 0; i < 54; i++ {
-			raw = append(raw, 0x4E)
+			appendRaw(0x4E, false)
 		}
 	}
 	// GAP4b
 	for len(raw) < 6254 {
-		raw = append(raw, 0x4E)
+		appendRaw(0x4E, false)
 	}
-	return mfmEncode(raw)
+	return mfmEncodeSync(raw, syncFlags)
 }
 
 // interleave merges side0 and side1 into 512-byte blocks (256 per side)
@@ -366,8 +431,7 @@ func interleave(side0, side1 []byte) []byte {
 }
 
 // FromDSK converts a *extdsk.DSK into an HFE file written at path.
-// If header is provided, it uses those values instead of defaults.
-func FromDSK(d *extdsk.DSK, path string, header ...*Header) error {
+func FromDSK(d *extdsk.DSK, path string) error {
 	numTracks := int(d.Entry.NbTracks)
 	numSides := max(int(d.Entry.NbHeads), 1)
 
@@ -398,10 +462,10 @@ func FromDSK(d *extdsk.DSK, path string, header ...*Header) error {
 			side1 = make([]byte, len(side0))
 		}
 
-		mfmLen := max(len(side1), len(side0))
+		interleaved := interleave(side0, side1)
 		tracks[t] = trackData{
-			interleaved: interleave(side0, side1),
-			mfmLen:      uint16(mfmLen * 2), // total interleaved length (both sides)
+			interleaved: interleaved,
+			mfmLen:      uint16(len(side0) + len(side1)), // actual MFM stream length (both sides)
 		}
 	}
 
@@ -410,6 +474,9 @@ func FromDSK(d *extdsk.DSK, path string, header ...*Header) error {
 	dataStartBlock := 1 + lutBlocks
 
 	lut := make([]byte, lutBlocks*blockSize)
+	for i := range lut {
+		lut[i] = 0xFF
+	}
 	currentBlock := dataStartBlock
 	for t := range numTracks {
 		binary.LittleEndian.PutUint16(lut[t*4:], uint16(currentBlock))
@@ -429,28 +496,15 @@ func FromDSK(d *extdsk.DSK, path string, header ...*Header) error {
 		hdr[i] = 0xff
 	}
 	copy(hdr[:8], "HXCPICFE")
-	if len(header) > 0 {
-		h := header[0]
-		hdr[8] = h.FormatRevision
-		hdr[9] = h.NumTracks
-		hdr[10] = h.NumSides
-		hdr[11] = h.TrackEncoding
-		binary.LittleEndian.PutUint16(hdr[12:], h.BitRate)
-		binary.LittleEndian.PutUint16(hdr[14:], h.FloppyRPM)
-		hdr[16] = h.FloppyInterface
-		hdr[17] = h.MCUVersion
-		binary.LittleEndian.PutUint16(hdr[18:], h.TrackListOffset)
-	} else {
-		hdr[8] = 0 // revision
-		hdr[9] = byte(numTracks)
-		hdr[10] = byte(numSides)
-		hdr[11] = 0                                   // ISOIBM_MFM
-		binary.LittleEndian.PutUint16(hdr[12:], 0xFA) // bitrate kbps
-		binary.LittleEndian.PutUint16(hdr[14:], 0)    // RPM
-		hdr[16] = 0x06                                // generic shugart
-		hdr[17] = 1                                   // MCU version
-		binary.LittleEndian.PutUint16(hdr[18:], 1)    // LUT at block 1
-	}
+	hdr[8] = 0 // revision
+	hdr[9] = byte(numTracks)
+	hdr[10] = byte(numSides)
+	hdr[11] = 0                                   // ISOIBM_MFM
+	binary.LittleEndian.PutUint16(hdr[12:], 0xFA) // bitrate kbps
+	binary.LittleEndian.PutUint16(hdr[14:], 0)    // RPM
+	hdr[16] = 0x06                                // generic shugart
+	hdr[17] = 1                                   // MCU version
+	binary.LittleEndian.PutUint16(hdr[18:], 1)    // LUT at block 1
 
 	if _, err := f.Write(hdr); err != nil {
 		return err
@@ -461,7 +515,11 @@ func FromDSK(d *extdsk.DSK, path string, header ...*Header) error {
 	for t := range numTracks {
 		padded := tracks[t].interleaved
 		if rem := len(padded) % blockSize; rem != 0 {
-			padded = append(padded, make([]byte, blockSize-rem)...)
+			pad := make([]byte, blockSize-rem)
+			for i := range pad {
+				pad[i] = 0xFF
+			}
+			padded = append(padded, pad...)
 		}
 		if _, err := f.Write(padded); err != nil {
 			return err
