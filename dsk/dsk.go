@@ -681,14 +681,11 @@ func (d *DSK) DskSize() uint16 {
 
 func GetNomAmsdos(masque string) string {
 	amsdosFile := make([]byte, 12)
-	for i := 0; i < 12; i++ {
+	for i := range 12 {
 		amsdosFile[i] = ' '
 	}
 	file := strings.ToUpper(strings.TrimSuffix(filepath.Base(masque), filepath.Ext(filepath.Base(masque))))
-	filenameSize := len(file)
-	if filenameSize > 8 {
-		filenameSize = 8
-	}
+	filenameSize := min(len(file), 8)
 	copy(amsdosFile[0:filenameSize], file[0:filenameSize])
 	amsdosFile[8] = '.'
 	ext := strings.ToUpper(filepath.Ext(masque))

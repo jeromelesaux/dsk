@@ -306,8 +306,8 @@ func (a *Action) DoFileActions() (onError bool, message, hint string) {
 	if a.fd.addHeader {
 		informations := fmt.Sprintf("execute address [#%.4x], loading address [#%.4x]\n", a.fd.Exec, a.fd.Load)
 		filename := dsk.GetNomAmsdos(a.fd.Path)
-		header.Size = uint16(len(content)) + 0x80
-		header.Size2 = uint16(len(content)) + 0x80
+		header.Size = uint16(len(content))
+		header.Size2 = uint16(len(content))
 		copy(header.Filename[:], []byte(filename[0:12]))
 		header.Address = a.fd.Load
 		header.Exec = a.fd.Exec
