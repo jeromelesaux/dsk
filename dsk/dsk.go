@@ -744,6 +744,7 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddre
 	//
 	if err == nil && header.Checksum == header.ComputedChecksum16() {
 		fmt.Fprintf(os.Stderr, "Header found...(%s)\n", masque)
+		fileSize = int(header.Size2)
 		isAmsdos = true
 	}
 	if !isAmsdos && typeModeImport != MODE_ASCII {
