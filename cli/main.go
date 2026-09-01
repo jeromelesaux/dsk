@@ -105,7 +105,8 @@ func main() {
 		WithSector(*sector).
 		WithTrack(*track).
 		WithHead(*heads).
-		WithType(*dskType)
+		WithType(*dskType).
+		WithPath(*dskPath)
 
 	dskAct := action.NewAction(*dskPath, *autoextract).
 		WithOptions(*opts).
