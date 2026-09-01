@@ -85,7 +85,6 @@ func main() {
 
 	acts := action.NewDskTasks().
 		WithActionListDsk(*dskPath, true).
-		WithActionFormatDsk(*dskPath, *format).
 		WithActionDisplayHexaFileDsk(*dskPath, *hexa != "").
 		WithActionDesassembleFileDsk(*dskPath, *disassemble != "").
 		WithActionListBasic(*dskPath, *basic != "").
