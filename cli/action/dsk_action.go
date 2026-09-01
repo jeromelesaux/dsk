@@ -4,7 +4,6 @@ type DskTask string
 
 var (
 	ActionListDsk            DskTask = "list"
-	ActionFormatDsk          DskTask = "format"
 	ActionDisplayHexaFileDsk DskTask = "hexa"
 	ActionDesassembleFileDsk DskTask = "desassemble"
 	ActionListBasic          DskTask = "listbasic"
@@ -45,12 +44,6 @@ func (a *DskTasks) WithActionListDsk(path string, isSet bool) *DskTasks {
 	return a
 }
 
-func (a *DskTasks) WithActionFormatDsk(path string, isSet bool) *DskTasks {
-	if isSet {
-		a.a = append(a.a, DskTaskFile{File: path, a: ActionFormatDsk})
-	}
-	return a
-}
 func (a *DskTasks) WithActionDisplayHexaFileDsk(path string, isSet bool) *DskTasks {
 	if isSet {
 		a.a = append(a.a, DskTaskFile{File: path, a: ActionDisplayHexaFileDsk})

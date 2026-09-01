@@ -126,6 +126,48 @@ func TestFormatSnaAndInfoSna(t *testing.T) {
 	assert.Contains(t, msg, "Cannot create Sna file")
 }
 
+func TestDoDskActionsFormatOnNewFile(t *testing.T) {
+	tmpfile := t.TempDir() + "/newdisk.dsk"
+	desc := NewDskDescriptor().WithPath(tmpfile)
+	a := NewAction(tmpfile).
+		WithOptions(*NewOptions().WithFormat(true).WithDataFormat(true)).
+		WithDskDescriptor(*desc)
+
+	onError, message, _ := a.DoDskActions()
+	assert.False(t, onError, message)
+
+	_, err := os.Stat(tmpfile)
+	assert.NoError(t, err)
+}
+
+func TestDoDskActionsErrorOnExistingNoForce(t *testing.T) {
+	tmpfile := t.TempDir() + "/olddisk.dsk"
+	assert.NoError(t, os.WriteFile(tmpfile, []byte("not a real dsk"), 0644))
+
+	desc := NewDskDescriptor().WithPath(tmpfile)
+	a := NewAction(tmpfile).
+		WithOptions(*NewOptions().WithFormat(true).WithDataFormat(true)).
+		WithDskDescriptor(*desc)
+
+	onError, message, _ := a.DoDskActions()
+	assert.True(t, onError)
+	assert.Contains(t, message, tmpfile)
+	assert.NotContains(t, message, "()")
+}
+
+func TestDoDskActionsFormatExistingWithForce(t *testing.T) {
+	tmpfile := t.TempDir() + "/existing-force.dsk"
+	desc := NewDskDescriptor().WithPath(tmpfile)
+	onError, message, _ := FormatDsk(tmpfile, *desc, false, true, false)
+	assert.False(t, onError, message)
+	a := NewAction(tmpfile).
+		WithOptions(*NewOptions().WithFormat(true).WithDataFormat(true).WithForce(true)).
+		WithDskDescriptor(*desc)
+
+	onError, message, _ = a.DoDskActions()
+	assert.False(t, onError, message)
+}
+
 func TestSnaActionDoSnaActionsFormat(t *testing.T) {
 	tmpfile := t.TempDir() + "/test2.sna"
 	s := NewSnaAction(tmpfile).WithVersion(1).WithSnaFormatAction(true)

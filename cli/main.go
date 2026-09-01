@@ -85,7 +85,6 @@ func main() {
 
 	acts := action.NewDskTasks().
 		WithActionListDsk(*dskPath, true).
-		WithActionFormatDsk(*dskPath, *format).
 		WithActionDisplayHexaFileDsk(*dskPath, *hexa != "").
 		WithActionDesassembleFileDsk(*dskPath, *disassemble != "").
 		WithActionListBasic(*dskPath, *basic != "").
@@ -106,7 +105,8 @@ func main() {
 		WithSector(*sector).
 		WithTrack(*track).
 		WithHead(*heads).
-		WithType(*dskType)
+		WithType(*dskType).
+		WithPath(*dskPath)
 
 	dskAct := action.NewAction(*dskPath, *autoextract).
 		WithOptions(*opts).

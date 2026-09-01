@@ -238,6 +238,12 @@ func ConvertDSKToHFE(d dsk.DSK, filepath string) (onError bool, message, hint st
 
 func (a *Action) DoDskActions() (onError bool, message, hint string) {
 	var listAlreadyDone bool
+	if a.options.format {
+		onError, message, hint = FormatDsk(a.Path, a.desc, a.options.vendorFormat, a.options.dataFormat, a.options.force)
+		if onError {
+			return onError, message, hint
+		}
+	}
 	onError, message, hint = a.SetDsk()
 	if onError {
 		return onError, message, hint
@@ -246,8 +252,6 @@ func (a *Action) DoDskActions() (onError bool, message, hint string) {
 		switch action.a {
 		case ActionConvertHFEToDSK:
 			onError, message, hint = SaveDsk(a.d, action.File)
-		case ActionFormatDsk:
-			onError, message, hint = FormatDsk(a.Path, a.desc, a.options.vendorFormat, a.options.dataFormat, a.options.force)
 		case ActionDisplayHexaFileDsk:
 			onError, message, hint = DisplayHexaFileDsk(a.d, a.fd.Path)
 		case ActionDesassembleFileDsk:
