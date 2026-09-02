@@ -757,7 +757,7 @@ func AsciiFileDsk(d dsk.DSK, fileInDsk string, isSdtout bool) (onError bool, mes
 
 func RawExportDsk(d dsk.DSK, fileInDsk string, desc DskDescriptor, size int, quiet bool) (onError bool, message, hint string) {
 	if fileInDsk == "" {
-		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put hello.bin -rawimport -track 1 -sector 0"
+		return true, "amsdosfile option is empty, set it.", "dsk -dsk yourdsk.dsk -get output.bin -rawexport -track 1 -sector 0 -size 16384"
 	}
 
 	if desc.Track == 39 {
