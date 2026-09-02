@@ -203,6 +203,22 @@ func TestPutFileAscii(t *testing.T) {
 	assert.True(t, bytes.HasPrefix(read, content))
 }
 
+func TestPutEmptyAsciiFileReturnsError(t *testing.T) {
+	d := FormatDsk(9, 40, 1, DataFormat, 0)
+
+	tmpfile := t.TempDir() + "/empty.txt"
+	assert.NoError(t, os.WriteFile(tmpfile, []byte{}, 0644))
+
+	err := d.PutFile(tmpfile, MODE_ASCII, 0, 0, 0, false, false, false)
+	assert.Error(t, err)
+}
+
+func TestCopyEmptyFileReturnsError(t *testing.T) {
+	d := FormatDsk(9, 40, 1, DataFormat, 0)
+	err := d.CopyFile([]byte{}, GetNomAmsdos("EMPTY.BIN"), 0, 256, 0, false, false, false)
+	assert.ErrorIs(t, err, ErrorEmptyFile)
+}
+
 func generateData(len int) []byte {
 	data := make([]byte, len)
 	rand.Read(data)

@@ -28,6 +28,7 @@ var (
 	ErrorNoBloc                  = errors.New("error no more block available")
 	ErrorNoDirEntry              = errors.New("error no more dir entry available")
 	ErrorFileSizeExceed          = errors.New("filesize exceed")
+	ErrorEmptyFile               = errors.New("cannot copy an empty file")
 )
 
 var (
@@ -844,6 +845,9 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddre
 // la taille est determine par le nombre de NbPages
 // regarder pourquoi different d'une autre DSK
 func (d *DSK) CopyFile(bufFile []byte, fileName string, fileLength, maxBloc, userNumber uint16, isSystemFile, readOnly, isHide bool) error {
+	if fileLength == 0 {
+		return ErrorEmptyFile
+	}
 	var nbPages, taillePage int
 	d.FillBitmap()
 	dirLoc := d.GetNomDir(fileName, isHide)
