@@ -126,6 +126,44 @@ func TestFormatSnaAndInfoSna(t *testing.T) {
 	assert.Contains(t, msg, "Cannot create Sna file")
 }
 
+func TestDskDescriptorWithSizeToExtract(t *testing.T) {
+	d := NewDskDescriptor().WithSizeToExtract(9216)
+	assert.Equal(t, 9216, d.SizeToExtract)
+}
+
+func TestRawExportErrorsIfZeroSized(t *testing.T) {
+	d := dsk.FormatDsk(9, 40, 1, dsk.DataFormat, 0)
+	desc := DskDescriptor{Track: 1, Sector: 0, Path: t.TempDir() + "/out.dsk"}
+
+	onError, _, _ := RawExportDsk(*d, t.TempDir()+"/out.bin", desc, 0, true)
+	assert.True(t, onError)
+}
+
+func TestRawExportDskWithSize(t *testing.T) {
+	dskPath := t.TempDir() + "/raw.dsk"
+	formatted := dsk.FormatDsk(9, 40, 1, dsk.DataFormat, 0)
+
+	content := make([]byte, 512)
+	for i := range content {
+		content[i] = byte(i)
+	}
+	desc := DskDescriptor{Track: 1, Sector: 0, Path: dskPath}
+
+	onError, message, _ := RawImportDataInDsk(*formatted, "in.bin", desc, content, true)
+	assert.False(t, onError, message)
+
+	reread, err := dsk.ReadDsk(dskPath)
+	assert.NoError(t, err)
+
+	outPath := t.TempDir() + "/out.bin"
+	onError, message, _ = RawExportDsk(*reread, outPath, desc, len(content), true)
+	assert.False(t, onError, message)
+
+	data, err := os.ReadFile(outPath)
+	assert.NoError(t, err)
+	assert.Equal(t, content, data[:len(content)])
+}
+
 func TestSnaActionDoSnaActionsFormat(t *testing.T) {
 	tmpfile := t.TempDir() + "/test2.sna"
 	s := NewSnaAction(tmpfile).WithVersion(1).WithSnaFormatAction(true)
