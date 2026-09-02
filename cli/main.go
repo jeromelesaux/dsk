@@ -32,26 +32,26 @@ var (
 	loadingAddress = flag.String("load", "", "Loading address for the inserted file (hexadecimal format, e.g., #170 allowed).")
 	user           = flag.Int("user", 0, "User number for the inserted file.")
 	force          = flag.Bool("force", false, "Force overwrite of an existing file in the DSK.")
-	//fileType       = flag.String("type", "", "Type of the inserted file: 'ascii' or 'binary'.")
-	snaPath      = flag.String("sna", "", "\tPath to the SNA file to handle.")
-	analyse      = flag.Bool("analyze", false, "Analyze and display the DSK header.")
-	cpcType      = flag.Int("cpctype", 2, "CPC type for SNA import: 0 = CPC464, 1 = CPC664, 2 = CPC6128, 3 = Unknown, 4 = CPCPlus6128, 5 = CPCPlus464, 6 = GX4000.")
-	screenMode   = flag.Int("screenmode", 1, "Screen mode parameter for SNA files.")
-	vendorFormat = flag.Bool("vendor", false, "Use vendor format for formatting (sector count = #09, last track = #27).")
-	dataFormat   = flag.Bool("data", true, "Use data format for formatting (sector count = #09, last track = #27).")
-	rawimport    = flag.Bool("rawimport", false, "Perform a raw import of an AMSDOS file. Requires '-dsk', '-track', and '-sector' options. \n\t\tCopies the file directly starting from the specified track and sector. e.g.: dsk -dsk mydskfile.dsk -put file.bin -rawimport -track 1 -sector 0")
-	rawexport    = flag.Bool("rawexport", false, "Perform a raw export of an AMSDOS file. Requires '-dsk', '-track', '-sector', and '-size' options. \n\t\tExtracts the file content from the specified track and sector up to the given size. e.g.: dsk -dsk mydskfile.dsk -get file.bin -rawexport -track 1 -sector 0 -size 16384")
-	size         = flag.Int("size", 0, "Size of data to extract for 'rawexport'. See 'rawexport' for details.")
-	autotest     = flag.Bool("autotest", false, "Run all available tests.")
-	autoextract  = flag.String("autoextract", "", "Extract all DSK files from a specified folder.")
-	snaVersion   = flag.Int("snaversion", 1, "Specify the SNA version (1 or 2 available).")
-	quiet        = flag.Bool("quiet", false, "Suppress unnecessary output (useful for scripting).")
-	stdoutOpt    = flag.Bool("stdout", false, "To redirect to stdout when using get file")
-	hidden       = flag.Bool("hide", false, "Hide the imported file")
-	removeHeader = flag.Bool("removeheader", false, "Remove amsdos header from exported file")
-	hfeFilepath  = flag.String("hfe", "", "Path to the HFE file to handle.")
-	toDsk        = flag.String("todsk", "", "Convert the specified HFE file to DSK format.")
-	toHfe        = flag.String("tohfe", "", "Convert the specified DSK file to HFE format.")
+	fileType       = flag.String("type", "", "Force the type of the inserted file: 'ascii' or 'binary'.")
+	snaPath        = flag.String("sna", "", "\tPath to the SNA file to handle.")
+	analyse        = flag.Bool("analyze", false, "Analyze and display the DSK header.")
+	cpcType        = flag.Int("cpctype", 2, "CPC type for SNA import: 0 = CPC464, 1 = CPC664, 2 = CPC6128, 3 = Unknown, 4 = CPCPlus6128, 5 = CPCPlus464, 6 = GX4000.")
+	screenMode     = flag.Int("screenmode", 1, "Screen mode parameter for SNA files.")
+	vendorFormat   = flag.Bool("vendor", false, "Use vendor format for formatting (sector count = #09, last track = #27).")
+	dataFormat     = flag.Bool("data", true, "Use data format for formatting (sector count = #09, last track = #27).")
+	rawimport      = flag.Bool("rawimport", false, "Perform a raw import of an AMSDOS file. Requires '-dsk', '-track', and '-sector' options. \n\t\tCopies the file directly starting from the specified track and sector. e.g.: dsk -dsk mydskfile.dsk -put file.bin -rawimport -track 1 -sector 0")
+	rawexport      = flag.Bool("rawexport", false, "Perform a raw export of an AMSDOS file. Requires '-dsk', '-track', '-sector', and '-size' options. \n\t\tExtracts the file content from the specified track and sector up to the given size. e.g.: dsk -dsk mydskfile.dsk -get file.bin -rawexport -track 1 -sector 0 -size 16384")
+	size           = flag.Int("size", 0, "Size of data to extract for 'rawexport'. See 'rawexport' for details.")
+	autotest       = flag.Bool("autotest", false, "Run all available tests.")
+	autoextract    = flag.String("autoextract", "", "Extract all DSK files from a specified folder.")
+	snaVersion     = flag.Int("snaversion", 1, "Specify the SNA version (1 or 2 available).")
+	quiet          = flag.Bool("quiet", false, "Suppress unnecessary output (useful for scripting).")
+	stdoutOpt      = flag.Bool("stdout", false, "To redirect to stdout when using get file")
+	hidden         = flag.Bool("hide", false, "Hide the imported file")
+	removeHeader   = flag.Bool("removeheader", false, "Remove amsdos header from exported file")
+	hfeFilepath    = flag.String("hfe", "", "Path to the HFE file to handle.")
+	toDsk          = flag.String("todsk", "", "Convert the specified HFE file to DSK format.")
+	toHfe          = flag.String("tohfe", "", "Convert the specified DSK file to HFE format.")
 
 	appVersion = "0.37"
 	version    = flag.Bool("version", false, "Display the application version and exit.")
@@ -69,6 +69,13 @@ func main() {
 		AddLoad(*loadingAddress).
 		WithAddHeader(*executeAddress != "" || *loadingAddress != "").
 		WithPaths(*put, *get, *basic, *hexa, *disassemble, *ascii, *remove, *info)
+
+	switch *fileType {
+	case "ascii":
+		fd = fd.WithType(action.AmsdosTypeAscii)
+	case "binary":
+		fd = fd.WithType(action.AmsdosTypeBinary)
+	}
 
 	opts := action.NewOptions().
 		WithQuiet(*quiet).
