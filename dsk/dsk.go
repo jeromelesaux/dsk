@@ -28,6 +28,7 @@ var (
 	ErrorNoBloc                  = errors.New("error no more block available")
 	ErrorNoDirEntry              = errors.New("error no more dir entry available")
 	ErrorFileSizeExceed          = errors.New("filesize exceed")
+	ErrorEmptyFile               = errors.New("cannot copy an empty file")
 )
 
 var (
@@ -724,7 +725,14 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddre
 	}
 
 	if err = binary.Read(fr, binary.LittleEndian, header); err != nil {
-		fmt.Fprintf(os.Stderr, "No header found for file :%s, error :%v\n", masque, err)
+		if errors.Is(err, io.EOF) || errors.Is(err, io.ErrUnexpectedEOF) {
+			fmt.Fprintf(os.Stderr, "No header found for file :%s, file (%d bytes) is shorter than the searched header (%d bytes)\n",
+				masque,
+				fileLength,
+				binary.Size(amsdos.StAmsdos{}))
+		} else {
+			fmt.Fprintf(os.Stderr, "No header found for file :%s, error :%v\n", masque, err)
+		}
 	}
 
 	if typeModeImport == MODE_BASIC && fileLength%128 != 0 {
@@ -797,6 +805,13 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddre
 			//
 			addHeader = true
 		}
+	case MODE_ASCII:
+		//
+		// Importation en mode ASCII : pas d'en-tete, la taille est celle du fichier lu
+		//
+		if !isAmsdos {
+			fileSize = fileLength
+		}
 	}
 	//
 	// Si fichier ok pour etre import
@@ -830,6 +845,9 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddre
 // la taille est determine par le nombre de NbPages
 // regarder pourquoi different d'une autre DSK
 func (d *DSK) CopyFile(bufFile []byte, fileName string, fileLength, maxBloc, userNumber uint16, isSystemFile, readOnly, isHide bool) error {
+	if fileLength == 0 {
+		return ErrorEmptyFile
+	}
 	var nbPages, taillePage int
 	d.FillBitmap()
 	dirLoc := d.GetNomDir(fileName, isHide)
