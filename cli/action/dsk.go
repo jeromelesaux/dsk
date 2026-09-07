@@ -70,6 +70,11 @@ func (d *DskDescriptor) WithType(dskType int) *DskDescriptor {
 	return d
 }
 
+func (d *DskDescriptor) WithSizeToExtract(size int) *DskDescriptor {
+	d.SizeToExtract = size
+	return d
+}
+
 type AmsdosFileDescriptor struct {
 	Path      string
 	Exec      uint16
@@ -752,7 +757,7 @@ func AsciiFileDsk(d dsk.DSK, fileInDsk string, isSdtout bool) (onError bool, mes
 
 func RawExportDsk(d dsk.DSK, fileInDsk string, desc DskDescriptor, size int, quiet bool) (onError bool, message, hint string) {
 	if fileInDsk == "" {
-		return true, "amsdosfile option is empty, set it.", "dsk -dsk output.dsk -put hello.bin -rawimport -track 1 -sector 0"
+		return true, "amsdosfile option is empty, set it.", "dsk -dsk yourdsk.dsk -get output.bin -rawexport -track 1 -sector 0 -size 16384"
 	}
 
 	if desc.Track == 39 {
@@ -762,7 +767,7 @@ func RawExportDsk(d dsk.DSK, fileInDsk string, desc DskDescriptor, size int, qui
 		fmt.Fprintf(os.Stdout, "Warning the starting sector is set as default : [%d]\n", desc.Sector)
 	}
 	if size == 0 {
-		fmt.Fprintf(os.Stdout, "Warning the size is set as default : [%d]\n", size)
+		return true, "Error the size to extract is 0, use option -size to set it", "e.g. -size 16384 or -size 0x4000"
 	}
 
 	fmt.Fprintf(os.Stdout, "Writing file content starting from track [%d] sector [%d] to file  [%s] in dsk [%s] size [%d]\n",
