@@ -246,8 +246,8 @@ func (a *Action) DoDskActions() (onError bool, message, hint string) {
 		switch action.a {
 		case ActionConvertHFEToDSK:
 			onError, message, hint = SaveDsk(a.d, action.File)
-		case ActionFormatDsk:
-			onError, message, hint = FormatDsk(a.Path, a.desc, a.options.vendorFormat, a.options.dataFormat, a.options.force)
+			//	case ActionFormatDsk:
+			//		onError, message, hint = FormatDsk(a.Path, a.desc, a.options.vendorFormat, a.options.dataFormat, a.options.force)
 		case ActionDisplayHexaFileDsk:
 			onError, message, hint = DisplayHexaFileDsk(a.d, a.fd.Path)
 		case ActionDesassembleFileDsk:

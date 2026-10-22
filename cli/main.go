@@ -84,7 +84,6 @@ func main() {
 		WithRawExport(*rawexport)
 
 	acts := action.NewDskTasks().
-		WithActionListDsk(*dskPath, true).
 		WithActionFormatDsk(*dskPath, *format).
 		WithActionDisplayHexaFileDsk(*dskPath, *hexa != "").
 		WithActionDesassembleFileDsk(*dskPath, *disassemble != "").
@@ -100,7 +99,8 @@ func main() {
 		WithActionGetAllFileDsk(*autoextract, *autoextract != "").
 		WithActionHFEFile(*hfeFilepath, *hfeFilepath != "").
 		WithActionConvertHFEToDSK(*toDsk, *toDsk != "").
-		WithActionConvertDSKToHFE(*toHfe, *toHfe != "")
+		WithActionConvertDSKToHFE(*toHfe, *toHfe != "").
+		WithActionListDsk(*dskPath, true)
 
 	desc := action.NewDskDescriptor().
 		WithSector(*sector).
