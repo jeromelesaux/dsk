@@ -240,7 +240,7 @@ func autotests() {
 	}
 
 	dskpath := "vendor-format.dsk"
-	os.Remove(dskpath)
+	_ = os.Remove(dskpath)
 	testsDone++
 	if formatVendorTest(dskpath) {
 		fmt.Printf("KO\n")
@@ -262,7 +262,7 @@ func autotests() {
 	} else {
 		fmt.Printf("OK\n")
 	}
-	os.Remove(dskpath)
+	_ = os.Remove(dskpath)
 	dskpath = "data-format-double.dsk"
 	testsDone++
 	if formatDoubleHeadDataTest(dskpath) {
@@ -271,7 +271,7 @@ func autotests() {
 	} else {
 		fmt.Printf("OK\n")
 	}
-	os.Remove(dskpath)
+	_ = os.Remove(dskpath)
 	dskpath = "data-format.dsk"
 	testsDone++
 	if formatDataTest(dskpath) {
@@ -396,15 +396,15 @@ func autotests() {
 		fmt.Printf("OK\n")
 	}
 	testsDone++
-	os.Remove("test.bin")
+	_ = os.Remove("test.bin")
 	testsDone++
-	os.Remove("test2.bin")
+	_ = os.Remove("test2.bin")
 	testsDone++
-	os.Remove("test3.bin")
+	_ = os.Remove("test3.bin")
 	testsDone++
-	os.Remove("test4.bin")
+	_ = os.Remove("test4.bin")
 	testsDone++
-	os.Remove(dskpath)
+	_ = os.Remove(dskpath)
 
 	snapath := "test.sna"
 	testsDone++
@@ -422,7 +422,7 @@ func autotests() {
 		fmt.Printf("OK\n")
 	}
 	testsDone++
-	os.Remove(snapath)
+	_ = os.Remove(snapath)
 
 	fmt.Printf("Tests done [%d] on failure [%d]\n", testsDone, testsOnError)
 }

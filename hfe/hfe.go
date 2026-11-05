@@ -478,7 +478,7 @@ func FromDSK(d *extdsk.DSK, path string) error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	// Header block
 	hdr := make([]byte, blockSize)

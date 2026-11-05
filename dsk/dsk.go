@@ -295,7 +295,7 @@ type DSK struct {
 }
 
 func (d *DSK) CleanBitmap() {
-	for i := 0; i < 256; i++ {
+	for i := range 256 {
 		d.BitMap[i] = 0
 	}
 }
@@ -380,7 +380,7 @@ func FormatDsk(nbSect, nbTrack, nbHead uint8, diskFormat DskFormat, extendedDskT
 	dsk.Tracks = make([]CPCEMUTrack, nbTrack*nbHead)
 	var i uint8
 	if nbHead == 1 {
-		for i = 0; i < nbTrack; i++ {
+		for i = range nbTrack {
 			switch diskFormat {
 			case DataFormat:
 				dsk.FormatTrack(i, i, 0, 0xC1, nbSect)
@@ -499,7 +499,7 @@ func WriteDsk(filePath string, d *DSK) error {
 	if err := d.Write(f); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading (%s) error %v", filePath, err)
 	}
-	f.Close()
+	_ = f.Close()
 	return nil
 }
 
@@ -514,7 +514,7 @@ func ReadDsk(filePath string) (*DSK, error) {
 	if err := dsk.Read(f); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading (%s) error %v", filePath, err)
 	}
-	f.Close()
+	_ = f.Close()
 
 	return dsk, nil
 }
@@ -540,10 +540,7 @@ func (d *DSK) CheckDsk() error {
 		var minSect, maxSect, s uint8
 		minSect = 0xFF
 		maxSect = 0
-		nbSecteur := int(tr.NbSect)
-		if nbSecteur > len(tr.Sect) {
-			nbSecteur = len(tr.Sect)
-		}
+		nbSecteur := min(int(tr.NbSect), len(tr.Sect))
 		for s = 0; s < uint8(nbSecteur); s++ {
 			if minSect > tr.Sect[s].R {
 				minSect = tr.Sect[s].R
@@ -628,17 +625,15 @@ func (d *DSK) GetFile(path string, indice int) error {
 		fmt.Fprintf(os.Stderr, "Cannot open file (%s), error :%v\n", path, err)
 		return err
 	}
-	defer fw.Close()
+	defer func() { _ = fw.Close() }()
 	for {
 		// Longueur du fichier
-		var j uint8
-		l := (d.Catalogue[i].NbPages + 7) >> 3
-		for j = 0; j < l; j++ {
+		l := int((d.Catalogue[i].NbPages + 7) >> 3)
+		for j := range l {
 			tailleBloc := 1024
 			p := d.ReadBloc(int(d.Catalogue[i].Blocks[j]))
 			var nbOctets int
 			if lMax > tailleBloc {
-				nbOctets = tailleBloc
 			} else {
 				nbOctets = lMax
 			}
@@ -822,11 +817,11 @@ func (d *DSK) PutFile(masque string, typeModeImport uint8, loadAddress, exeAddre
 		var rbuff bytes.Buffer
 		err = binary.Write(&rbuff, binary.LittleEndian, header)
 		if err != nil {
-			fmt.Fprintf(os.Stdout, "error while writing in header %v\n", err)
+			_, _ = fmt.Fprintf(os.Stdout, "error while writing in header %v\n", err)
 		}
 		err = binary.Write(&rbuff, binary.LittleEndian, buff)
 		if err != nil {
-			fmt.Fprintf(os.Stdout, "error while writing in content %v\n", err)
+			_, _ = fmt.Fprintf(os.Stdout, "error while writing in content %v\n", err)
 		}
 		buff = rbuff.Bytes()
 		//	memmove( &Buff[ sizeof( StAmsdos ) ], Buff, Lg );
@@ -861,25 +856,22 @@ func (d *DSK) CopyFile(bufFile []byte, fileName string, fileLength, maxBloc, use
 			}
 			dirLoc.NumPage = uint8(nbPages) // Numero de l'entree dans le fichier
 			nbPages++
-			taillePage = ((int(fileLength) - int(posFile) + 127) >> 7) // Taille de la page (on arrondit par le haut)
-			if taillePage > 128 {                                      // Si y'a plus de 16k il faut plusieurs pages
-				taillePage = 128
-			}
+			taillePage = min(((int(fileLength) - int(posFile) + 127) >> 7), 128)
 
 			dirLoc.NbPages = uint8(taillePage)
 			l := (dirLoc.NbPages + 7) >> 3 // Nombre de blocs=TaillePage/8 arrondi par le haut
-			for i := 0; i < 16; i++ {
+			for i := range 16 {
 				dirLoc.Blocks[i] = 0
 			}
 			var j uint8
-			for j = 0; j < l; j++ { // Pour chaque bloc de la page
+			for j = range l { // Pour chaque bloc de la page
 				bloc := d.RechercheBlocLibre(int(maxBloc)) // Met le fichier sur la disquette
 				//	fmt.Fprintf(os.Stdout,"Bloc:%d, MaxBloc:%d\n",bloc,maxBloc)
 				if bloc != 0 {
 					dirLoc.Blocks[j] = bloc
 					err = d.WriteBloc(int(bloc), bufFile, posFile)
 					if err != nil {
-						fmt.Fprintf(os.Stdout, "error while writing bloc %v\n", err)
+						_, _ = fmt.Fprintf(os.Stdout, "error while writing bloc %v\n", err)
 					}
 					posFile += 1024 // Passe au bloc suivant
 
@@ -890,7 +882,7 @@ func (d *DSK) CopyFile(bufFile []byte, fileName string, fileLength, maxBloc, use
 			// fmt.Fprintf(os.Stdout, "posDir:%d dirloc:%v\n", posDir, dirLoc)
 			err = d.SetInfoDirEntry(posDir, dirLoc)
 			if err != nil {
-				fmt.Fprintf(os.Stdout, "error while set info in directory %v\n", err)
+				_, _ = fmt.Fprintf(os.Stdout, "error while set info in directory %v\n", err)
 			}
 		} else {
 			return ErrorNoDirEntry
@@ -900,7 +892,7 @@ func (d *DSK) CopyFile(bufFile []byte, fileName string, fileLength, maxBloc, use
 }
 
 func (d *DSK) FillBitmap() int {
-	for i := 0; i < len(d.BitMap); i++ {
+	for i := range len(d.BitMap) {
 		d.BitMap[i] = 0
 	}
 	d.BitMap[0] = 1
@@ -1164,7 +1156,7 @@ func (d *DSK) RechercheBlocLibre(maxBloc int) uint8 {
 //
 
 func (d *DSK) RechercheDirLibre() (uint8, error) {
-	for i := 0; i < 64; i++ {
+	for i := range 64 {
 		dir, _ := d.GetInfoDirEntry(uint8(i))
 		if dir.User == USER_DELETED {
 			return uint8(i), nil
@@ -1178,7 +1170,7 @@ func (d *DSK) DisplayCatalogue() {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error while getting the catalogue error :%v\n", err)
 	}
-	for i := 0; i < 64; i++ {
+	for i := range 64 {
 		entry := d.Catalogue[i]
 		if entry.User != USER_DELETED && entry.NumPage != 0 {
 			fmt.Fprintf(os.Stderr, "%s.%s : %d\n", entry.Nom, entry.Ext, entry.User)
@@ -1192,7 +1184,7 @@ func (d *DSK) GetEntryyNameInCatalogue(num int) string {
 		fmt.Fprintf(os.Stderr, "error while getting the catalogue error :%v\n", err)
 	}
 	var nom string
-	for i := 0; i < 64; i++ {
+	for i := range 64 {
 		entry := d.Catalogue[i]
 		if entry.User != USER_DELETED && entry.NumPage != 0 && i == num {
 			nom = fmt.Sprintf("%.8s.%.3s", entry.Nom, entry.Ext)
@@ -1208,7 +1200,7 @@ func (d *DSK) GetEntrySizeInCatalogue(num int) string {
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "error while getting the catalogue error :%v\n", err)
 	}
-	for i := 0; i < 64; i++ {
+	for i := range 64 {
 		entry := d.Catalogue[i]
 		if entry.User != USER_DELETED && entry.NumPage != 0 && i == num {
 			var p, t int
@@ -1229,7 +1221,7 @@ func (d *DSK) GetEntrySizeInCatalogue(num int) string {
 
 func (d *DSK) GetFilesize(s StDirEntry) int {
 	t := 0
-	for i := 0; i < 64; i++ {
+	for i := range 64 {
 		if d.Catalogue[i].User != USER_DELETED {
 			if d.Catalogue[i].Nom == s.Nom &&
 				d.Catalogue[i].Ext == s.Ext {
@@ -1243,7 +1235,7 @@ func (d *DSK) GetFilesize(s StDirEntry) int {
 func (d *DSK) GetFilesIndices() []int {
 	indices := make([]int, 0)
 	cache := make(map[string]bool)
-	for i := 0; i < 64; i++ {
+	for i := range 64 {
 		if d.Catalogue[i].User != USER_DELETED {
 			filename := fmt.Sprintf("%s.%s", d.Catalogue[i].Nom, d.Catalogue[i].Ext)
 			if !cache[filename] {
@@ -1260,7 +1252,7 @@ func (d *DSK) GetCatalogue() error {
 	if d.catalogueLoaded {
 		return nil
 	}
-	for i := 0; i < 64; i++ {
+	for i := range 64 {
 		dirEntry, err := d.GetInfoDirEntry(uint8(i))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error while reading catalogue error :%v\n", err)
@@ -1289,7 +1281,7 @@ func (d *DSK) SetInfoDirEntry(numDir uint8, e StDirEntry) error {
 		return err
 	}
 	entry := data.Bytes()
-	for i := 0; i < 16; i++ {
+	for range 16 {
 		pos := d.GetPosData(t, s, true)
 		//	fmt.Fprintf(os.Stdout, "t:%d,s:%d,pos:%d\n", t, s, pos)
 		//	fmt.Fprintf(os.Stdout,"offset:%d\n",((uint16(numDir)&15)<<5) + d.GetPosData(t, s, true))
@@ -1347,7 +1339,7 @@ func (d *DSK) GetType(langue int, ams *amsdos.StAmsdos) string {
 }
 
 func (d *DSK) FileExists(entry StDirEntry) int {
-	for i := 0; i < 64; i++ {
+	for i := range 64 {
 		dir, err := d.GetInfoDirEntry(uint8(i))
 		if err != nil {
 			fmt.Fprintf(os.Stderr, "Error while getting info dir entry (%d) error :%v\n", i, err)
@@ -1396,12 +1388,7 @@ func (d *DSK) GetFileIn(filename string, indice int) ([]byte, error) {
 				}
 				firstBlock = false
 			}
-			var nbOctets int
-			if lMax > tailleBloc {
-				nbOctets = tailleBloc
-			} else {
-				nbOctets = lMax
-			}
+			nbOctets := min(lMax, tailleBloc)
 			if nbOctets > 0 {
 				b = append(b, bloc...)
 				cumul += nbOctets
@@ -1453,7 +1440,7 @@ func (d *DSK) ViewFile(indice int) ([]byte, int, error) {
 	for {
 		l := (d.Catalogue[i].NbPages + 7) >> 3
 		var j uint8
-		for j = 0; j < l; j++ {
+		for j = range l {
 			tailleBloc := 1024
 			bloc := d.ReadBloc(int(d.Catalogue[i].Blocks[j]))
 			if firstBlock {
@@ -1467,12 +1454,7 @@ func (d *DSK) ViewFile(indice int) ([]byte, int, error) {
 				}
 				firstBlock = false
 			}
-			var nbOctets int
-			if lMax > tailleBloc {
-				nbOctets = tailleBloc
-			} else {
-				nbOctets = lMax
-			}
+			nbOctets := min(lMax, tailleBloc)
 			if nbOctets > 0 {
 				b = append(b, bloc...)
 				cumul += nbOctets

@@ -7,7 +7,7 @@ func SaveFile(b []byte, path string) bool {
 	if err != nil {
 		return true
 	}
-	defer fw.Close()
+	defer func() { _ = fw.Close() }()
 	_, err = fw.Write(b)
 	return err != nil
 }

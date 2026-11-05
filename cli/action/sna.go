@@ -126,7 +126,7 @@ func (s *SnaAction) DoSnaActions() (onError bool, message, hint string) {
 					err), ""
 
 			}
-			defer f.Close()
+			defer func() { _ = f.Close() }()
 			_, err = f.Write(content)
 
 			return err == nil, fmt.Sprintf("import file (%s) in new sna (%s) error: %v\n",
@@ -158,7 +158,7 @@ func InfoSna(snaPath string) (onError bool, message, hint string) {
 	if err != nil {
 		msg.ExitOnError(fmt.Sprintf("Error while read sna file (%s) error %v", snaPath, err), "Check your sna file")
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	sna := &sna.SNA{}
 	if err := sna.Read(f); err != nil {
 		return true, fmt.Sprintf("Error while reading sna file (%s) error %v", snaPath, err), "Check your sna file"

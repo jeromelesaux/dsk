@@ -46,7 +46,7 @@ func NewCpr(filePath string) *Cpr {
 		},
 	}
 	cb := [2]byte{'c', 'b'}
-	for i := 0; i < 32; i++ {
+	for i := range 32 {
 		copy(cpr.DataZone.BankZone[i].Cb[:], cb[:])
 		// second := i % 10
 		// first := (i - second) / 10
@@ -63,7 +63,7 @@ func (c *Cpr) Save() error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if err := binary.Write(f, binary.LittleEndian, c.Riff); err != nil {
 		return err
@@ -76,7 +76,7 @@ func (c *Cpr) Save() error {
 		return err
 	}
 
-	for i := 0; i < 32; i++ {
+	for i := range 32 {
 		if err := binary.Write(f, binary.LittleEndian, c.DataZone.BankZone[i].Cb); err != nil {
 			return err
 		}
@@ -99,7 +99,7 @@ func (c *Cpr) Open() error {
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 
 	if err := binary.Read(f, binary.LittleEndian, &c.Riff); err != nil {
 		return err
@@ -112,7 +112,7 @@ func (c *Cpr) Open() error {
 		return err
 	}
 
-	for i := 0; i < 32; i++ {
+	for i := range 32 {
 		if err := binary.Read(f, binary.LittleEndian, &c.DataZone.BankZone[i].Cb); err != nil {
 			return err
 		}
@@ -158,10 +158,7 @@ func (c *Cpr) Add(b []byte, banknumber int) (int, error) {
 		return -1, ErrorBanknumber
 	}
 	for i := 0; i < CartChunckLength || i < len(b); {
-		size := CartChunckLength
-		if len(b) < CartChunckLength {
-			size = len(b)
-		}
+		size := min(CartChunckLength, len(b))
 		if err := c.Copy(b[i:size], banknumber); err != nil {
 			banknumber++
 			return banknumber, err
@@ -204,7 +201,7 @@ func (c *Cpr) AddFile(filePath string, startBanknumber int) error {
 		fmt.Fprintf(os.Stderr, "cannot open file %s error: %v\n", filePath, err)
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	b, err := io.ReadAll(f)
 	if err != nil {
 		return err

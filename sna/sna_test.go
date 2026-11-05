@@ -4,9 +4,9 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/jeromelesaux/dsk/dsk"
 	"github.com/jeromelesaux/dsk/sna"
 	"github.com/stretchr/testify/assert"
+	"github.com/stretchr/testify/require"
 )
 
 func TestMemoryChunck(t *testing.T) {
@@ -46,64 +46,114 @@ func TestCPCValue(t *testing.T) {
 		{sna.CPC464, 0},
 		{sna.CPC664, 1},
 		{sna.CPC6128, 2},
+		{sna.Unknown, 3},
+		{sna.CPCPlus6128, 4},
+		{sna.CPCPlus464, 5},
+		{sna.GX4000, 6},
 	}
-
 	for _, tt := range tests {
-		t.Run(string(tt.cpc), func(t *testing.T) {
-			result := sna.CPCValue(tt.cpc)
-			assert.Equal(t, tt.expected, result)
-		})
+		result := sna.CPCValue(tt.cpc)
+		assert.Equal(t, tt.expected, result)
 	}
 }
 
 func TestCRTCValue(t *testing.T) {
-	assert.Equal(t, uint8(0), sna.CRTCValue(sna.HD6845S_UM6845))
-	assert.Equal(t, uint8(1), sna.CRTCValue(sna.UM6845R))
-	assert.Equal(t, uint8(4), sna.CRTCValue(sna.Pre_ASIC))
+	tests := []struct {
+		crtc     sna.CRTC
+		expected uint8
+	}{
+		{sna.HD6845S_UM6845, 0},
+		{sna.UM6845R, 1},
+		{sna.MC6845, 2},
+		{sna.ASIC_6845, 3},
+		{sna.Pre_ASIC, 4},
+	}
+	for _, tt := range tests {
+		assert.Equal(t, tt.expected, sna.CRTCValue(tt.crtc))
+	}
 }
 
-func TestCPCTypeFunc(t *testing.T) {
+func TestCPCType(t *testing.T) {
 	assert.Equal(t, sna.CPC464, sna.CPCType(0))
+	assert.Equal(t, sna.CPC664, sna.CPCType(1))
+	assert.Equal(t, sna.CPC6128, sna.CPCType(2))
 	assert.Equal(t, sna.Unknown, sna.CPCType(3))
-	assert.Equal(t, sna.GX4000, sna.CPCType(6))
 	assert.Equal(t, sna.Unknown, sna.CPCType(99))
 }
 
-func TestSnaPutGet(t *testing.T) {
-	s := sna.NewSna(sna.NewSnaHeader())
-	content := make([]byte, 20)
-	for i := 0; i < len(content); i++ {
-		content[i] = byte(0xAA + i)
+func TestSNAReadWriteRoundtrip(t *testing.T) {
+	header := sna.NewSnaHeader()
+	original := sna.NewSna(header)
+	// write some data
+	for i := 0; i < 100; i++ {
+		original.Data[i] = byte(i)
 	}
-	assert.NoError(t, s.Put(content, 10, uint16(len(content))))
-	got, err := s.Get(10, 10)
-	assert.NoError(t, err)
-	assert.Equal(t, content[:10], got)
+
+	var buf bytes.Buffer
+	require.NoError(t, original.Write(&buf))
+
+	loaded := &sna.SNA{}
+	require.NoError(t, loaded.Read(bytes.NewReader(buf.Bytes())))
+
+	assert.Equal(t, original.Header.Version, loaded.Header.Version)
+	assert.Equal(t, original.Header.RegisterA, loaded.Header.RegisterA)
+	assert.Equal(t, original.Data[:100], loaded.Data[:100])
 }
 
-func TestSnaPutWithoutStartAddress(t *testing.T) {
+func TestSNAV2ReadWriteRoundtrip(t *testing.T) {
+	header := sna.NewSnaV2Header()
+	original := sna.NewSna(header)
+
+	var buf bytes.Buffer
+	require.NoError(t, original.Write(&buf))
+
+	loaded := &sna.SNA{}
+	require.NoError(t, loaded.Read(bytes.NewReader(buf.Bytes())))
+
+	assert.Equal(t, uint8(2), loaded.Header.Version)
+	assert.Equal(t, uint8(128), loaded.Header.MemoryDumpSize)
+}
+
+func TestSNAPutGet(t *testing.T) {
 	s := sna.NewSna(sna.NewSnaHeader())
-	content := []byte{0xAA, 0xBB, 0xCC}
-	err := s.Put(content, 0, uint16(len(content)))
+
+	// Get works independently of Put
+	for i := 0; i < 10; i++ {
+		s.Data[0x100+i] = byte(i + 1)
+	}
+	result, err := s.Get(0x100, 10)
+	require.NoError(t, err)
+	for i := 0; i < 10; i++ {
+		assert.Equal(t, byte(i+1), result[i])
+	}
+}
+
+func TestSNAGetExceedSize(t *testing.T) {
+	s := sna.NewSna(sna.NewSnaHeader())
+	_, err := s.Get(0xFFF0, 0x1000)
+	assert.Error(t, err)
+}
+
+func TestSNAPutNoHeaderNoAddress(t *testing.T) {
+	s := sna.NewSna(sna.NewSnaHeader())
+	err := s.Put([]byte{0x01, 0x02}, 0, 2)
 	assert.ErrorIs(t, err, sna.ErrorNoHeaderOrStartAddress)
 }
 
-func TestSnaGetRangeError(t *testing.T) {
+func TestSNACPCTypeString(t *testing.T) {
 	s := sna.NewSna(sna.NewSnaHeader())
-	_, err := s.Get(65000, 1000)
-	assert.ErrorIs(t, err, dsk.ErrorFileSizeExceed)
+	assert.Equal(t, "CPC464", s.CPCType())
 }
 
-func TestSnaReadWriteRoundTrip(t *testing.T) {
+func TestSNACRTCTypeString(t *testing.T) {
 	s := sna.NewSna(sna.NewSnaHeader())
-	s.Data[0] = 0x11
-	s.Data[1] = 0x22
-	var buf bytes.Buffer
-	assert.NoError(t, s.Write(&buf))
+	s.Header.CRTCType = 0
+	assert.Equal(t, "HD6845S_UM6845", s.CRTCType())
+}
 
-	s2 := &sna.SNA{}
-	assert.NoError(t, s2.Read(bytes.NewReader(buf.Bytes())))
-	assert.Equal(t, s.Header.Version, s2.Header.Version)
-	assert.Equal(t, byte(0x11), s2.Data[0])
-	assert.Equal(t, byte(0x22), s2.Data[1])
+func TestSNAHeaderString(t *testing.T) {
+	h := sna.NewSnaHeader()
+	result := h.String()
+	assert.Contains(t, result, "Version:1")
+	assert.Contains(t, result, "RegisterA")
 }

@@ -36,8 +36,9 @@ func writeHFE(t *testing.T, d *extdsk.DSK) string {
 
 func TestCRC16_Deterministic(t *testing.T) {
 	data := []byte{0xFE, 0x00, 0x00, 0x02}
-	if crc16(data) != crc16(data) {
-		t.Error("crc16 is not deterministic")
+	a, b := crc16(data), crc16(data)
+	if a != b {
+		t.Errorf("crc16 is not deterministic: %04X != %04X", a, b)
 	}
 }
 
@@ -298,7 +299,7 @@ func TestOpen_FileNotFound(t *testing.T) {
 
 func TestOpen_FileTooSmall(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "tiny.hfe")
-	os.WriteFile(path, make([]byte, 10), 0644)
+	require.NoError(t, os.WriteFile(path, make([]byte, 10), 0644))
 	if _, err := Open(path); err == nil {
 		t.Fatal("expected error for small file")
 	}
@@ -306,7 +307,7 @@ func TestOpen_FileTooSmall(t *testing.T) {
 
 func TestOpen_InvalidSignature(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "bad.hfe")
-	os.WriteFile(path, make([]byte, 1024), 0644)
+	require.NoError(t, os.WriteFile(path, make([]byte, 1024), 0644))
 	if _, err := Open(path); err == nil {
 		t.Fatal("expected error for invalid signature")
 	}
@@ -406,8 +407,8 @@ func TestBRUTAL_HFEToDSK(t *testing.T) {
 
 	f, err := os.Create("test.dsk")
 	require.NoError(t, err)
-	converted.Write(f)
-	f.Close()
+	require.NoError(t, converted.Write(f))
+	require.NoError(t, f.Close())
 }
 
 func TestRoundTrip_BRUTAL_HFE(t *testing.T) {
@@ -512,8 +513,8 @@ func TestRoundTrip_EmptyDSK_File(t *testing.T) {
 
 	f, err := os.Create("test.dsk")
 	require.NoError(t, err)
-	recovered.Write(f)
-	f.Close()
+	require.NoError(t, recovered.Write(f))
+	require.NoError(t, f.Close())
 }
 
 // --- Round-trip DSK → HFE → DSK ---
@@ -554,3 +555,4 @@ func TestLoadDefaultHFE(t *testing.T) {
 	require.NoError(t, err)
 
 }
+

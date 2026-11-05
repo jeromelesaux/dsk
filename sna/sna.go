@@ -149,10 +149,7 @@ func (m *MemChunck) Export() []byte {
 func (m *MemChunck) Feed(buf []byte) {
 	var chunckIndex int
 	var bufferIndex int
-	for {
-		if bufferIndex >= len(buf) {
-			break
-		}
+	for bufferIndex < len(buf) {
 		v := buf[bufferIndex]
 		switch v {
 		case 0xe5:
@@ -454,7 +451,7 @@ func ReadSna(filePath string) (*SNA, error) {
 	if err := sna.Read(f); err != nil {
 		fmt.Fprintf(os.Stderr, "Error while reading (%s) error %v", filePath, err)
 	}
-	f.Close()
+	_ = f.Close()
 	return sna, nil
 }
 
@@ -483,11 +480,7 @@ func (s *SNA) Read(r io.Reader) error {
 				}
 				continue
 			}
-			var nbBank int
-			for i := 0; i < nbBank; i++ {
-				s.MemoryChuncks = append(s.MemoryChuncks, &MemChunck{})
-			}
-			var size uint32
+				var size uint32
 			if err := binary.Read(r, binary.LittleEndian, &size); err != nil {
 				fmt.Fprintf(os.Stderr, "Cannot read SNA Memory Chunck error :%v\n", err)
 				return err
@@ -500,9 +493,7 @@ func (s *SNA) Read(r io.Reader) error {
 
 			mem := &MemChunck{}
 			mem.Feed(memBuf)
-
 			s.MemoryChuncks = append(s.MemoryChuncks, mem)
-			nbBank++
 		}
 	} else {
 		s.Data = make([]byte, int(s.Header.MemoryDumpSize)*1000+int(s.Header.ExternalMemoryDumpSize)*1000)
@@ -594,7 +585,7 @@ func ExportFromSna(snaPath string) ([]byte, error) {
 	if err != nil {
 		return []byte{}, err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	s := &SNA{}
 	if err = s.Read(f); err != nil {
 		return []byte{}, err
@@ -622,7 +613,7 @@ func ImportInSna(filePath, snaPath string, screenMode uint8, cpcType CPC, crtcTy
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() { _ = f.Close() }()
 	header := &m.CpcHead{}
 	if err := binary.Read(f, binary.LittleEndian, header); err != nil {
 		return err
@@ -664,7 +655,7 @@ func ImportInSna(filePath, snaPath string, screenMode uint8, cpcType CPC, crtcTy
 	if err != nil {
 		return err
 	}
-	defer w.Close()
+	defer func() { _ = w.Close() }()
 	if err := binary.Write(w, binary.LittleEndian, sna.Header); err != nil {
 		return err
 	}
@@ -689,7 +680,7 @@ func CreateSna(snaPath string, snaVersion int) (*SNA, error) {
 	if err != nil {
 		return s, err
 	}
-	defer w.Close()
+	defer func() { _ = w.Close() }()
 	if err := binary.Write(w, binary.LittleEndian, s.Header); err != nil {
 		return s, err
 	}
